@@ -124,9 +124,16 @@ class EnemyArcher(EnemyBase):
 
     def _post_update(self, dt: float) -> None:
         """Update active projectiles and apply gravity to them for arc effect."""
-        for p in self._active_projectiles:
+        for p in list(self._active_projectiles):
             p.velocity.y += 400.0 * dt
             p.update(dt)
+            # Colisión con terreno — el proyectil desaparece al tocar suelo/pared
+            if self._collision_rects:
+                for tile in self._collision_rects:
+                    if p.rect.colliderect(tile):
+                        p._expired = True
+                        p.is_active = False
+                        break
         self.clear_expired_projectiles()
 
     def clear_expired_projectiles(self) -> None:

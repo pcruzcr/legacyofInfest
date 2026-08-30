@@ -58,6 +58,7 @@ class EnemyIceSkater(EnemyBase):
         # Ataque deslizante
         self._slide_attack_cooldown: float = 0.0
         self._slide_attack_duration: float = 0.5
+        self._slide_attack_timer: float = 0.0
         self._is_sliding_attack: bool = False
 
         self.rect.width = 24
@@ -96,6 +97,7 @@ class EnemyIceSkater(EnemyBase):
 
     def _start_slide_attack(self) -> None:
         self._is_sliding_attack = True
+        self._slide_attack_timer = self._slide_attack_duration
         self._slide_attack_cooldown = 3.0
         direction = 1 if self.facing_direction > 0 else -1
         self._slide_velocity.x = direction * 180.0
@@ -104,6 +106,7 @@ class EnemyIceSkater(EnemyBase):
     def update(self, dt: float) -> None:
         # Detectar zona de hielo
         self._check_ice_zone()
+        self._slide_attack_cooldown = max(0.0, self._slide_attack_cooldown - dt)
         if self._is_sliding_attack:
             self._slide_attack_timer -= dt
             if self._slide_attack_timer <= 0:

@@ -50,6 +50,7 @@ class EnemySwimmer(EnemyBase):
         )
 
         self.swim_speed: float = swim_speed
+        self.patrol_speed: float = 30.0
         self._hug_slopes = False  # nadadores no se pegan a pendientes
 
         # Swimming state
@@ -128,9 +129,14 @@ class EnemySwimmer(EnemyBase):
             current = self._current_zone.corriente
             if current.length_squared() > 0:
                 self._swim_direction = current.normalize()
+            self.position += self._swim_direction * self.swim_speed * dt * 0.5
         else:
-            # Fuera del agua: patrulla normal en tierra
-            super()._patrol_behavior(dt)
+            # Fuera del agua: patrulla horizontal simple
+            self.position.x += self.facing_direction * self.patrol_speed * dt
+            # Rebotar en limites de arena si existe
+            if self.arena_bounds is not None:
+                if self.position.x <= self.arena_bounds.left or self.position.x + self.rect.width >= self.arena_bounds.right:  # noqa: E501
+                    self.facing_direction *= -1
 
     def _alert_behavior(self, dt: float) -> None:
         if self._in_water:
@@ -165,9 +171,30 @@ class EnemySwimmer(EnemyBase):
 
     def _update_water_state(self) -> None:
         """Detecta si el enemigo está en una ZonaDeAgua."""
-        # Buscar zona de agua que contenga al enemigo
-        # (simplificado: en implementación real se consultaría el mundo ECS)
-        pass
+        # Si tiene mundo ECS, busca ZonaDeAgua que lo contenga
+        try:
+            if hasattr(self, "_mundo"):
+                from src.framework.ecs.components import ZonaDeAgua
+                for _, zona in self._mundo.cada(ZonaDeAgua):  # type: ignore[attr-defined]
+                    if zona.rect.colliderect(self.rect):
+                        self._in_water = True
+                        self._current_zone = zona
+                        return
+        except Exception:
+            pass
+        # Fallback: si no hay ECS, asume fuera del agua pero patrulla igual
+        # Para no quedar inerte fuera del agua, usa movimiento normal
+        if not self._in_water:
+            # No hay zona, pero permite patrulla en tierra
+            self._current_zone = None
+        # Si estaba en agua y ya no colisiona, sale
+        if self._in_water and self._current_zone is not None:
+            if not self._current_zone.rect.colliderect(self.rect):
+                self._in_water = False
+                self._current_zone = None
+        # Si nunca entró, al menos permite movimiento terrestre
+        if not self._in_water:
+            self._current_zone = None
 
     def _get_animation_key(self) -> str:
         return "swim"

@@ -46,17 +46,21 @@ RAIZ_DE_COMPOSICION = "src/engine/core/app.py"
 #: laboratorios académicos que enseñan lo que vive en `framework/processing`.
 CAPA_DE_APLICACION = "src/engine/scenes/"
 
-#: La única dependencia tolerada de `framework` hacia `stages` (regla L4).
+#: Dependencias toleradas de `framework`/`engine` hacia `stages` (regla L4).
 #:
 #: `entity_factory.ensure_registered()` da de alta al Venado en el registro de
 #: entidades, y para eso lo importa. Se tolera porque el Venado es el **jefe de
 #: referencia** que mantiene el equipo docente y del que copian los alumnos, no
-#: una entrega.
+#: una entrega. `tutorial_hub` es el **hub de tutorial jugable** (AUD-721) que
+#: el menú principal empuja como escena; vive en `stages/` por ser contenido
+#: de referencia, no entrega de estudiante, y por eso `engine/scenes` lo importa
+#: de forma diferida dentro de la función.
 #:
 #: Añadir algo aquí es afirmar «esto es material del curso, no contenido de un
 #: estudiante», y hay que justificarlo también en `03_ARCHITECTURE.md` §3.1.
 EXCEPCION_L4: frozenset[str] = frozenset({
     "src.stages.boss_venado.boss_venado",
+    "src.stages.tutorial_hub.tutorial_hub",
 })
 
 

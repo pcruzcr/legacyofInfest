@@ -140,8 +140,20 @@ class EnemyClimber(EnemyBase):
 
     def _find_climb_target(self) -> None:
         # Buscar Liana/Tirolesa cercana en el mundo ECS
-        # (implementación simplificada: en real se consultaría mundo ECS)
-        pass
+        try:
+            if hasattr(self, "_mundo"):
+                from src.framework.ecs.components import Liana, Tirolesa
+                for _, liana in self._mundo.cada(Liana):  # type: ignore[attr-defined]
+                    if liana.rect.colliderect(self.rect.inflate(20, 20)):
+                        self._on_liana = liana
+                        return
+                for _, tirolesa in self._mundo.cada(Tirolesa):  # type: ignore[attr-defined]
+                    if tirolesa.destino.distance_to(pygame.Vector2(self.rect.center)) < 60:
+                        self._on_zipline = tirolesa
+                        self._on_zipline_progress = 0.0
+                        return
+        except Exception:
+            pass
 
     def _climb_liana(self, dt: float) -> None:
         if not self._on_liana:

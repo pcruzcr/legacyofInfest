@@ -138,8 +138,8 @@ COMBO_WINDOW: float = 0.5
 # reordered or appended to from anywhere in the process — including by a test
 # that forgot to restore it — silently rebalancing combat. Indexing is
 # unchanged, so no call site needed updating.
-COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0)
-COMBO_MAX: int = 3
+COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.0, 3.0)
+COMBO_MAX: int = 10
 
 # ── Accessibility and other player preferences ─────────────────
 #

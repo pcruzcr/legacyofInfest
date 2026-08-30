@@ -5,12 +5,21 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-import moderngl
+try:
+    import moderngl
+except ImportError:
+    moderngl = None  # type: ignore[assignment]
+
 import numpy as np
 import pygame
 
 from src.engine.core import gpu_effects, settings
-from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
+
+try:
+    from src.engine.render.gpu_sprite_batch import SpriteBatchGPU
+except ImportError:  # pragma: no cover — sin ModernGL
+    SpriteBatchGPU = None  # type: ignore[assignment]
+
 from src.engine.render.memoria_de_textura import MemoriaDeTexturas
 from src.engine.render.shaders import (
     GODRAY_DEFAULT_SAMPLES,
@@ -318,6 +327,10 @@ class GLRenderer:
         rellene órdenes sin tener que importar ModernGL; una escena que no
         publica nada deja el lote vacío y `volcar` cuesta cero.
         """
+        if SpriteBatchGPU is None or moderngl is None:  # type: ignore[truthy-function]
+            raise ImportError(
+                "ModernGL no esta instalado - instala con pip install -e .[accel] para el camino GL"
+            )
         if self.ctx is None:
             raise RuntimeError(
                 "no hay contexto OpenGL: el lote de sprites de GPU no existe "
@@ -343,6 +356,10 @@ class GLRenderer:
         self._lote_de_sprites = lote
 
     def init(self, window_surface: pygame.Surface) -> None:
+        if moderngl is None:  # type: ignore[truthy-function]
+            raise ImportError(
+                "ModernGL no esta instalado - instala con pip install -e .[accel] para el camino GL"
+            )
         display_w, display_h = window_surface.get_size()
         import os as _os
         _os.environ["SDL_WINDOW_OPENGL"] = "1"
@@ -350,7 +367,7 @@ class GLRenderer:
             (display_w, display_h),
             pygame.OPENGL | pygame.DOUBLEBUF,
         )
-        self.ctx = moderngl.create_context()
+        self.ctx = moderngl.create_context()  # type: ignore[union-attr]
         renderer = str(self.ctx.info.get("GL_RENDERER", "?"))
         logger.info("GL_RENDERER: %s", renderer)
         if not _es_tarjeta_nvidia(renderer):
@@ -1154,23 +1171,51 @@ class GLRenderer:
         self.config.chromatic_aberration_strength = actual
 
     def resize(self, width: int, height: int) -> None:
+        # Libera FBOs anteriores antes de crear nuevos para no fugar texturas
+        for fbo_name in ("_scene_fbo", "_temp_fbo", "_bloom_fbo", "_prev_fbo", "_light_fbo"):
+            fbo = getattr(self, fbo_name, None)
+            if fbo is not None:
+                try:
+                    # Soltar attachments de color para memoria_de_textura
+                    for tex in getattr(fbo, "color_attachments", []):
+                        try:
+                            self.memoria_de_textura.soltar(tex)
+                        except Exception:
+                            pass
+                    fbo.release()
+                except Exception:
+                    pass
+                setattr(self, fbo_name, None)
         self._create_fbos(width, height)
 
     def destroy(self) -> None:
         for fbo_name in ("_scene_fbo", "_temp_fbo", "_bloom_fbo", "_prev_fbo", "_light_fbo"):
             fbo = getattr(self, fbo_name, None)
             if fbo is not None:
-                fbo.release()
-        # AUD-215: el programa de la aberración cromática se libera aquí. El
-        # resto de programas de la tubería todavía no se liberan (queda
-        # anotado); se añade el propio para no dejar el hueco más grande de lo
-        # que ya es.
-        if self._bloom_extract_prog is not None:
-            self._bloom_extract_prog.release()
-            self._bloom_extract_prog = None
-        if self._chromatic_aberration_prog is not None:
-            self._chromatic_aberration_prog.release()
-            self._chromatic_aberration_prog = None
+                try:
+                    for tex in getattr(fbo, "color_attachments", []):
+                        try:
+                            self.memoria_de_textura.soltar(tex)
+                        except Exception:
+                            pass
+                    # depth también pesa pero no se registra; solo release
+                    fbo.release()
+                except Exception:
+                    pass
+                setattr(self, fbo_name, None)
+        for prog_name in (
+            "_passthrough_prog", "_bloom_prog", "_bloom_extract_prog",
+            "_color_grading_prog", "_vignette_prog", "_motion_blur_prog",
+            "_lighting_prog", "_colorblind_prog", "_chromatic_aberration_prog",
+            "_refraction_prog", "_godray_prog", "_upload_prog", "_overlay_prog",
+        ):
+            prog = getattr(self, prog_name, None)
+            if prog is not None:
+                try:
+                    prog.release()
+                except Exception:
+                    pass
+                setattr(self, prog_name, None)
         if self._screen_texture:
             self._screen_texture.release()
             self._screen_texture = None

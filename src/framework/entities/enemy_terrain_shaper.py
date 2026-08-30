@@ -131,30 +131,44 @@ class EnemyTerrainShaper(EnemyBase):
 
         if action == 0:
             # Crear bloque empujable
+            from src.framework.ecs.components import Solido
             from src.framework.stage.bloques import BloqueEmpujable
 
-            _bloque = BloqueEmpujable(
+            bloque = BloqueEmpujable(
                 rect=pygame.Rect(int(x), int(y), 32, 32),
                 velocidad=45.0,
                 con_gravedad=True,
             )
-            # Añadir al mundo ECS
+            try:
+                self._mundo.crear(Solido(), bloque)  # type: ignore[attr-defined]
+            except Exception:
+                pass
         elif action == 1:
             # Crear bloque destructible
+            from src.framework.ecs.components import Solido
             from src.framework.stage.bloques import BloqueDestructible
 
-            _bloque = BloqueDestructible(
+            bloque = BloqueDestructible(
                 rect=pygame.Rect(int(x), int(y), 32, 32),
                 golpes=2,
             )
+            try:
+                self._mundo.crear(Solido(), bloque)  # type: ignore[attr-defined]
+            except Exception:
+                pass
         elif action == 2:
             # Colocar HazardZone
+            from src.framework.ecs.components import Solido
             from src.framework.stage.stage_data import HazardZone
 
-            _hazard = HazardZone(
+            hazard = HazardZone(
                 rect=pygame.Rect(int(x - 24), int(y), 48, 16),
                 damage=0.5,
             )
+            try:
+                self._mundo.crear(Solido(), hazard)  # type: ignore[attr-defined]
+            except Exception:
+                pass
 
         self._action_type = (self._action_type + 1) % 3
 

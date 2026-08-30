@@ -905,10 +905,10 @@ de la cola de eventos pygame antes de cada test.
 |---|---|
 | Núcleo | 800×600 @60 FPS; 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
 | ECS | Bajo la herencia; 20 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
-| Jugador | 26 estados; 5.0 HP; combate completo; arco; estamina opt-in |
-| Enemigos | 30 tipos registrados (8 arquetipos + 21 especies + jefe ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
+| Jugador | 28 estados; 5.0 HP; combate completo; arco; estamina opt-in |
+| Enemigos | 54 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |
-| TMX | 39 tipos del framework + 21 especies + 8 arquetipos + `BossVenado`, más `Solid`/`Platform` en `Collision` (71 declarables; ver §7.3); 17+ propiedades; 8 capas |
+| TMX | 50 tipos del framework + 54 de entidades, más `Solid`/`Platform` en `Collision` (104 declarables; ver §7.3); 18 propiedades; 8 capas |
 | Mecánicas F5 | 11/11 en el motor (stage_mecanicas las enseña) |
 | VFX | Luz, bloom, viñeta, clima, partículas, día/noche, estaciones, niebla, agua, estelas, números de daño |
 | Persistencia | Atómica, hostil-probada |
@@ -958,14 +958,11 @@ de la cola de eventos pygame antes de cada test.
 <!-- /cita-historica -->
 - `22_API_CONTRACTS.md` (histórico): módulos eliminados (`utils/spritesheet.py`,
   `scene/transitions.py`).
-- Conteos de estados: docs 19/25/26 según edición; **el código tiene 26**.
+- Conteos de estados: docs 19/25/26/27 según edición; **el código tiene 28**.
 - `EnemyState`: 4 miembros en 22_API vs **13 en código**.
 - Brute HP: 6.0 en GDD vs **5.0 en código**.
-- Conteos de tipos: doc 62 dice 62/30; **el código declara 39 tipos de framework** (+ 2 de
-  colisión + 8 arquetipos + 21 especies + `BossVenado` = 71 siempre disponibles; ver la
-  corrección de la §7.3). *(Nota 2026-08-13: la comparación con «doc 60 dice 73/37» ya no
-  aplica — ese documento se recontó y ahora dice 78, con `docs/70` AUD-412/413 como fuente,
-  con un alcance más amplio explicado en la §7.3.)*
+- Conteos de tipos: doc 62 dice 104/54 (2026-08-30); **el código declara 50 tipos de framework** (+ 54 entidades + 2 de
+  colisión = 104 declarables; ver §7.3 y `tests/test_el_inventario_cuenta_bien.py`). *(Nota 2026-08-30: doc 60 actualizado a 104 y 54; la cifra viva es la de `test_el_inventario_cuenta_bien.py`.)*
 - README (histórico): "1.333 tests ES / 640 EN"; real ~2.872.
 
 ### 21.5 No implementado por decisión (no es deuda, es diseño)

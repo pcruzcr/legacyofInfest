@@ -160,7 +160,13 @@ class EnemyShielded(EnemyBase):
         else:
             # Por detrás o escudo roto: daño normal
             super().apply_hit(damage, source_position, canal)
-        # Parry rompe escudo instantáneamente
-        if hasattr(self, '_parry_success') and self._parry_success:
-            self._shield_broken = True
-            self._shield_regen_timer = self.shield_regen_delay
+        # Regen se maneja en _post_update; no reiniciar el temporizador aquí
+        # salvo en el fotograma exacto en que se rompe (arriba).
+
+    def _post_update(self, dt: float) -> None:
+        # Regen del escudo tras delay
+        if self._shield_broken:
+            self._shield_regen_timer -= dt
+            if self._shield_regen_timer <= 0:
+                self.shield_health = self.shield_max_health
+                self._shield_broken = False

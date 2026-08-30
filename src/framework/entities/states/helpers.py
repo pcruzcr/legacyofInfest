@@ -165,22 +165,23 @@ def _start_attack(player: Player, attack_type: object) -> None:
         LongAttackState,
         ShortAttackState,
     )
-    changed = False
+    if (player.combo_active
+            and player.combo_timer > 0
+            and player.last_attack_type == atk_name
+            and player.combo_count < settings.COMBO_MAX):
+        player.combo_count += 1
+    else:
+        player.combo_count = 1
+    from src.engine.core.difficulty import get_config
+    player.combo_timer = float(getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+    player.last_attack_type = atk_name
+    player.combo_active = True
     if attack_type == player.SHORT_ATTACK:
-        changed = player._change_state_instance(ShortAttackState())
+        player._change_state_instance(ShortAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
     else:
-        changed = player._change_state_instance(LongAttackState())
+        player._change_state_instance(LongAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_LONG_ATTACK)
-
-    if changed:
-        if (player.combo_active
-                and player.combo_timer > 0
-                and player.last_attack_type == atk_name
-                and player.combo_count < settings.COMBO_MAX):
-            player.combo_count += 1
-        else:
-            player.combo_count = 1
         # AUD-154 — la ventana de combo sale de la dificultad, no de `settings`.
         #
         # Los tres presets declaran `combo_window` (0,60 en fácil; 0,35 en
@@ -242,6 +243,7 @@ def _reset_combo(player: Player) -> None:
     player.combo_count = 0
     player.combo_timer = 0.0
     player.combo_active = False
+    player.last_attack_type = ""
 
 
 def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:

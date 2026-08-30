@@ -54,6 +54,7 @@ class EnemyFlyingBomber(EnemyFlying):
         self._drop_interval: float = 2.5
         self._bomb_damage: float = 1.0
         self._bomb_radius: float = 48.0
+        self._active_bombs: list[Projectile] = []
 
         self._load_zone_sprites(zone, 20, 14)
 
@@ -127,9 +128,31 @@ class EnemyFlyingBomber(EnemyFlying):
             lifetime=3.0,
         )
         bomb._bomb_radius = self._bomb_radius  # para explosión en área
+        self._active_bombs.append(bomb)
         self._event_bus.emit(Events.SFX_PROJECTILE_FIRE, pos=(self.rect.centerx, self.rect.centery))
-        # El proyectil se añade a la escena via StageScene._post_update
-        # (en implementación real se añadiría a la lista de proyectiles)
+
+    def _post_update(self, dt: float) -> None:
+        # Actualizar bombas y área — colisión con terreno + expiración
+        for bomb in list(self._active_bombs):
+            bomb.update(dt)
+            if self._collision_rects:
+                for tile in self._collision_rects:
+                    if bomb.rect.colliderect(tile):
+                        bomb._expired = True
+                        bomb.is_active = False
+                        break
+            if not bomb.is_active:
+                self._active_bombs.remove(bomb)
+                # Explosión en área — chequeo correcto contra el rect del jugador
+                if hasattr(bomb, "_bomb_radius") and self._player_ref is not None:
+                    jugador_rect = getattr(self._player_ref, "rect", None)
+                    if jugador_rect is not None and bomb.rect.colliderect(jugador_rect):
+                        # Daño en área: el Projectile ya habría hecho colisión,
+                        # esto es el radio de explosión adicional
+                        if hasattr(self._player_ref, "apply_damage"):
+                            self._player_ref.apply_damage(
+                                bomb.damage, (bomb.rect.centerx, bomb.rect.centery)
+                            )
 
     def _get_animation_key(self) -> str:
         return "fly"

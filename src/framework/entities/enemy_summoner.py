@@ -132,7 +132,7 @@ class EnemySummoner(EnemyBase):
         if self._active_minions >= self._max_minions:
             return
 
-        from src.framework.entities import entity_factory
+        from src.framework.entities import bestiary_registry
 
         # Spawnear esbirro cerca del invocador
         spawn_pos = pygame.Vector2(
@@ -141,21 +141,20 @@ class EnemySummoner(EnemyBase):
         )
 
         try:
-            minion = entity_factory.create_entity(
-                self._summon_type,
-                spawn_pos,
-                zone=self._sprite_zone,
-            )
+            spec = bestiary_registry.get(self._summon_type)
+            if spec is None:
+                return
+            minion = spec.build(spawn_pos)
             if minion:
                 self._active_minions += 1
                 # Callback al morir
                 original_die = minion._die
 
-                def on_die():
-                    self._active_minions -= 1
-                    original_die()
+                def on_die(*a, **kw):
+                    self._active_minions = max(0, self._active_minions - 1)
+                    return original_die(*a, **kw)
 
-                minion._die = on_die
+                minion._die = on_die  # type: ignore[method-assign]
         except Exception as e:
             logger.warning("EnemySummoner: failed to spawn minion: %s", e)
 

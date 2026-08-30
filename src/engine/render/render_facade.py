@@ -9,30 +9,27 @@ Patrón: Facade + Strategy + Builder (GLRenderConfig)
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pygame
-
-if TYPE_CHECKING:
-    from src.framework.stage.camera import Camera
 
 
 class RenderBackendStrategy:
     """Strategy para backend de render (GL vs Software)."""
 
-    def render(self, surface: pygame.Surface, camera: Camera, dt: float) -> None:
+    def render(self, surface: pygame.Surface, camera: Any, dt: float) -> None:
         raise NotImplementedError
 
 
 class GLBackend(RenderBackendStrategy):
-    def render(self, surface: pygame.Surface, camera: Camera, dt: float) -> None:
+    def render(self, surface: pygame.Surface, camera: Any, dt: float) -> None:
         # Delega a GLRenderer si está inicializado, si no cae a software
         from src.engine.render.gl_pipeline import GLRenderer
         GLRenderer.get_instance().render(surface, camera, dt)
 
 
 class SoftwareBackend(RenderBackendStrategy):
-    def render(self, surface: pygame.Surface, camera: Camera, dt: float) -> None:
+    def render(self, surface: pygame.Surface, camera: Any, dt: float) -> None:
         # Fallback puro CPU (DrawingSystem + PostProcessing)
         pass
 

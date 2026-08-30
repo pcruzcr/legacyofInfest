@@ -104,6 +104,9 @@ MARCADORES_DE_POSICION: frozenset[str] = frozenset({
     # AUD-429: el ejemplo de registro de la guía de enemigos traducida.
     "src/stages/mi_nivel/mi_enemigo.py",
     "tests/test_stageN_smoke.py",
+    # AUD-XXX: M7 planificado — tests aún no existen, citados como objetivo.
+    "tests/test_world_simulation.py",
+    "tests/test_environment_state.py",
 })
 
 #: Módulos retirados que la documentación cita **como historia**: «esto existía
@@ -140,6 +143,9 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     # para que alguien lo deserializara por error. `docs/93` lo cita como
     # evidencia del hallazgo F2: historia, no una ruta que deba existir.
     "assets/models/professor_sample.pkl",
+    # AUD-237: el tileset del cementerio genérico se retiró al rehacer stage4_1
+    # con tilesets por fase; KNOWN_GAPS GAP-026 lo cita como historia.
+    "assets/tilesets/tileset_cemetery.png",
 })
 
 #: Estado del jugador: ficheros que el juego **escribe al jugarse** y que

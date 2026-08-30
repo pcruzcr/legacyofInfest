@@ -60,6 +60,17 @@ class EnemyBrute(EnemyBase):
     def _patrol_behavior(self, dt: float) -> None:
         speed = 40.0
         self.position.x += self.facing_direction * speed * dt
+        # Colisión con muros
+        if self._collision_rects:
+            rect = pygame.Rect(int(self.position.x), int(self.position.y), self.rect.width, self.rect.height)
+            for tile in self._collision_rects:
+                if rect.colliderect(tile):
+                    if self.facing_direction > 0:
+                        self.position.x = float(tile.left - self.rect.width)
+                    else:
+                        self.position.x = float(tile.right)
+                    self.facing_direction *= -1
+                    break
         distance = abs(self.position.x - self._patrol_origin.x)
         if distance >= 64:
             self.facing_direction *= -1

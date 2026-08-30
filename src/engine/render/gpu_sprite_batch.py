@@ -39,7 +39,15 @@ encarga normales.
 """
 from __future__ import annotations
 
-import moderngl
+from typing import Any
+
+try:
+    import moderngl  # type: ignore[import-untyped]
+    _HAS_MODERNGL = True
+except ImportError:  # pragma: no cover
+    moderngl = None  # type: ignore[assignment]
+    _HAS_MODERNGL = False
+
 import numpy as np
 import pygame
 
@@ -70,11 +78,15 @@ class SpriteBatchGPU:
 
     def __init__(
         self,
-        ctx: moderngl.Context,
+        ctx: moderngl.Context | Any,  # type: ignore[name-defined]
         ancho: int,
         alto: int,
         max_ordenes: int = 8192,
     ) -> None:
+        if not _HAS_MODERNGL or moderngl is None:
+            raise ImportError(
+                "ModernGL no esta instalado - instala con pip install -e .[accel] para el camino GL"
+            )
         self.ctx = ctx
         self._ancho = ancho
         self._alto = alto

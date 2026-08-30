@@ -14,12 +14,12 @@ date_processed: "2026-07-14"
 > [`60_GUIA_COMPLETA_DEL_MOTOR.md`](60_GUIA_COMPLETA_DEL_MOTOR.md).**
 >
 > Lo que hay aquí abajo sigue siendo cierto, pero es **parcial**: la tabla de
-> enemigos lista 8 de los 30 tipos registrados, y no aparecen ninguno de los
+> enemigos lista 8 de los 54 tipos registrados, y no aparecen ninguno de los
 > objetos de las fases 4 y 5 —`Pickup`, `Key`, `LockedDoor`, `Chest`, `Vine`,
 > `Zipline`, `RhythmBlock`, `MovingPlatform`, `SinkingPlatform`, `WindZone`,
 > `WaterZone`, `FrictionZone`, `Conveyor`, `LaserZone`, `Guard`, `Stalker`,
 > `EventTrigger`—. Si buscas algo y no está aquí, está en la guía completa
-> antes que en ningún sitio.
+> antes que en ningún sitio. Actualizado 2026-08-30: 54 tipos (ver `docs/62`).
 
 ## 1. Requisitos del mapa TMX
 
@@ -421,6 +421,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **101** tipos.
+Total aceptado en `Objects`: **97** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

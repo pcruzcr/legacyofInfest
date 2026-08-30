@@ -641,6 +641,8 @@ class Player(BaseEntity):
             base = 1.0
         elif state == PlayerState.CHARGE_RELEASE and self._active_hitbox is not None:
             base = 1.0
+        elif state == PlayerState.GROUND_POUND and self._active_hitbox is not None:
+            base = 1.0
         from src.engine.core.difficulty import get_config
         cfg = get_config()
         if base > 0.0 and self.combo_active and self.combo_count > 0:

@@ -245,7 +245,7 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 78 tipos de objeto, uno por uno
+## 4. Los 104 tipos de objeto, uno por uno
 
 > **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
 > Esta nota decía primero que la cuenta correcta era 76, contando sólo la capa
@@ -256,8 +256,12 @@ efecto, mira la consola antes que el código.
 > (`BUILTIN_OBJECT_TYPES`) + 37 (enemigos, §6) + 2 (`Solid`/`Platform`, capa
 > `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
 > (`Objective`); ésa era la única corrección real. Revertido a 78.
+>
+> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 54 (enemigos, §6)
+> + 2 (`Solid`/`Platform`) = **104**. La lista de abajo es ilustrativa; la cifra
+> viva la guarda `tests/test_el_inventario_cuenta_bien.py`.
 
-El motor acepta **82 tipos**: 43 integrados del framework y 37 enemigos del
+El motor acepta **104 tipos**: 50 integrados del framework y 54 enemigos del
 registro, en la capa `Objects`, más `Solid` y `Platform` en `Collision`.
 Todos los números se convierten a `float` automáticamente.
 
@@ -802,12 +806,12 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 37 tipos y 13 estados
+## 6. Enemigos: 54 tipos y 13 estados
 
-### Los ocho arquetipos
+### Los ocho arquetipos base
 
-Son la base; los 29 restantes son variantes temáticas con otro aspecto y otros
-números.
+Son la base; los 46 restantes son variantes y jefes con otro aspecto y otros
+números (35 especies del bestiario + 7 de entregas + buddies y especializados).
 
 | Tipo | Cómo se comporta | Propiedades |
 |---|---|---|
@@ -820,21 +824,26 @@ números.
 | `Caster` | ataque a distancia con conjuro | `fire_rate` `projectile_damage` |
 | `Assassin` | se acerca rápido | `patrol_speed` `alert_speed` |
 
-### Las 22 variantes del bestiario
+### Las 35 especies del bestiario
+
+Están registradas en `src/framework/entities/bestiary_registry.py` (AUD-046).
+Incluyen las 22 listadas abajo más 13 añadidas desde entonces (Cangrejo,
+Medusa, PezAbismal, IceSkater, ParryTeacher, etc.). Ver `docs/18_ENEMY_ROSTER.md`
+para la lista viva.
 
 ```
 Walker:   WalkerGuardia  WalkerEstudiante  WalkerGarza  WalkerPalom
           WalkerInsect   WalkerRaton       WalkerTerciopelo
-          WalkerSerpientePequena
+          WalkerSerpientePequena  … (+ Cangrejo — ver roster completo)
 Flying:   FlyingBird     FlyingBoa         FlyingHalcon  FlyingCucaracha
-          FlyingNotebook FlyingTerciovolador
+          FlyingNotebook FlyingTerciovolador … (+ Medusa, PezAbismal)
 Shooter:  ShooterFrog    ShooterBuitre     ShooterQuetzal  ShooterCocinero
           ShooterTiza    ShooterSerpienteArbol  ShooterVenomoLargo
-Jefe:     BossVenado
+Jefe:     BossVenado, BossRey, BossPaburu, BossGavilan (+ buddies)
 ```
 
-**Quince de estos tipos no aparecen en ningún mapa del curso.** Si buscas
-enemigos con personalidad para tu zona, empieza por ahí.
+**Varios de estos tipos no aparecen en ningún mapa del curso.** Si buscas
+enemigos con personalidad para tu zona, empieza por el roster completo.
 
 ### Los enemigos de las entregas
 

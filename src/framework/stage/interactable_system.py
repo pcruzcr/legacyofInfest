@@ -33,6 +33,8 @@ from src.framework.stage.interactables import (
     Llavero,
     PlacaDePresion,
     Recogible,
+    SecretExit,
+    SecretRoom,
     ZonaDeWarp,
     alcanza,
 )
@@ -69,6 +71,8 @@ class InteractableSystem:
         bus: EventBus | None = None,
         warps: list[ZonaDeWarp] | None = None,
         placas: list[PlacaDePresion] | None = None,
+        secret_exits: list[SecretExit] | None = None,
+        secret_rooms: list[SecretRoom] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
@@ -79,6 +83,8 @@ class InteractableSystem:
         self.warps = list(warps or [])
         #: Placas de presión (PressurePlate) — botones por peso.
         self.placas: list[PlacaDePresion] = list(placas or [])
+        self.secret_exits: list[SecretExit] = list(secret_exits or [])
+        self.secret_rooms: list[SecretRoom] = list(secret_rooms or [])
         self.llavero = Llavero()
         self._bus = bus
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
@@ -115,6 +121,7 @@ class InteractableSystem:
         self._disparar(jugador, usar)
         self._warpear(dt, jugador, usar)
         self._cerrar_las_cronometradas(dt, jugador)
+        self._revelar_secretos(jugador, usar)
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
@@ -421,6 +428,26 @@ class InteractableSystem:
             # emitiendo para quien quiera enterarse desde su escena; esto es
             # el camino que no exige escribir Python.
             self.abrir_por_evento(disparador.evento)
+
+    def _revelar_secretos(self, jugador: pygame.Rect, usar: bool) -> None:
+        for sec in self.secret_exits:
+            if sec.descubierto:
+                continue
+            if sec.automatico:
+                if not sec.rect.colliderect(jugador):
+                    continue
+            elif not (usar and alcanza(jugador, sec.rect)):
+                continue
+            if sec.revelar(jugador):  # type: ignore[arg-type]
+                self._emitir(Events.SECRET_FOUND, secret_id=sec.secret_id)
+                self._avisar(f"¡Secreto encontrado: {sec.secret_id}!")
+        for room in self.secret_rooms:
+            if getattr(room, "descubierto", False):
+                continue
+            if not room.rect.colliderect(jugador):
+                continue
+            room.descubierto = True  # type: ignore[attr-defined]
+            self._emitir(Events.SECRET_FOUND, secret_id=getattr(room, "secret_id", ""))
 
     def _warpear(self, dt: float, jugador: pygame.Rect, usar: bool) -> None:
         """AUD-287 — cruzar de un punto del mapa a otro.

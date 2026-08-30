@@ -46,13 +46,13 @@ date_processed: "2026-08-26"
 
 ## M2 — Enemies, bosses, AI (COMPLETADO)
 
-**Alcance:** 30 tipos registrados, 8 arquetipos base, 13 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
+**Alcance:** 54 tipos registrados, 8 arquetipos base, 13 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
 
 **Evidencia:**
 - `pytest tests/test_enemy_state_machine.py -v` → 13 estados
-- `pytest tests/test_boss_venado.py -v` → 100% rúbrica
+- `pytest tests/test_boss_encounter.py -v` → 100% rúbrica (Venado vía `grade_boss.py`)
 - `pytest tests/test_squad_brain.py -v` → 1.82 ms lote vs 11.87 ms unitario
-- `pytest tests/test_bullet_hell.py -v` → 12.94 ms ± 0.072 ms
+- `pytest tests/test_mecanicas_f5.py -k TestEnjambreDeBalas -v` → 12.94 ms → 0.072 ms (EnjambreDeBalas, 2000 balas)
 
 **Commits:** AUD-046, AUD-131, AUD-132, AUD-135, AUD-150, AUD-263, AUD-291-299
 
@@ -165,10 +165,10 @@ python scripts/mutation_check.py --ci    # todos ≥ 70%
 - `EnvironmentState` actualiza cada frame: hora, estación, clima, luz ambiental
 - `PostProcessing` consume `ambient_light`, `bloom`, `vignette` del ambiente
 
-**Evidencia objetivo:**
+**Evidencia objetivo (planificado, ficheros aún no existen):**
 ```bash
-pytest tests/test_world_simulation.py -v    # nuevo
-pytest tests/test_environment_state.py -v   # nuevo
+pytest tests/test_world_simulation.py -v    # planificado — ver `docs/91_PLAN_DE_CIERRE.md` §E1
+pytest tests/test_environment_state.py -v   # planificado — ver `docs/91_PLAN_DE_CIERRE.md` §E1
 ```
 
 **Referencia:** `docs/91_PLAN_DE_CIERRE.md` §E1, `docs/94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md` §7 Lote 5
@@ -210,8 +210,8 @@ python scripts/validate_assets.py --ci               # 0 errores
 
 | Métrica | Actual | Objetivo M8 |
 |---|---|---|
-| Tests passing | 6,300+ | > 6,500 |
-| Mypy scope | 8/22 paquetes | 12/22 |
+| Tests passing | 6,272 | > 6,500 |
+| Mypy scope | 9/22 paquetes | 12/22 |
 | Mutation score (core) | 5 módulos ≥ 70% | 10 módulos ≥ 70% |
 | TMX validation | 22/22 OK | 22/22 + tile checks |
 | Asset validation | 0 errores | 0 errores |

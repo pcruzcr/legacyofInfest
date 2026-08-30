@@ -61,7 +61,7 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Enemigos y jefes
 
-* **30 tipos registrados** sobre ocho arquetipos, con **13 estados** incluido
+* **54 tipos registrados** sobre ocho arquetipos base (22 clases + 35 especies del bestiario, varios jefes), con **13 estados** incluido
   `TELEGRAPHING`.
 * **Cerebro de escuadrón** con scikit-learn: predicción por lote, cadencia
   limitada y escalonada. Medido: 9 filas cuestan 1,82 ms en lote contra 11,87
@@ -72,11 +72,11 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Escenarios y TMX
 
-**78 tipos de objeto en runtime** (43 integrados del framework + 37 del
+**104 tipos de objeto en runtime** (50 integrados del framework + 54 del
 registro una vez descubiertos los escenarios, más `Solid` y `Platform` en
 `Collision`; la referencia de estudiantes `STAGE_CREATION.md` cuenta el
-registro base sin descubrir: 73, y `check_tmx_coverage.py` cuenta
-base+collision: 75), **18 propiedades de mapa**, 8 capas. Incluye las once
+registro base sin descubrir: 97, y `check_tmx_coverage.py` cuenta
+base+collision: 99), **18 propiedades de mapa**, 8 capas. Incluye las once
 mecánicas de la fase 5 —viento, fricción, cinta, láser, onda, agua, plataforma
 móvil, hundible, bloque rítmico, liana, tirolesa— más sigilo con cono de visión
 y perseguidor, y los cuatro interactivos de F4.1.
@@ -113,7 +113,7 @@ daño y efectos de impacto. Todo configurable desde Tiled sin escribir Python.
 
 ### Calidad
 
-* **6326 casos** recogidos (`pytest --collect-only -q`, 2026-08-23).
+* **6272 casos** recogidos (`pytest --collect-only -q`, 2026-08-30).
 * 84 pruebas de humo que **arrancan, actualizan y dibujan** cada escena
   (`test_scene_smoke.py` y `test_stage0_smoke.py`).
 * `ruff` limpio, `mypy` en CI con trinquete, validadores en CI.
@@ -143,18 +143,19 @@ Dos cosas concretas: **no hay atlas de sprites** —58 blits sueltos— y el
 post-procesado se hace **en CPU sobre superficies**, con `gl_pipeline.py`
 (1.100 líneas con sus sombreadores) ya escrito y sin usarse para esto.
 
-### B2. `stage_scene.py` — 1.245 líneas
+### B2. `stage_scene.py` — 1.277 líneas
 
 Carga, actualiza, dibuja, gestiona VFX, agarres, interactuables y cámara. Es un
 objeto-dios y es donde se toca casi cualquier cambio, así que también es donde
-más fácil es romper algo sin querer. Se parte en cuatro o cinco colaboradores.
+más fácil es romper algo sin querer. Se parte en cuatro o cinco colaboradores
+(medido `wc -l src/framework/scenes/stage_scene.py` el 2026-08-30).
 
 ### B3. Alcance del comprobador de tipos
 
 `mypy` entró en CI con **2 paquetes de unos 15** y hoy el trinquete tiene
-**6** (`mypy_scope.txt`, AUD-371): core, input, audio, ui, utils y
-framework/physics. La lista existe justamente para ir subiendo; el trabajo es
-real pero mecánico.
+**9** (`mypy_scope.txt`): core, input, scene, audio, ui, utils, physics, world
+y stage. La lista existe justamente para ir subiendo; el trabajo es
+real pero mecánico (AUD-371, ampliado a 9 en 2026-08-30).
 
 ### B4. Cobertura de pruebas ~48 %
 
@@ -326,16 +327,16 @@ ningún software vivo. El techo realista por categoría está en
 
 | Área | Hay | Mejorable | Falta |
 |---|---|---|---|
-| Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.245 líneas | — |
-| Jugador | 26 estados | — | — |
-| Enemigos | 30 tipos, 13 estados, IA por lote | tipos sin usar en ningún mapa: sólo `BossSpawn` indirecto | — |
+| Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.277 líneas | — |
+| Jugador | 28 estados | — | — |
+| Enemigos | 54 tipos, 13 estados, IA por lote | tipos sin usar en ningún mapa: sólo `BossSpawn` indirecto | — |
 | Jefes | fases, telegrafiado, puntos débiles | variedad entre jefes | — |
-| Escenarios | 78 tipos TMX en runtime (69 base), 11 mecánicas | stage 0 usa 4 de 11 | — |
+| Escenarios | 104 tipos TMX en runtime (97 base), 11 mecánicas | stage 0 usa 4 de 11 | — |
 | Gráficos | luz, clima, VFX, post-procesado | atlas, batching, post en GPU | 2.5D |
 | Audio | música dinámica, ambiente, posicional | — | **reloj musical**, buses, ducking |
 | Accesibilidad | 4 ayudas conectadas | — | — |
 | Persistencia | atómica y endurecida | — | — |
-| Calidad | 6326 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
+| Calidad | 6272 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
 | Localización | catálogos completos, política española-única desde AUD-455/2026-08-11 | ver `tests/test_documentacion_en_espanol.py` para el estado vivo | — |
 
 ---
