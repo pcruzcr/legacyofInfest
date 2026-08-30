@@ -49,6 +49,12 @@ PARTES = {
         "SenalesDeEscenario",
         ("_subscribe_event_handlers", "_unsubscribe_all_handlers"),
     ),
+    # AUD-733: la persistencia (banderas/diálogo/guardado) sale de `senales`
+    # para devolverla a <400 líneas; es estado que sobrevive, no efecto.
+    "persistencia": (
+        "PersistenciaDeEscenario",
+        ("_suscribir_persistencia",),
+    ),
     # AUD-595 — la economía (el botín que deja cada enemigo) sale de
     # `senales`: vivía ahí por historia, no por concepto, y el fichero había
     # vuelto a rozar su presupuesto.
@@ -255,11 +261,7 @@ class TestElArchivoNoVuelveACrecer:
     def test_cada_parte_es_legible_de_una_sentada(self, modulo) -> None:
         ruta = (RAIZ / "src" / "framework" / "scenes" / "stage_parts"
                 / f"{modulo}.py")
-        # AUD-729: senales.py llegó a 441 por sumar economía+sonido sin
-        # partir de nuevo; 400 es ~1 pantalla, 450 sigue siendo legible de
-        # una sentada y evita que un arreglo de 2 líneas rompa CI.
-        limite = 450 if modulo == "senales" else 400
-        assert len(ruta.read_text(encoding="utf-8").splitlines()) <= limite
+        assert len(ruta.read_text(encoding="utf-8").splitlines()) <= 400
 
 
 class TestSeDiceLoQueSonYLoQueNo:

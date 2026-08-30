@@ -17,13 +17,11 @@ queda mudo sin un solo error en consola.
 """
 from __future__ import annotations
 
-import logging
 import random
 from typing import Any
 
 from src.engine.core import settings
 from src.engine.core.events import Events
-from src.engine.core.experience import ExperienceSystem
 from src.framework.stage.interactable_system import EVENTO_RECOGIDO, EVENTO_WARP
 from src.framework.vfx.hit_effects import HitEffects
 
@@ -137,43 +135,10 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(EVENTO_WARP, _on_warp)
         self._vfx_handlers[EVENTO_WARP] = _on_warp
 
-        def _on_flag_set(**data: Any) -> None:
-            flag = str(data.get("flag", ""))
-            if flag:
-                self.context.banderas[flag] = True
-
-        self.context.event_bus.subscribe(Events.FLAG_SET, _on_flag_set)
-        self._vfx_handlers[Events.FLAG_SET] = _on_flag_set
-
-        # AUD-244 — abrir la conversación que pide un disparador del mapa.
-        #
-        # `StageLoader` lee `dialogue_tree_id` de los `MessageTrigger` desde
-        # AUD-127 y hasta ahora sólo `stage0` hacía algo con él, con árboles
-        # escritos a mano en Python. Los otros dieciséis mapas podían declarar
-        # una conversación y no ocurría nada, sin aviso.
-        #
-        # Los árboles se cargan de `data/dialogues/<stage_id>.json` con
-        # `DialogueTree.desde_datos`, que existe desde AUD-127 para que un
-        # diseñador que no programa pueda escribir un diálogo. Hasta hoy no
-        # tenía quien la llamara.
-        def _on_show_dialogue(**data: Any) -> None:
-            tree_id = str(data.get("tree_id", ""))
-            arbol = self._arboles_de_dialogo.get(tree_id)
-            if arbol is None:
-                # Un identificador que no existe es una errata del mapa, y
-                # callarse es justamente lo que hizo que esto tardara meses
-                # en verse.
-                if tree_id:
-                    logging.getLogger(__name__).warning(
-                        "diálogo: el mapa pide el árbol '%s' y no está en "
-                        "data/dialogues/%s.json", tree_id,
-                        getattr(self._stage_data, "stage_id", "?"),
-                    )
-                return
-            if not self._dialogue.active:
-                self._dialogue.start_dialogue(arbol)
-
-        self._vfx_handlers[Events.SHOW_DIALOGUE] = _on_show_dialogue
+        # AUD-733: banderas, diálogo y persistencia viven en
+        # `persistencia.py`. Se llama aquí al final para que `cerraduras`
+        # vea los eventos ya registrados.
+        self._suscribir_persistencia()  # type: ignore[attr-defined]
 
         def _on_enemy_died(**data: Any) -> None:
             # Fix reporte Guillermo 7c: las cerraduras con abre_con_evento no se
@@ -392,44 +357,6 @@ class SenalesDeEscenario:
         self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
 
         self._subscribe_sfx_handlers()
-
-        # Fix reporte Guillermo 7c: cerraduras que se abren por evento del mapa
-        # (TMX `abre_con`) no solo por Disparador. Se suscribe a cada evento
-        # distinto declarado en las cerraduras del nivel, para que un
-        # ENEMY_DIED del cocinero o un evento custom abra sin código en la escena.
-        for cerradura in getattr(self._interactables, "cerraduras", []):
-            evt = str(getattr(cerradura, "abre_con_evento", "") or "")
-            if evt and evt not in self._vfx_handlers and evt not in self._sfx_handlers:
-                def _make_opener(ev: str = evt) -> Any:
-                    def _opener(**_data: Any) -> None:
-                        try:
-                            self._interactables.abrir_por_evento(ev)
-                        except Exception:
-                            pass
-                    return _opener
-                handler = _make_opener()
-                self.context.event_bus.subscribe(evt, handler)
-                self._vfx_handlers[evt] = handler
-
-        # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
-        def _on_save_requested(**data: Any) -> None:
-            sm = self.context.save_manager
-            if sm is not None:
-                sm.auto_save(
-                    stage_id=data.get("stage_id", ""),
-                    stage_index=data.get("stage_index", 0),
-                    checkpoint_x=data.get("checkpoint_x", 0),
-                    checkpoint_y=data.get("checkpoint_y", 0),
-                    health=data.get("health", 100),
-                    max_health=data.get("max_health", 100),
-                    # AUD-251: el checkpoint se lleva las banderas de mundo.
-                    zone_flags=dict(getattr(self.context, "banderas", {})),
-                    # AUD-267: y la experiencia, que sin esto se perdía al
-                    # cerrar el juego aunque hubiera subido jugando.
-                    exp_total=ExperienceSystem.get_instance().exp,
-                )
-        self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
-        self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
 
     def _unsubscribe_all_handlers(self) -> None:
         for evt, handler in self._sfx_handlers.items():

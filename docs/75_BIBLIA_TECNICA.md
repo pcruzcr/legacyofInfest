@@ -24,7 +24,7 @@ señala y gana el código (regla de precedencia de `CLAUDE.md` §5).
 | §1 | ¿Cómo instalo, corro y pruebo el juego? |
 | §2 | ¿Qué comandos CLI tiene el motor? |
 | §3 | ¿Cuáles son los controles? |
-| §4 | ¿Qué hace el jugador? (26 estados, física, combate, habilidades) |
+| §4 | ¿Qué hace el jugador? (28 estados, física, combate, habilidades) |
 | §5 | ¿Qué enemigos existen y cómo se programan? |
 | §6 | ¿Qué jefes hay y qué API usan? |
 | §7 | ¿Cómo diseño un nivel? (TMX: capas, objetos, propiedades) |
@@ -544,7 +544,7 @@ escenario siguen funcionando sin tocarlas). El puente: `ComponentesDeEntidad` (m
 - `BaseEntity(ComponentesDeEntidad, ABC)`: `set_event_bus(bus)`, `update(dt)` (abstracto),
   `draw(surface, camera_offset)` (abstracto). Posición `pygame.Vector2`, `Rect` de colisión,
   visibilidad, activo.
-- `PlayerState(str, Enum)`: los 26 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
+- `PlayerState(str, Enum)`: los 28 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
 - `entity_factory.ensure_registered()`: registra tipos en el StageLoader (idempotente).
 - `bestiary.py`: `BestiaryEntry(enemy_id, name, description, lore, drops, hp, damage)`,
   `Bestiary.get_instance()` → `id_de(enemigo)`, `get_entry(id)`, `get_all_entries()`,

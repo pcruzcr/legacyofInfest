@@ -267,12 +267,12 @@ class AudioPipeline:
     # AUD-639 — Reverb Zones (pre-baked variants)
     # ─────────────────────────────────────────────────────────────────
     
-    def apply_reverb(self, seg, reverb_name: str, wet: float = 0.3, 
+    def apply_reverb(self, seg, reverb_name: str, wet: float = 0.3,
                      dry: float = 0.7, decay: float = 1.5):
         """Apply pre-baked reverb variant to a segment.
-        
-        The reverb variants are pre-baked by \`tools/generate_all_assets.py\`
-        and stored as \`{name}_reverb.wav\` alongside the original.
+
+        The reverb variants are pre-baked by `tools/generate_all_assets.py`
+        and stored as `{name}_reverb.wav` alongside the original.
         """
         if reverb_name == "default":
             return seg

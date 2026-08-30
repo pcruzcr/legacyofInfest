@@ -60,6 +60,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ _DIRECTORIO = Path(__file__).resolve().parent.parent.parent.parent / "locale"
 _catalogo: dict[str, str] = {}
 _idioma_actual: str = IDIOMA_POR_DEFECTO
 _faltantes: set[str] = set()
-_candado = __import__("threading").RLock()
+_candado = threading.RLock()
 
 
 def idioma_actual() -> str:

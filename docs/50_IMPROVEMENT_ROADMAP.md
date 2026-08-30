@@ -19,8 +19,8 @@ date_processed: "2026-08-26"
 
 | Hito | Tema | Estado | Evidencia de aceptación |
 |---|---|---|---|
-| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (27 estados, salto 72 px calibrado) |
-| **M2** | Enemies, bosses, AI | ✅ **Completado** | 30 tipos, 8 arquetipos, 13 estados IA, bullet hell NumPy 0.072 ms |
+| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (28 estados, salto 72 px calibrado) |
+| **M2** | Enemies, bosses, AI | ✅ **Completado** | 54 tipos, 8 arquetipos, 13 estados IA, bullet hell NumPy 0.072 ms |
 | **M3** | Audio system (Phase 6) | ✅ **Completado** | `validate_tmx.py --ci` 22/22, mypy limpio en engine/audio |
 | **M4** | Visual polish (Phase 9) | 🔄 **En curso** | color flash, parallax 5 capas, color grading, squash/stretch |
 | **M5** | Zero-Bug Policy tile validator | 📋 **Planificado** | `validate_tmx.py --ci` valida tiles, animaciones, propiedades |
@@ -35,7 +35,7 @@ date_processed: "2026-08-26"
 **Alcance:** bucle principal, tres relojes, composición de escalas de tiempo, tope de fotograma, bus de eventos, contenedor de escenas, ECS base, componente-como-vista.
 
 **Evidencia:**
-- `pytest tests/test_player_physics.py -v` → 27 estados jugador, salto 72 px
+- `pytest tests/test_player_physics.py -v` → 28 estados jugador, salto 72 px
 - `pytest tests/test_resolucion_de_movimiento.py -v` → resolutor compartido
 - `mypy src/engine/core src/engine/input src/engine/scene` → limpio
 - `ruff check src/engine/ src/framework/ tests/` → limpio

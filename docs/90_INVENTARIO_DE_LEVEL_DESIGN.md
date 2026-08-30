@@ -78,7 +78,7 @@ tiene DSP); la decisión está documentada como no-futuro en la guía del motor
 
 ### 1.2 Gameplay
 
-El jugador tiene **26 estados** en 7 grupos (ver `04_PLAYER_SPEC.md`): suelo
+El jugador tiene **28 estados** en 7 grupos (ver `04_PLAYER_SPEC.md`): suelo
 (`IDLE` `WALKING` `CROUCHING` `SLIDE`), aire (`JUMPING` `FALLING` `DASHING`
 `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE`), ataque (8 estados, incluido
 `ULTIMATE`, que se carga con golpes y se lanza con `U`), `PARRY`, agarre

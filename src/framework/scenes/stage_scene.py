@@ -42,6 +42,7 @@ from src.framework.scenes.stage_parts.economia import EconomiaDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.pausa import PausaDeEscenario
+from src.framework.scenes.stage_parts.persistencia import PersistenciaDeEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.scenes.stage_parts.simulacion import SimulacionDeEscenario
@@ -94,8 +95,8 @@ def _arena_del_jefe(stage_data: StageData, cuerpo: pygame.Rect) -> pygame.Rect:
 
 
 class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
-                 SenalesDeEscenario, SonidoDeEscenario,
-                 EconomiaDeEscenario,
+                  SenalesDeEscenario, PersistenciaDeEscenario, SonidoDeEscenario,
+                  EconomiaDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
                  ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, PausaDeEscenario, BaseScene):
