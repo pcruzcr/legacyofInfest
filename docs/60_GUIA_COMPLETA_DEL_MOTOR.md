@@ -889,11 +889,14 @@ total de 65, aunque no aparecen en la lista corta de 22 variantes arriba
 
 `ArcherQuetzal` · `AssassinSombra` · `BruteGolemHielo` · `BuddyEnguarde` ·
 `BuddyExpresso` · `BuddyRino` · `CasterHealer` · `ChargerWolf` · `Climber` ·
-`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper`
+`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper` ·
+`AhogadoDelPozo` · `Ceibo` · `Cerbatana` · `Hormiga` · `LaSodaCulebra` ·
+`LaSodaShooterCocinero` · `LaSodaZancudo` · `MascaraTilawa` · `Murcielago` · `Oropel` · `SukiaDeCeniza`
 
-Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.)
-y buddies montables; se documentan aquí para que la lista sea exhaustiva sin
-repetir la tabla completa de 35 especies.
+Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.),
+buddies montables y variantes de nivel (Ceibo, Hormiga, Oropel, etc.); se
+documentan aquí para que la lista sea exhaustiva sin repetir la tabla completa
+de 35 especies + 10 nuevas.
 
 ### Los 15 estados de enemigo
 
