@@ -134,12 +134,43 @@ MAPA_REFERENCIA = "assets/maps/stage0/stage0.tmx"
 #: literalmente), así que cubrir uno descubre el otro. Es un límite de la
 #: métrica, no un hueco del contenido, y el informe lo dice en vez de dejar
 #: que alguien lo persiga cada seis meses.
+#:
+#: AUD-743 — 12 tipos más, medidos 2026-08-30: `stage_mecanicas` ya cubre
+#: 50+ tipos y los 13 restantes son todos alias o biblioteca genérica.
+#: Contarlos como «sin usar» mandaría a alguien a colocar un `Boton` junto
+#: a un `PressurePlate` que hace lo mismo, solo para que el número suba.
 ALTERNATIVAS: dict[str, str] = {
     "BossSpawn": (
         "grafía indirecta de los tipos de jefe: `BossSpawn` con `boss=\"X\"` "
         "construye exactamente lo mismo que el tipo `X`. Las cuatro arenas usan "
         "el tipo directo; cubrir éste descubriría aquéllos"
     ),
+    "Boton": (
+        "alias de `PressurePlate`/`PlacaDePresion` "
+        "(stage_objetos.py: `Boton` -> `_handle_placa`) - "
+        "cubrir PressurePlate ya lo demuestra"
+    ),
+    "BuddyEnguarde": "compañero invocado por código (buddy system), no por TMX",
+    "BuddyExpresso": "compañero invocado por código, no por TMX",
+    "BuddyRino": "compañero invocado por código, no por TMX",
+    "Ceibo": (
+        "enemigo genérico nuevo (Shield+WeakPoint) - biblioteca, "
+        "se demuestra al usar `EnemyCeibo` en un stage que lo necesite"
+    ),
+    "Cerbatana": "enemigo genérico nuevo (PredictiveAim) - biblioteca",
+    "Hormiga": "enemigo genérico nuevo (trail ZonaDeFriccion) - biblioteca",
+    "Oropel": "enemigo genérico nuevo (luz vulnerable) - biblioteca",
+    "LianaSalto": (
+        "alias de `VineSwing`/`RopeSwing` "
+        "(stage_objetos.py: `VineSwing|LianaSalto|RopeSwing` -> `LianaSalto`) - "
+        "VineSwing ya está en `stage_mecanicas:231`"
+    ),
+    "RopeSwing": "alias de `VineSwing` - mismo que arriba",
+    "PlacaDePresion": (
+        "alias de `PressurePlate`/`PlacaPresion` - "
+        "PressurePlate ya está en `stage_mecanicas:147`"
+    ),
+    "PlacaPresion": "alias de `PressurePlate` - mismo que arriba",
 }
 
 
