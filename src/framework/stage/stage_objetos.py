@@ -35,6 +35,7 @@ from src.framework.stage.interactables import (
     SecretRoom,
     ZonaDeWarp,
 )
+from src.framework.stage.object_handler_registry import register
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (
     _BOOL_PROPS,
@@ -114,30 +115,17 @@ class ObjetosDeTiled:
                         player_spawn_found = True
                     continue
 
-            if obj_type == "PlayerSpawn":
-                if player_spawn_found:
-                    raise FrameworkUsageError("More than one PlayerSpawn object found")
-                cls._handle_player_spawn(stage, obj)
-                player_spawn_found = True
-
-            elif obj_type == "MessageTrigger":
-                cls._handle_message_trigger(stage, obj, props)
-
-            elif obj_type == "MessageTrigger_Once":
-                cls._handle_message_trigger(stage, obj, props)
-
-            elif obj_type in cls._entity_registry:
+            # 2. Fallback para tipos no registrados o que necesitan contexto extra
+            if obj_type in cls._entity_registry:
                 cls._handle_entity_spawn(stage, obj, obj_name, props, waypoints_by_owner)
-
-            elif obj_type == "Checkpoint":
-                cls._handle_checkpoint(stage, obj, props)
 
             elif obj_type == "NextTrigger":
                 if obj.width > 0 and obj.height > 0:
                     stage.next_trigger = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
 
-            elif obj_type == "HazardZone":
-                cls._handle_hazard_zone(stage, obj, props)
+            elif obj_type == "DeathPit":
+                if obj.width > 0 and obj.height > 0:
+                    stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
 
             elif obj_type == "PushBlock":
                 cls._handle_bloque(stage, obj, props, empujable=True)
@@ -145,83 +133,6 @@ class ObjetosDeTiled:
             elif obj_type == "BreakableBlock":
                 cls._handle_bloque(stage, obj, props, empujable=False)
 
-            elif obj_type == "Cutscene":
-                cls._handle_cutscene(stage, obj, props)
-
-            elif obj_type == "Objective":
-                cls._handle_objetivo(stage, obj, props, obj_name)
-
-            elif obj_type == "DeathPit":
-                if obj.width > 0 and obj.height > 0:
-                    stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
-
-            elif obj_type == "CameraLock":
-                cls._handle_camera_lock(stage, obj, props)
-
-            elif obj_type == "Light":
-                cls._handle_light(stage, obj, props)
-
-            elif obj_type == "AmbientLightZone":
-                cls._handle_zona_luz_ambiente(stage, obj, props)
-
-            elif obj_type == "MusicZone":
-                cls._handle_zona_musica(stage, obj, props)
-
-            elif obj_type == "CameraZoomZone":
-                cls._handle_zona_zoom(stage, obj, props)
-
-            # AUD-605 — la arena del jefe, dibujada en Tiled.
-            elif obj_type == "ArenaZone":
-                cls._handle_zona_arena(stage, obj)
-
-            # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
-            # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
-            # y disparadores de evento.
-            elif obj_type in ("Pickup", "Key"):
-                cls._handle_recogible(stage, obj, props)
-
-            elif obj_type in ("Door", "Cage", "LockedDoor"):
-                cls._handle_cerradura(stage, obj, props, obj_type)
-
-            elif obj_type == "Chest":
-                cls._handle_cofre(stage, obj, props)
-
-            elif obj_type == "EventTrigger":
-                cls._handle_disparador(stage, obj, props)
-
-            elif obj_type == "BossSpawn":
-                problema = cls._handle_boss_spawn(stage, obj)
-                if problema is not None:
-                    report.add(problema)
-
-            elif obj_type == "ScrollZone":
-                cls._handle_scroll_forzado(stage, obj, props)
-
-            elif obj_type == "WarpZone":
-                cls._handle_warp(stage, obj, props)
-
-            elif obj_type == "SecretExit":
-                cls._handle_secret_exit(stage, obj, props)
-
-            elif obj_type == "SecretRoom":
-                cls._handle_secret_room(stage, obj, props)
-
-            elif obj_type in ("PressurePlate", "PlacaDePresion", "PlacaPresion", "Boton"):
-                cls._handle_placa(stage, obj, props)
-
-            elif obj_type == "BuddyRino":
-                cls._handle_buddy(stage, obj, props, "BuddyRino")
-
-            elif obj_type == "BuddyExpresso":
-                cls._handle_buddy(stage, obj, props, "BuddyExpresso")
-
-            elif obj_type == "BuddyEnguarde":
-                cls._handle_buddy(stage, obj, props, "BuddyEnguarde")
-
-            elif obj_type == "Slope":
-                cls._handle_pendiente(stage, obj, props)
-
-            # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
             elif obj_type in _TIPOS_DE_COMPONENTE:
                 cls._handle_componente(stage, obj, props, obj_type)
 

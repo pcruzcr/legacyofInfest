@@ -276,6 +276,24 @@ class HUD:
         self._save_notify_timer: float = 0.0
         #: AUD-281 — lo que queda del rebote del contador de monedas.
         self._pulso_timer: float = 0.0
+        # AUD-729: declaraciones para mypy — los rects los crea el Builder
+        # dinámicamente. Sin estas anotaciones mypy cree que HUD no tiene esos
+        # atributos y cada acceso es attr-defined. Se inicializan con dummy
+        # y el Builder los sobrescribe inmediatamente.
+        self._portrait_frame_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._portrait_sprite_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._y_barras_bloque: int = 0
+        self._paso_barra_bloque: int = 0
+        self._vida_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._estamina_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._carga_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._oxigeno_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._score_region: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._timer_bg_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._timer_icon_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._timer_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._portraits: dict[str, pygame.Surface] = {}
+        self._font: pygame.font.Font = pygame.font.Font(None, 12)
         # Builder — desmonolitización HUD 255 líneas (AUD-724)
         from src.engine.ui.hud_builder import HUDBuilder
         self._builder = HUDBuilder(self)
@@ -334,6 +352,10 @@ class HUD:
             self._frame_edges = {}
             self._frame_fill = None
         # Timer rects ya vienen del Builder, solo falta pre escalar el fill
+        # AUD-729: elimina duplicación MARGEN_DE_PANTALLA — el Builder ya fijó
+        # _score_region/_timer_bg_rect/_timer_icon_rect/_timer_rect con MARGEN=6.
+        # La duplicación anterior redefinía los mismos 4 rects con una variable
+        # local y rompía el lint/mypy (F821/name-defined) sin aportar nada.
         self._timer_fill = (
             pygame.transform.scale(self._frame_fill, (self._timer_bg_rect.width, self._timer_bg_rect.height))
             if isinstance(self._frame_fill, pygame.Surface) else None
@@ -347,56 +369,16 @@ class HUD:
                 "left": pygame.transform.scale(self._frame_edges["left"], (ce, tr.height - 2 * ce)),
                 "right": pygame.transform.scale(self._frame_edges["right"], (ce, tr.height - 2 * ce)),
             }
-        self._timer_icon_rect = _rect_escalado(137, 6 + 1, 12, 12)
-        self._timer_rect = _rect_escalado(151, 6, 34, 14)
         self._oxigeno_ratio: float = -1.0
         self._oxigeno_avisando: bool = False
         self._oxigeno_flash_timer: float = 0.0
         self._oxigeno_flash_on: bool = False
 
-        # AUD-219/AUD-535 — marcador de puntos y monedas, reubicado junto
-        # al bloque de identidad (retrato + barras) ahora que los
-        # corazones ya no ocupan la fila horizontal donde vivía antes.
-        # AUD-547 — su x deriva del borde derecho del retrato con el
-        # mismo hueco de 6 px que tenía antes (26+6=32); con el retrato
-        # movido a MARGEN_DE_PANTALLA=6, ese borde ahora cae en 30, así
-        # que el marcador se corre a 36 para conservar el mismo hueco. Su
-        # y usa el mismo margen de pantalla que el retrato — sin esto
-        # quedaría más cerca del borde superior que su propio vecino.
-        self._score_region = _rect_escalado(
-            MARGEN_DE_PANTALLA + 30, MARGEN_DE_PANTALLA, 92, 24)
+        # AUD-219/AUD-535 — marcador de puntos y monedas. Las 4 regiones ya
+        # vienen del Builder (_score_region, _timer_bg_rect, etc.); aquí sólo
+        # se inicializan los contadores y el estado del parpadeo del reloj.
         self._score: int = 0
         self._coins: int = 0
-        # AUD-535 — el reloj se centra arriba (antes pegado al borde
-        # derecho) y pierde la etiqueta "TIME": un ícono la reemplaza,
-        # dibujado en `_draw_timer`, no un sprite nuevo que mantener.
-        # AUD-547 — y usa el margen de pantalla; x no lo necesita (está
-        # centrado horizontalmente, lejos de ambos bordes laterales).
-        self._timer_bg_rect = _rect_escalado(134, MARGEN_DE_PANTALLA, 52, 16)
-        # Pre-scale timer background once (deferred from frame load block)
-        self._timer_fill = (
-            pygame.transform.scale(
-                self._frame_fill,
-                (self._timer_bg_rect.width, self._timer_bg_rect.height),
-            )
-            if isinstance(self._frame_fill, pygame.Surface)
-            else None
-        )
-        if self._frame_edges:
-            tr = self._timer_bg_rect
-            # AUD-459 — grosor del borde a escala, igual que en el retrato.
-            ce = _e(2)
-            self._timer_edges = {
-                "top": pygame.transform.scale(self._frame_edges["top"], (tr.width - 2 * ce, ce)),
-                "bottom": pygame.transform.scale(self._frame_edges["bottom"], (tr.width - 2 * ce, ce)),
-                "left": pygame.transform.scale(self._frame_edges["left"], (ce, tr.height - 2 * ce)),
-                "right": pygame.transform.scale(self._frame_edges["right"], (ce, tr.height - 2 * ce)),
-            }
-        # AUD-535 — el ícono ocupa el borde izquierdo del marco del reloj;
-        # las cifras, el resto. `_timer_label_rect` (el texto "TIME") ya
-        # no existe — el ícono es la etiqueta.
-        self._timer_icon_rect = _rect_escalado(137, MARGEN_DE_PANTALLA + 1, 12, 12)
-        self._timer_rect = _rect_escalado(151, MARGEN_DE_PANTALLA, 34, 14)
         self._timer_flash_timer: float = 0.0
         self._timer_flash_on: bool = False
         # Load timer font (TTF preferred for readability)
@@ -420,7 +402,8 @@ class HUD:
         # `tools/generate_all_assets.py`).
 
         # Load portrait sprites
-        self._portraits: dict[str, pygame.Surface] = {}
+        # AUD-729: ya declarado arriba para mypy; aquí sólo se vacía y recarga
+        self._portraits.clear()
         for state in _PORTRAIT_STATES:
             path = settings.ASSETS_DIR / "ui" / f"portrait_{state}.png"
             try:

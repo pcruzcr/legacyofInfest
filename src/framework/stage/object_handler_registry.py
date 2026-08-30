@@ -16,7 +16,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-Handler = Callable[[Any, Any, dict[str, Any]], None]
+# AUD-729: Callable[..., Any] permite handlers que son @classmethod
+# (reciben `cls`), que devuelven TmxObjectProblem | None (BossSpawn)
+# o que aceptan `obj_type` extra (Cerradura/Buddy). El registro sólo
+# mapea nombre → callable; la validación de firma es runtime.
+Handler = Callable[..., Any]
 
 _REGISTRY: dict[str, Handler] = {}
 

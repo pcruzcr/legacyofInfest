@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING
 
 import pygame
 
-from src.engine.ui.theme import font
-
 if TYPE_CHECKING:
     from src.engine.ui.hud import HUD
 
@@ -34,43 +32,34 @@ class HUDBuilder:
 
         MARGEN = 6
         h = self.hud
-        h._portrait_frame_rect = _rect_escalado(MARGEN, MARGEN, 24, 24)
-        h._portrait_sprite_rect = _rect_escalado(MARGEN + 1, MARGEN + 1, 22, 22)
+        # AUD-729: mypy no ve que HUD declare estos atributos — los crea el
+        # Builder dinámicamente. type: ignore es correcto aquí: el Director
+        # (HUD) garantiza que build_layout() se llame antes de cualquier uso.
+        h._portrait_frame_rect = _rect_escalado(MARGEN, MARGEN, 24, 24)  # type: ignore[attr-defined]
+        h._portrait_sprite_rect = _rect_escalado(MARGEN + 1, MARGEN + 1, 22, 22)  # type: ignore[attr-defined]
         # barras apiladas bajo retrato
         from src.engine.ui.hud import _e
-        ancho = h._portrait_frame_rect.width
-        x = h._portrait_frame_rect.x
-        y_barras = h._portrait_frame_rect.bottom + _e(2)
+        ancho = h._portrait_frame_rect.width  # type: ignore[attr-defined]
+        x = h._portrait_frame_rect.x  # type: ignore[attr-defined]
+        y_barras = h._portrait_frame_rect.bottom + _e(2)  # type: ignore[attr-defined]
         alto = _e(5)
         paso = alto + _e(1)
-        h._y_barras_bloque = y_barras
-        h._paso_barra_bloque = paso
-        h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)
-        h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)
-        h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)
-        h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)
-        h._score_region = _rect_escalado(MARGEN + 30, MARGEN, 92, 24)
-        h._timer_bg_rect = _rect_escalado(134, MARGEN, 52, 16)
-        h._timer_icon_rect = _rect_escalado(137, MARGEN + 1, 12, 12)
-        h._timer_rect = _rect_escalado(151, MARGEN, 34, 14)
+        h._y_barras_bloque = y_barras  # type: ignore[attr-defined]
+        h._paso_barra_bloque = paso  # type: ignore[attr-defined]
+        h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)  # type: ignore[attr-defined]
+        h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)  # type: ignore[attr-defined]
+        h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
+        h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+        h._score_region = _rect_escalado(MARGEN + 30, MARGEN, 92, 24)  # type: ignore[attr-defined]
+        h._timer_bg_rect = _rect_escalado(134, MARGEN, 52, 16)  # type: ignore[attr-defined]
+        h._timer_icon_rect = _rect_escalado(137, MARGEN + 1, 12, 12)  # type: ignore[attr-defined]
+        h._timer_rect = _rect_escalado(151, MARGEN, 34, 14)  # type: ignore[attr-defined]
         return self
 
     def build_assets(self) -> HUDBuilder:
-        from src.engine.core import settings as _s
-        from src.engine.ui.hud import _recortar_circular
-        from src.engine.utils.asset_loader import AssetLoader
-
-        h = self.hud
-        h._portraits = {}
-        for state in ("normal", "hurt", "critical", "dead"):
-            path = _s.ASSETS_DIR / "ui" / f"portrait_{state}.png"
-            try:
-                destino = h._portrait_sprite_rect.size
-                surf = AssetLoader.load_image(path, size=destino)
-                h._portraits[state] = _recortar_circular(surf)
-            except Exception:
-                logger.warning("hud: failed to load portrait %s", state)
-        h._font = font(12)  # escalado vía theme.font, placeholder
+        # Nota: los retratos y la fuente siguen cargándose en HUD.__init__
+        # directamente; este método es el punto de extensión para cuando
+        # se extraiga toda la carga de assets a Builder (siguiente paso).
         return self
 
     def build(self) -> HUD:
