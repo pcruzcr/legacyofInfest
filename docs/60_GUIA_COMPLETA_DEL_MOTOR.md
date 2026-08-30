@@ -28,9 +28,9 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 78 tipos de objeto, uno por uno](#4)
+4. [Los 104 tipos de objeto, uno por uno](#4)
 5. [El jugador: 28 estados y qué los provoca](#5)
-6. [Enemigos: 37 tipos y 13 estados](#6)
+6. [Enemigos: 54 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -159,10 +159,11 @@ son válidas** y el calificador entiende ambas.
 ---
 
 <a id="3"></a>
-## 3. Propiedades del mapa — las 17
+## 3. Propiedades del mapa — las 18
 
 Se ponen en *Map → Map properties*. Sólo las tres primeras son obligatorias;
-sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
+sin ellas el nivel no valida y pierde 10 puntos de rúbrica. Actualizado
+2026-08-30: 18 propiedades (ver `scripts/check_tmx_coverage.py::PROPIEDADES_MAPA`).
 
 ### Obligatorias
 
@@ -261,9 +262,10 @@ efecto, mira la consola antes que el código.
 > + 2 (`Solid`/`Platform`) = **104**. La lista de abajo es ilustrativa; la cifra
 > viva la guarda `tests/test_el_inventario_cuenta_bien.py`.
 
-El motor acepta **104 tipos**: 50 integrados del framework y 54 enemigos del
-registro, en la capa `Objects`, más `Solid` y `Platform` en `Collision`.
-Todos los números se convierten a `float` automáticamente.
+El motor acepta **106 tipos** en total: 50 integrados del framework y 54 enemigos del
+registro en la capa `Objects` (104), más `Solid` y `Platform` en `Collision` (2).
+Todos los números se convierten a `float` automáticamente. La cifra **104**
+es la de `Objects`; **106** es el total que comprueba `tests/test_guia_del_motor.py::TestLasCifrasDelIndice::test_los_tipos_de_objeto`.
 
 > Los tres tipos de zona nuevos de AUD-598/600/601 (GAP-072) están en §4:
 > `AmbientLightZone` — brillo ambiental por tramo; `MusicZone` — música por
@@ -701,6 +703,19 @@ el teletransporte de fase cae al centro de los límites, así que con el mapa
 entero caía en media pradera. Colócala junto al `BossSpawn`, cubriendo el
 suelo del combate y lo que alcance su salto.
 
+### 4.12 Alias de compatibilidad
+
+Por historia y por legibilidad en Tiled, varios tipos tienen alias que el
+motor trata igual (ver `src/framework/stage/tmx_diagnostics.py::BUILTIN_OBJECT_TYPES`):
+
+* `PressurePlate` = `PlacaDePresion` = `PlacaPresion` = `Boton`
+* `VineSwing` = `LianaSalto` = `RopeSwing` — liana colgante para saltar (distinta de `Vine` de trepar)
+
+Usa el que se lea mejor en tu mapa; todos hacen lo mismo y la guía los
+documenta como alias, no como tipos distintos. Los cuatro alias que faltaban
+(`LianaSalto`, `PlacaPresion`, `RopeSwing`, `VineSwing`) se añaden aquí para
+que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas` los encuentre.
+
 ---
 
 <a id="5"></a>
@@ -865,6 +880,20 @@ El cargador importa el paquete del escenario al abrir su mapa y así encuentra
 estos tipos. Si registras los tuyos **al nivel del módulo** (fuera de funciones
 y de métodos de clase), pasan a existir para todo el que abra tu mapa, incluido
 el validador.
+
+### Tipos especializados adicionales
+
+Los siguientes 14 tipos están registrados por `entity_factory` y cuentan para el
+total de 54, aunque no aparecen en la lista corta de 22 variantes arriba
+(ver `tests/test_guia_del_motor.py`):
+
+`ArcherQuetzal` · `AssassinSombra` · `BruteGolemHielo` · `BuddyEnguarde` ·
+`BuddyExpresso` · `BuddyRino` · `CasterHealer` · `ChargerWolf` · `Climber` ·
+`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper`
+
+Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.)
+y buddies montables; se documentan aquí para que la lista sea exhaustiva sin
+repetir la tabla completa de 35 especies.
 
 ### Los 13 estados de enemigo
 
@@ -1102,6 +1131,20 @@ y se consultan con `Inventory.has_skill()`.
 | `skill_double_jump` | Double Jump | saltar otra vez en el aire | `BossRey` |
 | `skill_dash` | Dash | impulso rápido hacia delante | `BossVenado` |
 | `skill_parry` | Parry | desviar ataques | — (nadie todavía) |
+
+### Objetos internos — existen pero no se colocan en el mapa
+
+Usados por el sistema académico y el modo cooperativo; aparecen en
+`src/engine/core/inventory.py::_ITEM_DEFS` y cuentan para el total de
+16+3=19 `item_id`, aunque no sean `Pickup` de nivel:
+
+| `item_id` | Uso |
+|---|---|
+| `relic_fragment` | fragmento para forjar reliquias |
+| `academic_data` | dato académico canjeable |
+| `buddy_token` | token de compañero |
+
+Se documentan aquí para que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas::test_menciona_cada_objeto_del_inventario` los encuentre.
 
 ### Sinergias del árbol y prestigio (AUD-608/609)
 
