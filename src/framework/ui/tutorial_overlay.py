@@ -56,6 +56,17 @@ class TutorialOverlay:
     def update(self, dt: float, input_manager: InputManager | None) -> None:
         if not self._active:
             return
+        # AUD-673 — con `reduced_motion` el fundido se suprime: el aviso
+        # aparece/desaparece sin alfa, porque el fundido es el que marea.
+        try:
+            from src.engine.core import user_settings as _us
+
+            if _us.preferencia("reduced_motion", False) and self._timer < 0.5:
+                self._timer = 0
+                self._active = False
+                return
+        except Exception:
+            pass
         self._timer -= dt
         if input_manager is not None and input_manager.is_action_just_pressed(Action.CONFIRM):
             self._active = False

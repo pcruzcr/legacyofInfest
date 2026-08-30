@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from src.engine.core import settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.events import Events
+from src.engine.core.i18n import _
 from src.engine.core.user_settings import user_data_dir
 
 logger = logging.getLogger(__name__)
@@ -510,7 +511,7 @@ class AchievementSystem:
 
         pygame.draw.rect(surface, (255, 215, 0), (bx, by, bar_w, bar_h), 1)
 
-        title = self._font.render(f"Achievement Unlocked: {n['name']}", True, (255, 215, 0))
+        title = self._font.render(_("ui.achievement_unlocked").format(name=n['name']), True, (255, 215, 0))
         surface.blit(title, (bx + 8, by + 3))
         desc = self._font.render(n['description'], True, (200, 200, 200))
         surface.blit(desc, (bx + 8, by + 17))

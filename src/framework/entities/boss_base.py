@@ -45,11 +45,28 @@ class BossPhase:
     phase_index: int
     health_threshold: float
     attack_patterns: list[str] = field(default_factory=list)
+    # --- aliases for retrocompatibilidad (AUD-XXX) ---
+    attacks: list[str] | None = field(default=None, repr=False)
+    attack_names: list[str] | None = field(default=None, repr=False)
+    ataques: list[str] | None = field(default=None, repr=False)
     movement_type: str = "stationary"
     speed_multiplier: float = 1.0
     sprite_override: str | None = None
     filter_effect: str | None = None
-    combos: dict[str, list[str]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        alias_val: list[str] | None = None
+        for cand in (self.attacks, self.attack_names, self.ataques):
+            if cand is not None:
+                alias_val = list(cand) if alias_val is None else alias_val + list(cand)
+        if alias_val is not None:
+            if self.attack_patterns:
+                self.attack_patterns = alias_val + list(self.attack_patterns)
+            else:
+                self.attack_patterns = alias_val
+        object.__setattr__(self, "attacks", None)
+        object.__setattr__(self, "attack_names", None)
+        object.__setattr__(self, "ataques", None)
     # ── F5.7 — mecánicas de fase del dossier de jefes ──────────
     #: Inmune al daño durante toda la fase. Nosk, Metal Sonic, Mother Brain.
     #:
@@ -157,6 +174,8 @@ class BossBase(EnemyBase):
         self._completion_fired: bool = False
         self._transition_overlay: pygame.Surface | None = None
         self._flip_cache: dict[tuple[str, int], pygame.Surface] = {}
+        # B-048: cache para sobel (evita recalcular cada frame y evita parpadeo)
+        self._filter_cache: dict[int, pygame.Surface] = {}
 
         # ── Kit de encuentro (AUD-053) ─────────────────────────
         # Antes de esto BossBase sólo sabía de fases. Telegrafiado, puntos
@@ -186,6 +205,17 @@ class BossBase(EnemyBase):
         #: ajustan su rect en `__init__` después de llamar a `super()`, así que
         #: leerlo aquí guardaría el tamaño equivocado.
         self._tam_base: tuple[int, int] | None = None
+
+    def __setattr__(self, name: str, value: object) -> None:
+        # AUD-XXX: is_visible=False debe interrumpir el ataque en curso
+        # inmediatamente, no solo en el proximo tick.
+        object.__setattr__(self, name, value)
+        if name == "is_visible" and value is False:
+            try:
+                atk = object.__getattribute__(self, "attacks")
+                atk.interrupt()
+            except AttributeError:
+                pass
 
     @property
     def completion_fired(self) -> bool:
@@ -265,7 +295,10 @@ class BossBase(EnemyBase):
         self,
         damage: float,
         source_position: tuple[float, float],
+        canal: str | None = None,
     ) -> None:
+        if not self.is_visible:
+            return
         if not self.is_alive or self.is_transitioning:
             return
         if self._invincibility_timer > 0:
@@ -275,7 +308,7 @@ class BossBase(EnemyBase):
             # mismo que estar en transición: aquí el jefe sigue atacando, sólo
             # que golpearlo no sirve hasta que se cumpla lo que la fase pida.
             return
-        super().apply_hit(damage, source_position)
+        super().apply_hit(damage, source_position, canal=canal)
 
         if self.current_health > 0 and self.state != EnemyState.DYING:
             self._check_phase_transition()
@@ -433,8 +466,24 @@ class BossBase(EnemyBase):
         self._invincibility_timer = float("inf")
         self.transition_timer = 2.5
 
+    # Template Method — esqueleto de transición de fase (AUD-725)
+    def on_enter_phase(self, phase: BossPhase) -> None:
+        """Hook para subclases: se ejecuta al entrar a una nueva fase."""
+        pass
+
+    def on_exit_phase(self, phase: BossPhase) -> None:
+        """Hook para subclases: se ejecuta al salir de la fase anterior."""
+        pass
+
     def _finish_phase_transition(self) -> None:
         """Complete phase transition: advance phase, emit event, trigger VFX."""
+        # Hook de salida de la fase anterior (Template Method)
+        if 0 <= self.current_phase < len(self.phases):
+            try:
+                self.on_exit_phase(self.phases[self.current_phase])
+            except Exception:
+                logger.exception("on_exit_phase falló")
+
         self.current_phase += 1
         self.is_transitioning = False
         self._invincibility_timer = 0.0
@@ -456,6 +505,12 @@ class BossBase(EnemyBase):
         if self.current_phase < len(self.phase_health_thresholds):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
         self.current_health = min(self.current_health, self._phase_max_health)
+
+        # Hook de entrada a la nueva fase (Template Method)
+        try:
+            self.on_enter_phase(phase)
+        except Exception:
+            logger.exception("on_enter_phase falló")
 
         self._event_bus.emit(
             Events.BOSS_PHASE_CHANGED,
@@ -483,6 +538,10 @@ class BossBase(EnemyBase):
 
     def _pre_update(self, dt: float) -> bool:
         """Handle phase transitions. Return True to skip normal update."""
+        # AUD-XXX: si el jefe está invisible, no avanza fase ni ataques
+        if not self.is_visible:
+            self.attacks.interrupt()
+            return False
         if self.is_transitioning:
             self.transition_timer -= dt
             if self.transition_timer <= 0:
@@ -510,6 +569,10 @@ class BossBase(EnemyBase):
         animación y el HUD leen de ahí; la máquina de estados sigue siendo la
         dueña del estado.
         """
+        # AUD-XXX: invisible no telegrafia ni invoca
+        if not self.is_visible:
+            self.attacks.interrupt()
+            return
         self.summons.update(dt)
 
         if self.state == EnemyState.DYING or not self.is_alive:
@@ -551,7 +614,7 @@ class BossBase(EnemyBase):
                 self.pending_summons.extend(spawned)
                 self.on_summon(wave.species_id, len(spawned))
 
-    def on_attack_fired(self, attack_name: str) -> None:
+    def on_attack_fired(self, _attack_name: str) -> None:
         """Gancho: el ataque acaba de pasar de aviso a golpe.
 
         Las subclases lo sobreescriben para generar proyectiles, sacudir la
@@ -617,6 +680,8 @@ class BossBase(EnemyBase):
 
     def weak_point_at(self, hit_rect: pygame.Rect) -> WeakPoint | None:
         """El punto débil expuesto que ese golpe alcanza, si alguno."""
+        if not self.is_visible:
+            return None
         for point in self.weak_points:
             # AUD-606 — escala de fase y espejado por dirección para los
             # jefes que declaran `cajas_siguen_al_cuerpo`; el resto conserva
@@ -674,23 +739,46 @@ class BossBase(EnemyBase):
         return None
 
     def _apply_filter(self, frame: pygame.Surface) -> pygame.Surface:
-        """Apply the current phase's filter effect to a sprite frame."""
-        self._filter_frame += 1
+        """Apply the current phase's filter effect to a sprite frame (fix B-048).
+
+        Antes devolvía el sobel opaco negro que tapaba al jefe y solo 1 de cada
+        5 frames → parpadeo negro ~12 Hz. Ahora el sobel devuelve contorno con
+        SRCALPHA (ver FilterTools.sobel_edge) y se compone encima del sprite
+        original, cacheando el resultado para no recalcular cada frame pero sin
+        parpadear: cuando hay efecto, siempre se devuelve el frame filtrado.
+        """
         if not self.phases or self.current_phase >= len(self.phases):
-            return frame
-        if self._filter_frame % _APPLY_FILTER_EVERY_N_FRAMES != 0:
             return frame
         phase = self.phases[self.current_phase]
         effect = phase.filter_effect
         if effect is None:
             return frame
+        # Throttle de cómputo pero sin parpadeo: cachear
+        cache_key = id(frame) ^ hash(effect)
+        cached = self._filter_cache.get(cache_key)
+        # Solo recalcular cada N frames o si no hay cache
+        self._filter_frame += 1
+        if cached is not None and self._filter_frame % _APPLY_FILTER_EVERY_N_FRAMES != 0:
+            return cached
         from src.framework.processing.filter_tools import FilterTools
         if effect == "sobel":
-            return FilterTools.sobel_edge(frame)
+            edge = FilterTools.sobel_edge(frame)
+            # Si sobel ya devuelve overlay transparente (sprite con alpha), componer
+            if edge.get_flags() & pygame.SRCALPHA:
+                composited = frame.copy().convert_alpha()
+                # edge ya tiene fondo transparente y borde blanco → blit normal
+                composited.blit(edge, (0, 0))
+                self._filter_cache[cache_key] = composited
+                return composited
+            # Fallback opaco (foto de laboratorio): devolver tal cual
+            self._filter_cache[cache_key] = edge
+            return edge
         if effect == "sobel_x":
             import numpy as np
             k = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
-            return FilterTools.apply_kernel(frame, k)
+            result = FilterTools.apply_kernel(frame, k)
+            self._filter_cache[cache_key] = result
+            return result
         return frame
 
     def draw(

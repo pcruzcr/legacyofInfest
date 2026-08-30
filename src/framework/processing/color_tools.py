@@ -133,15 +133,38 @@ class ColorTools:
 
     @classmethod
     def apply_tint(cls, surface: pygame.Surface, color: tuple[int, int, int]) -> pygame.Surface:
-        surf = surface.copy()
+        w, h = surface.get_size()
         r, g, b = color
-        arr: np.ndarray = pygame.surfarray.array3d(surf).astype(np.float32)
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
+        arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr[:, :, 0] = (arr[:, :, 0] * r / 255.0).clip(0, 255)
         arr[:, :, 1] = (arr[:, :, 1] * g / 255.0).clip(0, 255)
         arr[:, :, 2] = (arr[:, :, 2] * b / 255.0).clip(0, 255)
-        result = pygame.surfarray.make_surface(arr.astype(np.uint8))
-        if surface.get_alpha():
+        rgb_uint8 = arr.astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = __import__('numpy').transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
+        result = pygame.surfarray.make_surface(rgb_uint8)
+        if surface.get_alpha() is not None:
             result.set_alpha(surface.get_alpha())
+        if surface.get_colorkey() is not None:
+            result.set_colorkey(surface.get_colorkey())
         return result
 
     @classmethod

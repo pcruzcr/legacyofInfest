@@ -1,0 +1,25 @@
+{
+    "name": "combat_arena_small",
+    "description": "Arena pequeña de combate - 3 arquetipos, 5-8 enemigos",
+    "pacing": "combat",
+    "width": 20,
+    "height": 12,
+    "layers": {
+        "Collision": [
+            {"type": "Solid", "x": 0, "y": 176, "width": 320, "height": 16},
+            {"type": "Platform", "x": 64, "y": 144, "width": 48, "height": 8},
+            {"type": "Platform", "x": 160, "y": 128, "width": 64, "height": 8},
+            {"type": "Platform", "x": 256, "y": 144, "width": 48, "height": 8}
+        ],
+        "Terrain": [],
+        "Objects": [
+            {"type": "PlayerSpawn", "x": 32, "y": 160},
+            {"type": "Checkpoint", "x": 160, "y": 160, "width": 16, "height": 32, "props": {"checkpoint_id": "0"}},
+            {"type": "Walker", "x": 96, "y": 160, "props": {"patrol_length": "80", "max_health": "2"}},
+            {"type": "Walker", "x": 160, "y": 160, "props": {"patrol_length": "64", "max_health": "2"}},
+            {"type": "Flying", "x": 200, "y": 112, "props": {"flight_mode": "sine", "flight_speed": "60", "sine_amplitude": "24", "sine_frequency": "1.4"}},
+            {"type": "Flying", "x": 256, "y": 112, "props": {"flight_mode": "sine", "flight_speed": "60", "sine_amplitude": "24", "sine_frequency": "1.4"}},
+            {"type": "Shooter", "x": 288, "y": 160, "props": {"fire_rate": "0.5", "projectile_speed": "120", "projectile_damage": "0.5"}}
+        ]
+    }
+}

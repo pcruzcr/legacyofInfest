@@ -30,7 +30,8 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
-from src.framework.physics.capas import MASCARA_POR_DEFECTO, Capa
+from src.framework.scenes.stage_builder import StageBuilder
+from src.framework.scenes.stage_facade import StageFacade
 from src.framework.scenes.stage_parts.actualizaciones import ActualizacionesDeEscenario
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.arco import ArcoDelJugador
@@ -41,6 +42,7 @@ from src.framework.scenes.stage_parts.economia import EconomiaDeEscenario
 from src.framework.scenes.stage_parts.fantasma import FantasmaDeCarrera
 from src.framework.scenes.stage_parts.mundo_ecs import MundoDelEscenario
 from src.framework.scenes.stage_parts.pausa import PausaDeEscenario
+from src.framework.scenes.stage_parts.persistencia import PersistenciaDeEscenario
 from src.framework.scenes.stage_parts.rush import ConduccionDelBossRush
 from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
 from src.framework.scenes.stage_parts.simulacion import SimulacionDeEscenario
@@ -48,6 +50,7 @@ from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
 from src.framework.stage import culling
 from src.framework.stage.camera import Camera
 from src.framework.stage.collision_system import CollisionSystem
+from src.framework.stage.combat_manager import CombatManager
 from src.framework.stage.drawing_system import DrawingSystem
 from src.framework.stage.hazard_system import HazardSystem
 from src.framework.stage.interactable_system import InteractableSystem
@@ -92,8 +95,8 @@ def _arena_del_jefe(stage_data: StageData, cuerpo: pygame.Rect) -> pygame.Rect:
 
 
 class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
-                 SenalesDeEscenario, SonidoDeEscenario,
-                 EconomiaDeEscenario,
+                  SenalesDeEscenario, PersistenciaDeEscenario, SonidoDeEscenario,
+                  EconomiaDeEscenario,
                  DiagnosticoDeEscenario, CinematicasDeEscenario,
                  ArcoDelJugador, MundoDelEscenario, ActualizacionesDeEscenario, DibujoDeEscenario,
                  FantasmaDeCarrera, ConduccionDelBossRush, PausaDeEscenario, BaseScene):
@@ -119,6 +122,11 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._tutorial_shown: set[str] = set()
         super().__init__(context)
         self._tmx_path = resolved
+        # Facade para clientes que no necesitan conocer la red interna (Facade)
+        self.facade = StageFacade(self)
+        # Builder para construcción por pasos (Builder)
+        self._builder = StageBuilder(context, resolved)
+        self._builder.attach_scene(self)
         self._stage_data: StageData | None = None
         self._player: Player | None = None
         self._camera: Camera = Camera()
@@ -197,6 +205,9 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # los usan sería pagar por nada.
         self._niebla = None
         self._agua_vfx = None
+        # P0 — caché de unión de agua O(n) → O(1) si no cambia (id + rect.topleft)
+        self._agua_union_cache: pygame.Rect | None = None
+        self._agua_version: tuple[tuple[int, tuple[int, int]], ...] | None = None
         self._nado = ControlDeNado()
         self._tiempo_bala = TiempoBala()
         self._scroll_forzado = ScrollForzado()
@@ -415,9 +426,16 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         data = StageLoader.load(self._tmx_path)
         if data is None:
             raise RuntimeError(f"StageScene: failed to load stage from {self._tmx_path}")
+        # AUD-658 — guarda explícita: StageLoader puede devolver None en casos
+        # de TMX corrupto ya reportados vía report.ok; el raise de arriba hace
+        # que _stage_data y _player nunca queden en estado parcial.
+        assert data is not None
         self._stage_data = data
         spawn = self._stage_data.spawn_point
+        assert spawn is not None, "spawn_point no puede ser None tras load exitoso"
         self._player = Player(spawn, event_bus=self.context.event_bus)
+        # AUD-658 — invariante: on_enter siempre deja _player no-None
+        assert self._player is not None
         if hasattr(self._stage_data, "gravity_multiplier"):
             self._player.gravity_multiplier = self._stage_data.gravity_multiplier
         # AUD-129 — la vista del escenario llega al jugador.
@@ -428,7 +446,19 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # sistema de diálogo sin abrirse durante meses (AUD-127) — si algún día
         # alguien renombra el campo, quiero un `AttributeError` ruidoso, no un
         # escenario que calla y se juega en la vista equivocada.
-        self._player.vista_cenital = self._stage_data.vista == "cenital"
+        try:
+            from src.framework.stage.vista_system import es_top_down
+            _is_top = es_top_down(self._stage_data.vista)
+        except Exception:
+            _is_top = self._stage_data.vista == "cenital"
+        self._player.vista_cenital = _is_top
+        # 100% cenital — propaga vista a todos los enemigos (top-down vistas usan cenital physics)
+        for _e in getattr(self._stage_data, "entity_list", []):
+            if hasattr(_e, "vista_cenital"):
+                try:
+                    _e.vista_cenital = _is_top
+                except Exception:
+                    pass
         # AUD-141 — la estamina, si este escenario la pide. Por el mismo
         # camino que la vista: una propiedad del mapa que la escena traslada
         # al jugador al cargar.
@@ -451,50 +481,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._camera.follow(self._player)
         self._camera.set_map_size(*self._stage_data.map_pixel_size)
 
-        for enemy in self._stage_data.entity_list:
-            if hasattr(enemy, "set_event_bus"):
-                enemy.set_event_bus(self.context.event_bus)
-            elif not getattr(enemy, "_event_bus", None):
-                enemy._event_bus = self.context.event_bus
-            if hasattr(enemy, "set_player_ref"):
-                enemy.set_player_ref(self._player.rect)
-            if hasattr(enemy, "set_collision_rects"):
-                # AUD-395 — lo que frena a este enemigo lo decide su máscara
-                # (GAP-038). Antes se le pasaban las dos listas del escenario
-                # y punto: si un enemigo tenía que ignorar algo, se lo filtraba
-                # él por dentro, a mano, y cada uno a su manera.
-                #
-                # `Capa.SOLIDO` y `Capa.PLATAFORMA` se pasan por separado y no
-                # sumadas porque `set_collision_rects` distingue las dos —las
-                # plataformas se atraviesan desde abajo y los sólidos no—, así
-                # que fundirlas aquí perdería justo la diferencia que el
-                # resolutor necesita.
-                mascara = getattr(enemy, "mascara_de_colision", MASCARA_POR_DEFECTO)
-                enemy.set_collision_rects(
-                    self._stage_data.capas.solidos_para(mascara & Capa.SOLIDO),
-                    one_way=self._stage_data.capas.solidos_para(
-                        mascara & Capa.PLATAFORMA),
-                )
-            # AUD-325 — los enemigos comparten el suelo inclinado del
-            # escenario: sin esto, un caminante atravesaría la cara de una
-            # rampa, que el jugador ya respeta desde AUD-323.
-            if hasattr(enemy, "set_pendientes"):
-                enemy.set_pendientes(self._stage_data.pendientes)
-            if isinstance(enemy, BossBase):
-                # AUD-061: el jefe necesita saber dónde acaba su arena, y la
-                # escena es quien conoce el tamaño del mapa. `BossVenado` la
-                # tenía escrita a mano como ARENA_W = 320 mientras su mapa mide
-                # 640: peleaba en la mitad izquierda y una embestida podía
-                # sacarlo del escenario, dejando el combate sin poder ganarse.
-                #
-                # AUD-605 — y el mapa entero tampoco era la respuesta: pasar
-                # `Rect(0, 0, ancho_mapa, alto_mapa)` hacía que cualquier
-                # lógica que usara el centro de los límites —el teletransporte
-                # de fase— cayera en medio del nivel. Un `ArenaZone` en el TMX
-                # declara el cuadrilátero real; ver `_arena_del_jefe`.
-                enemy.set_arena_bounds(_arena_del_jefe(self._stage_data,
-                                                       enemy.rect))
-            self._bestiary.record_encounter(Bestiary.id_de(enemy))
+        # Builder delega el cableado de enemigos (Builder + Facade)
+        self._builder.build_enemies(self._stage_data, self._player)
 
         self._checkpoints = list(self._stage_data.checkpoints)
         for cp in self._checkpoints:
@@ -546,6 +534,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             disparadores=self._stage_data.disparadores,
             bus=self.context.event_bus,
             warps=self._stage_data.warps,
+            placas=getattr(self._stage_data, "placas", None),
         )
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.
@@ -555,6 +544,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             destructibles=self._stage_data.destructibles,
             bus=self.context.event_bus,
         )
+        # AUD-616 — delegar orquestación de combate al CombatManager
+        self._combat = CombatManager(self._collision, self._bloques)
         self._configurar_vfx_opcionales()
         # AUD-400 — los objetivos que declara el mapa (GAP-047). Se dan de alta
         # aquí, con el resto del contenido del TMX, para que el sistema esté
@@ -897,18 +888,52 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         imitaba. Dibujar los dos sumaría una superposición sobre una
         refracción, que es el defecto que AUD-222 acaba de quitar del bloom.
 
-        La región es la pantalla entera porque eso es exactamente lo que
-        cubre hoy `WaterEffect`: la propiedad `water_effect` del TMX es un
-        booleano de escenario, no un rectángulo. Cuando las zonas de agua del
-        ECS expongan su rect en pantalla, es aquí donde hay que estrecharla —
-        la tubería ya acepta cualquier rectángulo.
+        AUD-623 — la región se publica desde las zonas de agua ECS reales,
+        no la pantalla entera. Se calcula la unión de todas las `ZonaDeAgua`
+        visibles en cámara y se publica su envolvente.
+
+        P0 — caché O(n) → O(1): guarda `self._agua_union_cache` (unión en mundo)
+        y `self._agua_version` (tupla de `id` + `rect.topleft` por zona) y
+        recalcula sólo si `len(ZonaDeAgua)` o algún `rect` cambia.
         """
         from src.engine.core import gpu_effects
+        from src.framework.ecs.components import ZonaDeAgua
 
         if gpu_effects.WATER in gpu_effects.effects_on_gpu():
-            gpu_effects.publish_water_region(
-                (0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+            # Versión que cambia si hay más/menos agua o si alguna se movió
+            # Spec: usa `id` + `rect.topleft`; incluimos tamaño implícitamente
+            # via rect copy, pero la clave es topleft como pide el enunciado.
+            version: tuple[tuple[int, tuple[int, int]], ...] = tuple(
+                (id(agua), (agua.rect.x, agua.rect.y)) for _, agua in self._mundo.cada(ZonaDeAgua)
             )
+            world_union: pygame.Rect | None
+            if self._agua_version != version:
+                # Recalcula unión en mundo O(n) — sólo cuando cambia el agua
+                world_union = None
+                for _, agua in self._mundo.cada(ZonaDeAgua):
+                    if agua.rect.width <= 0 or agua.rect.height <= 0:
+                        continue
+                    if world_union is None:
+                        world_union = agua.rect.copy()
+                    else:
+                        world_union = world_union.union(agua.rect)
+                self._agua_union_cache = world_union
+                self._agua_version = version
+            else:
+                world_union = self._agua_union_cache
+
+            if world_union is not None:
+                # Lleva la unión del mundo a pantalla O(1) — clamp y publish
+                rect_pantalla = world_union.move(-int(self._camera.offset.x), -int(self._camera.offset.y))
+                # Culling si totalmente fuera de pantalla (evita publish innecesario)
+                if rect_pantalla.right <= 0 or rect_pantalla.left >= settings.INTERNAL_WIDTH:
+                    return
+                if rect_pantalla.bottom <= 0 or rect_pantalla.top >= settings.INTERNAL_HEIGHT:
+                    return
+                rect_pantalla.clamp_ip(pygame.Rect(0, 0, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
+                gpu_effects.publish_water_region(
+                    (rect_pantalla.left, rect_pantalla.top, rect_pantalla.width, rect_pantalla.height),
+                )
         else:
             self._agua_vfx.draw(surface, self._camera.offset)
 
@@ -981,6 +1006,41 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                     self._bloques.empujar(player.rect, direccion, dt,
                                           con_cerradas)
                 self._bloques.caer(dt, con_cerradas)
+
+            # AUD-XXX — placas de presión: usan la misma lista de solidos
+            # ``con_cerradas`` que los bloques (no duplican composición) y se
+            # evalúan DESPUÉS de que los bloques se hayan movido, para que el
+            # peso del fotograma ya esté en su sitio definitivo. Si una placa
+            # abre una puerta, se recompone ``solidos`` para que el jugador la
+            # note en este mismo fotograma (sin 1 frame de retardo).
+            if getattr(self._interactables, "placas", None) is not None:
+                try:
+                    bloques_para_placa = (
+                        self._bloques.empujables if self._bloques is not None else []
+                    )
+                    if player is not None:
+                        self._interactables.actualizar_placas(
+                            bloques_para_placa, player.rect,
+                        )
+                        # Recompone cerradas/solidos si alguna puerta cambió.
+                        nuevas_cerradas = self._interactables.rects_solidos()
+                        if len(nuevas_cerradas) != len(cerradas) or nuevas_cerradas != cerradas:
+                            cerradas = nuevas_cerradas
+                            con_cerradas = (
+                                stage.collision_rects + cerradas
+                                if cerradas else stage.collision_rects
+                            )
+                            extra = cerradas + (
+                                self._bloques.rects_solidos()
+                                if self._bloques is not None else []
+                            )
+                            solidos = (
+                                stage.collision_rects + extra if extra else stage.collision_rects
+                            )
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "placas: fallo al actualizar", exc_info=True,
+                    )
 
             # F5.3–F5.6 — las mecánicas nuevas corren ANTES que el jugador.
             #
@@ -1130,9 +1190,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             # acertó. No hay un sonido de «bloque roto» y no voy a inventar
             # un nombre para un fichero que no existe: eso es exactamente lo
             # que llevaba `05_ENEMY_SPEC.md` prometiendo (AUD-133).
-            if self._bloques is not None and self._bloques.golpear(player.active_hitbox):
-                self.context.event_bus.emit(Events.SFX_HIT_CONNECT)
-            self._collision.process_attack(dt, player, stage, self._camera, clock)
+            self._combat.process_attack(dt, player, stage, self._camera, clock)
         finally:
             # AUD-498 — el descuento del hit-stop ya NO se hace aquí.
             #
@@ -1148,7 +1206,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             # por fotograma con el reloj real, igual que ya hacían las
             # transiciones. Aquí sólo queda registrar el factor del fotograma
             # en curso, sin descontar tiempo.
-            self._collision.aplicar_escala_de_hitstop(clock)
+            self._combat.aplicar_factor_hitstop(clock)
 
     def actualizar_en_tiempo_real(self, dt_sin_escalar: float) -> None:
         """El hit-stop se descuenta aqui, con el reloj real (AUD-498).
@@ -1158,7 +1216,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         el hit-stop provoca. Ver el `finally` de `_update_combat` para la
         cadena completa.
         """
-        self._collision.update_hitstop(dt_sin_escalar, self.context.clock)
+        self._combat.update_hitstop(dt_sin_escalar, self.context.clock)
 
     def _update_camera_map(self, dt: float) -> None:
         stage = self._stage_data

@@ -23,6 +23,9 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 # ── CONSTANTS ─────────────────────────────────────────────────────
+
+# ── NEW MODULE IMPORTS ──────────────────────────────────────────────
+
 W, H = 320, 224
 TILE_SIZE = 16
 SPRITE_W, SPRITE_H = 32, 32

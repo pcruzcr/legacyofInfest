@@ -1,108 +1,135 @@
 """
-Module: play_map
-System: stages.boss_venado.tools
-Description: PLAYABLE (real window, real input) in-engine viewer for the
-"Residencias al Crepusculo" boss arena map -- the human-playable counterpart
-to ``capture_map.py`` in this same directory. Where ``capture_map.py`` boots
-the real App headlessly and teleports the player to fixed x positions for
-screenshots, this tool boots the SAME real App/scene pipeline but opens an
-actual OS window, runs a REAL 60 FPS game loop (``DeltaClock``/``pygame.time.
-Clock`` real-time pacing, not manually-stepped dt), and lets the user walk
-the map with the engine's own controls (arrows/A-D to move, SPACE/UP/W to
-jump -- ``src/engine/input/action_map.py`` DEFAULT_KEY_BINDINGS, unmodified).
-Movement/physics/collision are handled entirely by the real code path
-main.py uses (``InputManager.pump`` -> ``EventBus.dispatch`` ->
+Modulo: play_map
+Sistema: stages.boss_venado.tools
+Descripcion: visor JUGABLE (ventana real, input real) dentro del motor para
+el mapa de la arena del boss "Residencias al Crepusculo" -- la contraparte
+jugable por humanos de ``capture_map.py`` en este mismo directorio. Donde
+``capture_map.py`` arranca la App real de forma headless y teletransporta al
+jugador a posiciones x fijas para las capturas, esta herramienta arranca el
+MISMO pipeline real de App/escena pero abre una ventana de SO real, corre un
+loop de juego REAL a 60 FPS (ritmo en tiempo real con ``DeltaClock``/
+``pygame.time.Clock``, no dt avanzado manualmente), y deja que el usuario
+camine por el mapa con los propios controles del motor (flechas/A-D para
+moverse, SPACE/UP/W para saltar -- DEFAULT_KEY_BINDINGS de
+``src/engine/input/action_map.py``, sin modificar). El movimiento/fisica/
+colision son manejados enteramente por la ruta de codigo real que usa
+main.py (``InputManager.pump`` -> ``EventBus.dispatch`` ->
 ``SceneManager.update`` -> ``StageScene.update`` -> ``Player.update(dt,
-collision_rects, input_manager)``) -- this tool never reads or writes the
-player's position/velocity itself; see ``_frame`` below.
+collision_rects, input_manager)``) -- esta herramienta nunca lee ni escribe
+la position/velocity del jugador directamente; ver ``_frame`` abajo.
 
-PREVIEW DE FASE 2 -- this tool carries forward the exact same two per-frame,
-capture-tool-only compensations that ``capture_map.py`` documents at length
-(read that module's docstring for the full technical rationale, links to
-``reports\\map_residencias\\CAMERALOCK.md`` and ``reports\\FINDINGS.md`` H-10,
-and the architect approval). Summary, reproduced here because a human at the
-keyboard needs BOTH to actually see themselves move through the arena instead
-of a frozen/stale view:
+PREVIEW DE FASE 2 -- esta herramienta arrastra exactamente las mismas dos
+compensaciones por frame, solo-de-herramienta-de-captura, que
+``capture_map.py`` documenta en detalle (leer el docstring de ese modulo
+para la justificacion tecnica completa, enlaces a
+``reports\\map_residencias\\CAMERALOCK.md`` y ``reports\\FINDINGS.md`` H-10,
+y la aprobacion del arquitecto). Resumen, reproducido aqui porque un humano
+frente al teclado necesita AMBAS para realmente verse moverse por la arena
+en lugar de una vista congelada/desactualizada:
 
-  PREVIEW COMPENSATION A -- CameraLock global switch: the TMX's
-  CameraLock_01 (see ``ArenaZone_01``/``CameraLock_01`` at x=1600 in
-  boss_venado.tmx) freezes BOTH camera axes for the ENTIRE stage from frame 0
-  (``Camera.set_camera_locks()`` does not gate on the lock's rect, a known
-  engine bug). Compensation: empty ``scene._stage_data.camera_locks`` right
-  after the scene is pushed, once, at startup.
+  COMPENSACION DE PREVIEW A -- interruptor global de CameraLock: el
+  CameraLock_01 del TMX (ver ``ArenaZone_01``/``CameraLock_01`` en x=1600 en
+  boss_venado.tmx) congela AMBOS ejes de la camara para TODO el stage desde
+  el frame 0 (``Camera.set_camera_locks()`` no condiciona al rect del lock,
+  un bug de motor conocido). Compensacion: vaciar
+  ``scene._stage_data.camera_locks`` justo despues de que la escena se
+  empuja, una vez, al arrancar.
 
-  PREVIEW COMPENSATION B -- H-10: ``StageScene`` never calls pyscroll's real
-  ``BufferedRenderer.center()``, so the tile BACKGROUND art stays glued to the
-  spawn corner forever while entities (drawn separately) move correctly with
-  ``camera.offset``. Compensation: every frame, between
-  ``scene_manager.update()`` (camera offset final for the frame) and
-  ``app._draw()`` (pyscroll blits from it), call the real
-  ``stage.map_layer.center((camera.offset.x + W/2, camera.offset.y + H/2))``.
+  COMPENSACION DE PREVIEW B -- H-10: ``StageScene`` nunca llama a la
+  ``BufferedRenderer.center()`` real de pyscroll, asi que el arte de FONDO de
+  tiles queda pegado para siempre a la esquina de spawn mientras las
+  entidades (dibujadas por separado) se mueven correctamente con
+  ``camera.offset``. Compensacion: cada frame, entre
+  ``scene_manager.update()`` (offset de camara definitivo para el frame) y
+  ``app._draw()`` (pyscroll blitea a partir de el), llamar a la
+  ``stage.map_layer.center((camera.offset.x + W/2, camera.offset.y + H/2))``
+  real. NOTA (2026-08-26): ``BossVenadoScene`` (boss_venado_scene.py, la
+  escena completa, no la ``StageScene`` base de arriba) tuvo su propia
+  version de esta compensacion en ``update()`` desde el rewrite de fase 2
+  hasta esa fecha, retirada por redundante -- ``App._draw()`` SI recorre
+  ``dibujar_mundo()`` (AUD-039, ver docstring de modulo de
+  ``boss_venado_scene.py``, seccion H-10) y centra el mismo fondo por su
+  cuenta ANTES de dibujarlo. Esta copia de aqui (COMPENSACION B) sigue sin
+  tocarse -- no forma parte de ese retiro, que fue solo de la escena --
+  pero por la misma razon podria ser igual de redundante; no se verifico
+  para este visor, queda como hallazgo abierto.
 
-  PREVIEW COMPENSATION C -- boss AI arena-clamp bug (capture_map's
-  COMPENSATION 3): the professor's original ``BossVenado`` movement AI uses a
-  320-scale arena constant (``ARENA_W = 320``) against WORLD coordinates, so
-  on its very first ``update()`` it flings itself from its TMX spawn (see
-  ``BossVenado_01`` in boss_venado.tmx) out to world x~44, out of the arena.
-  Out of scope for a MAP viewer (logged in FINDINGS.md). This tool snapshots
-  the boss's actual spawn position (``boss.position``) right after the scene
-  loads -- BEFORE any ``update()`` has a chance to move it -- and re-pins the
-  boss to THAT snapshot every frame, same pattern as capture_map.py's
-  ``_pin_boss``/``boss_home``, so it stays visible wherever the TMX places it
-  (previously this was a stale hardcoded (2000, 240) coordinate, wrong since
-  the map's round-11/round-12 widening moved the real spawn -- see FINDINGS).
+  COMPENSACION DE PREVIEW C -- bug de clamp de arena de la IA del boss
+  (COMPENSACION 3 de capture_map): la IA de movimiento original del
+  ``BossVenado`` del profesor usa una constante de arena a escala 320
+  (``ARENA_W = 320``) contra coordenadas de MUNDO, asi que en su
+  primerisimo ``update()`` se lanza a si mismo desde su spawn del TMX (ver
+  ``BossVenado_01`` en boss_venado.tmx) hacia world x~44, fuera de la
+  arena. Fuera del alcance de un visor de MAPA (registrado en
+  FINDINGS.md). Esta herramienta captura la posicion de spawn real del
+  boss (``boss.position``) justo despues de que la escena carga -- ANTES de
+  que cualquier ``update()`` tenga oportunidad de moverlo -- y re-fija al
+  boss a ESA captura cada frame, mismo patron que ``_pin_boss``/
+  ``boss_home`` de capture_map.py, para que siga visible dondequiera que el
+  TMX lo coloque (antes esto era una coordenada (2000, 240) hardcodeada y
+  desactualizada, incorrecta desde que la ampliacion de la ronda-11/
+  ronda-12 del mapa movio el spawn real -- ver FINDINGS).
 
-None of these three touch src/engine, src/framework, or the TMX -- all three
-mutate already-constructed runtime objects (StageData, PyscrollGroup, the
-boss entity) from outside, through their existing public API/fields, exactly
-like capture_map.py does. They are documented as "preview of phase 2" because
-the real fix (making Camera/StageScene/the boss AI correct) is out of scope
-for a map-viewing tool and belongs to later boss-AI/engine-bridge work.
+Ninguna de estas tres toca src/engine, src/framework, ni el TMX -- las tres
+mutan objetos de runtime ya construidos (StageData, PyscrollGroup, la
+entidad del boss) desde afuera, a traves de su API/campos publicos
+existentes, exactamente como hace capture_map.py. Se documentan como
+"preview de fase 2" porque la correccion real (hacer que Camera/StageScene/
+la IA del boss sean correctos) esta fuera del alcance de una herramienta de
+visualizacion de mapa y pertenece a trabajo posterior de IA del boss/puente
+del motor.
 
-REAL WINDOW, NOT DUMMY: unlike capture_map.py, this tool wants an actual OS
-window, so it force-sets SDL_VIDEODRIVER to "windows" -- NOT ``setdefault``
--- but ONLY when launched as the script itself (``if __name__ ==
-"__main__"``). This matters because ``tests/conftest.py`` hard-sets
-``os.environ["SDL_VIDEODRIVER"] = "dummy"`` for the whole pytest session, and
-PowerShell env vars persist across commands typed into the SAME shell
-session (unlike a fresh subprocess env) -- so a shell that recently ran
-pytest could otherwise silently leak "dummy" into this tool and produce a
-window-less run even though a real window was requested. Guarding the force
-behind ``__name__ == "__main__"`` means: run directly -> always get a real
-window regardless of what leaked in; imported as a module (this project's own
-smoke test does exactly that, setting SDL_VIDEODRIVER=dummy itself BEFORE
-importing this module) -> the import is a no-op on the env var, so the smoke
-test stays headless. SDL_AUDIODRIVER is left untouched either way -- a real
-play session should get real audio like main.py does; the smoke test doesn't
-call App() long enough to hit anything but pygame.mixer.init() (harmless
-under whatever driver is already active in that process).
+VENTANA REAL, NO DUMMY: a diferencia de capture_map.py, esta herramienta
+quiere una ventana de SO real, asi que fuerza SDL_VIDEODRIVER a "windows"
+-- NO ``setdefault`` -- pero SOLO cuando se lanza como el propio script
+(``if __name__ == "__main__"``). Esto importa porque ``tests/conftest.py``
+fija a fuego ``os.environ["SDL_VIDEODRIVER"] = "dummy"`` para toda la
+sesion de pytest, y las variables de entorno de PowerShell persisten entre
+comandos tecleados en la MISMA sesion de shell (a diferencia de un entorno
+de subproceso fresco) -- asi que un shell que corrio pytest recientemente
+podria si no filtrar silenciosamente "dummy" a esta herramienta y producir
+una ejecucion sin ventana aunque se pidiera una ventana real. Proteger el
+forzado detras de ``__name__ == "__main__"`` significa: ejecutar
+directamente -> siempre se obtiene una ventana real sin importar que se
+haya filtrado; importado como modulo (el propio smoke test de este
+proyecto hace exactamente eso, fijando el mismo SDL_VIDEODRIVER=dummy ANTES
+de importar este modulo) -> la importacion no tiene efecto sobre la
+variable de entorno, asi que el smoke test se mantiene headless.
+SDL_AUDIODRIVER se deja intacto en cualquier caso -- una sesion de juego
+real deberia tener audio real como lo tiene main.py; el smoke test no
+llama a App() el tiempo suficiente como para tocar nada mas que
+pygame.mixer.init() (inofensivo bajo cualquier driver que ya este activo
+en ese proceso).
 
-Usage (from the LAB's ``game`` directory, real window/audio):
+Uso (desde el directorio ``game`` del LAB, ventana/audio real):
 
     path\\to\\python.exe src\\stages\\boss_venado\\tools\\play_map.py
 
-Controls: arrows or A/D to move, SPACE/UP/W to jump (engine defaults, see
-``src/engine/input/action_map.py``). ESC or closing the window exits
-cleanly. (Note: ESC is ALSO bound to Action.PAUSE/CANCEL, which
-StageScene.update() uses to open its own in-game pause menu -- that still
-happens, in parallel, since the same real events are fed to InputManager;
-this tool additionally watches the raw ESC keydown itself, independent of
-the scene, to guarantee the viewer window always closes on ESC per this
-tool's own spec, rather than only surfacing a pause menu the tester would
-then have to navigate out of.)
+Controles: flechas o A/D para moverse, SPACE/UP/W para saltar (valores por
+defecto del motor, ver ``src/engine/input/action_map.py``). ESC o cerrar la
+ventana sale de forma limpia. (Nota: ESC TAMBIEN esta ligado a
+Action.PAUSE/CANCEL, que StageScene.update() usa para abrir su propio menu
+de pausa dentro del juego -- eso sigue pasando, en paralelo, ya que los
+mismos eventos reales se alimentan a InputManager; esta herramienta
+adicionalmente observa el keydown crudo de ESC por si misma,
+independientemente de la escena, para garantizar que la ventana del visor
+siempre se cierre con ESC segun la propia especificacion de esta
+herramienta, en lugar de solo mostrar un menu de pausa del cual el tester
+tendria que salir despues.)
 
-VERIFICATION: because this tool wants a real window, it can't be exercised
-end-to-end by an automated smoke test without one. What CAN be, and is
-covered by this project's own headless smoke check (SDL dummy, run from the
-LAB, not committed -- see ``reports\\FINDINGS.md`` / session notes for the
-exact command), is that the frame-stepping function below (``_frame``),
-which is the one and only thing that runs every frame and is unique to this
-tool (everything else is either identical to capture_map.py or is the
-standard App/SceneManager real-loop wiring), correctly lets synthetic
-KEYDOWN input reach the real Player through the real InputManager/EventBus/
-SceneManager pipeline and that the two camera compensations keep
-``camera.offset`` following the player -- i.e. that this file's own logic,
-not pygame's window/event system, is correct.
+VERIFICACION: como esta herramienta quiere una ventana real, no puede
+ejercitarse de punta a punta con un smoke test automatizado sin una. Lo que
+SI puede, y esta cubierto por el propio chequeo headless de smoke de este
+proyecto (SDL dummy, corrido desde el LAB, no commiteado -- ver
+``reports\\FINDINGS.md`` / notas de sesion para el comando exacto), es que
+la funcion de avance de frame de abajo (``_frame``), que es lo unico que
+corre cada frame y es exclusivo de esta herramienta (todo lo demas es
+identico a capture_map.py o es el cableado estandar del loop real de
+App/SceneManager), deja correctamente que el input KEYDOWN sintetico
+alcance al Player real a traves del pipeline real de InputManager/EventBus/
+SceneManager y que las dos compensaciones de camara mantengan a
+``camera.offset`` siguiendo al jugador -- es decir, que la logica propia de
+este archivo, no el sistema de ventana/eventos de pygame, sea correcta.
 """
 from __future__ import annotations
 
@@ -110,17 +137,18 @@ import os
 import sys
 from pathlib import Path
 
-# Force a REAL SDL video driver, but only when this file is executed as the
-# script itself -- see "REAL WINDOW, NOT DUMMY" in the module docstring for
-# why this must NOT be a blanket process-wide setting and NOT `setdefault`.
+# Fuerza un driver de video SDL REAL, pero solo cuando este archivo se
+# ejecuta como el propio script -- ver "VENTANA REAL, NO DUMMY" en el
+# docstring del modulo para saber por que esto NO debe ser un ajuste global
+# a nivel de proceso y NO debe ser `setdefault`.
 if __name__ == "__main__":
     os.environ["SDL_VIDEODRIVER"] = "windows"
 
-# tools/ -> boss_venado/ -> stages/ -> src/ -> game/ (LAB game root, the
-# equivalent of legacyofInfest/ in the real project). Same layout constant
-# as capture_map.py.
+# tools/ -> boss_venado/ -> stages/ -> src/ -> game/ (raiz del juego del LAB,
+# el equivalente de legacyofInfest/ en el proyecto real). Misma constante de
+# layout que capture_map.py.
 _GAME_ROOT = Path(__file__).resolve().parents[4]
-os.chdir(_GAME_ROOT)  # StageLoader.load() resolves the TMX path relative to cwd.
+os.chdir(_GAME_ROOT)  # StageLoader.load() resuelve la ruta del TMX relativa al cwd.
 sys.path.insert(0, str(_GAME_ROOT))
 
 import pygame  # noqa: E402
@@ -132,10 +160,11 @@ from src.stages.boss_venado.boss_venado_scene import BossVenadoScene  # noqa: E4
 
 
 def _sync_map_render(scene: BossVenadoScene) -> None:
-    """PREVIEW COMPENSATION B (H-10, see module docstring): call pyscroll's
-    real ``center()`` API so the tile background actually follows
-    ``camera.offset`` instead of staying glued to the initial buffer window.
-    Verbatim logic to capture_map.py's ``_sync_map_render``."""
+    """COMPENSACION DE PREVIEW B (H-10, ver docstring del modulo): llama a la
+    API real ``center()`` de pyscroll para que el fondo de tiles realmente
+    siga a ``camera.offset`` en lugar de quedar pegado a la ventana de
+    buffer inicial. Logica identica, literal, al ``_sync_map_render`` de
+    capture_map.py."""
     stage = scene._stage_data
     if stage is None:
         return
@@ -150,12 +179,14 @@ def _sync_map_render(scene: BossVenadoScene) -> None:
 
 
 def _pin_boss(boss: BossBase | None, home: pygame.Vector2 | None) -> None:
-    """PREVIEW COMPENSATION C (boss AI arena-clamp bug, see module
-    docstring): hold the boss at its TMX spawn every frame, after the scene's
-    own update() has (mis)moved it and before draw(). Verbatim logic to
-    capture_map.py's ``_pin_boss`` -- ``home`` is a snapshot of the boss's
-    REAL spawn position taken dynamically in ``setup()``, not a hardcoded
-    coordinate, so it always matches wherever the current TMX places it."""
+    """COMPENSACION DE PREVIEW C (bug de clamp de arena de la IA del boss,
+    ver docstring del modulo): mantiene al boss fijo en su spawn del TMX
+    cada frame, despues de que el propio update() de la escena lo (mal)movio
+    y antes de draw(). Logica identica, literal, al ``_pin_boss`` de
+    capture_map.py -- ``home`` es una captura de la posicion de spawn REAL
+    del boss tomada dinamicamente en ``setup()``, no una coordenada
+    hardcodeada, asi que siempre coincide con donde sea que el TMX actual
+    lo coloque."""
     if boss is None or home is None:
         return
     boss.position.update(home)
@@ -176,11 +207,12 @@ def _find_boss(scene: BossVenadoScene) -> BossBase | None:
 
 
 def _poll_events() -> tuple[list[pygame.event.Event], bool]:
-    """Poll the real event queue for this frame. Returns (events,
-    quit_requested); quit_requested is True on window-close (QUIT) or a raw
-    ESC keydown -- this tool's own clean-exit hotkey (see module docstring
-    re: ESC also being Action.PAUSE/CANCEL, handled separately/normally by
-    the scene once these events are fed to InputManager in ``_frame``)."""
+    """Sondea la cola de eventos real para este frame. Retorna (events,
+    quit_requested); quit_requested es True al cerrar la ventana (QUIT) o
+    con un keydown crudo de ESC -- la propia tecla de salida limpia de esta
+    herramienta (ver docstring del modulo sobre que ESC tambien es
+    Action.PAUSE/CANCEL, manejado por separado/normalmente por la escena
+    una vez que estos eventos se alimentan a InputManager en ``_frame``)."""
     events = pygame.event.get()
     quit_requested = any(
         e.type == pygame.QUIT
@@ -198,15 +230,17 @@ def _frame(
     events: list[pygame.event.Event],
     dt: float,
 ) -> None:
-    """One iteration of the real game loop body -- the same pipeline
-    App.run() drives (input -> dispatch -> update -> draw), reproduced here
-    (instead of calling app.run() directly) only because the two per-frame
-    compensations must run BETWEEN scene_manager.update() [camera offset
-    final for the frame] and app._draw() [pyscroll blits from it], a point
-    app.run() has no hook for. Movement/physics/collision are entirely the
-    engine's own: this function feeds real events through InputManager same
-    as App._process_events(), then lets SceneManager/StageScene/Player do
-    everything they normally do -- it does not read or write player state."""
+    """Una iteracion del cuerpo real del loop de juego -- el mismo pipeline
+    que conduce App.run() (input -> dispatch -> update -> draw), reproducido
+    aqui (en lugar de llamar a app.run() directamente) solo porque las dos
+    compensaciones por frame deben correr ENTRE scene_manager.update()
+    [offset de camara definitivo para el frame] y app._draw() [pyscroll
+    blitea a partir de el], un punto para el que app.run() no tiene ningun
+    hook. El movimiento/fisica/colision son enteramente del propio motor:
+    esta funcion alimenta eventos reales a traves de InputManager igual que
+    App._process_events(), y luego deja que SceneManager/StageScene/Player
+    hagan todo lo que normalmente hacen -- no lee ni escribe el estado del
+    jugador."""
     app.input_manager.pump(events)
     app.event_bus.dispatch()
     app.scene_manager.update(dt)
@@ -217,30 +251,33 @@ def _frame(
 
 
 def setup() -> tuple[App, BossVenadoScene, BossBase | None, pygame.Vector2 | None]:
-    """Boot the real App, push BossVenadoScene (identical to capture_map.py's
-    startup sequence), apply PREVIEW COMPENSATION A once, locate the boss and
-    snapshot its spawn. Split out from main() so a headless smoke test can
-    drive frames directly without opening a real window."""
+    """Arranca la App real, empuja BossVenadoScene (identico a la secuencia
+    de arranque de capture_map.py), aplica la COMPENSACION DE PREVIEW A una
+    vez, localiza al boss y captura su spawn. Separado de main() para que un
+    smoke test headless pueda conducir frames directamente sin abrir una
+    ventana real."""
     app = App()
     scene = BossVenadoScene(app.context)
-    app.scene_manager.push(scene)  # awake() -> start() -> on_enter(), same as main.py
+    app.scene_manager.push(scene)  # awake() -> start() -> on_enter(), igual que main.py
 
     assert scene._player is not None, "on_enter() did not spawn a player"
     assert scene._stage_data is not None, "on_enter() did not load stage data"
 
-    # PREVIEW COMPENSATION A (CameraLock global switch, see module
-    # docstring): empty the parsed CameraLock list on the already-loaded
-    # StageData so Camera.set_camera_locks() -- re-read every frame from
-    # StageScene.update() -- never sees a lock_x/lock_y=True entry.
+    # COMPENSACION DE PREVIEW A (interruptor global de CameraLock, ver
+    # docstring del modulo): vacia la lista de CameraLock parseada sobre el
+    # StageData ya cargado para que Camera.set_camera_locks() -- releida
+    # cada frame desde StageScene.update() -- nunca vea una entrada con
+    # lock_x/lock_y=True.
     n_locks = len(scene._stage_data.camera_locks)
     scene._stage_data.camera_locks = []
     print(f"[play_map] cleared {n_locks} CameraLock(s) from stage_data for this session")
 
     boss = _find_boss(scene)
-    # Snapshot the boss's spawn BEFORE any update() runs (its AI would relocate
-    # it on frame 0 -- see PREVIEW COMPENSATION C / _pin_boss): this is where
-    # the CURRENT TMX puts it, read dynamically instead of a hardcoded
-    # coordinate that would go stale the next time the map is edited.
+    # Captura el spawn del boss ANTES de que corra cualquier update() (su IA
+    # lo reubicaria en el frame 0 -- ver COMPENSACION DE PREVIEW C /
+    # _pin_boss): aqui es donde el TMX ACTUAL lo coloca, leido dinamicamente
+    # en lugar de una coordenada hardcodeada que quedaria desactualizada la
+    # proxima vez que se edite el mapa.
     boss_home = pygame.Vector2(boss.position) if boss is not None else None
     print(
         f"[play_map] player spawn={tuple(scene._player.position)} "
@@ -256,7 +293,7 @@ def main() -> None:
 
     running = True
     while running and app.context.running:
-        dt = app.clock.tick()  # real-time pacing at settings.TARGET_FPS (60)
+        dt = app.clock.tick()  # ritmo en tiempo real a settings.TARGET_FPS (60)
         events, quit_requested = _poll_events()
         if quit_requested:
             running = False

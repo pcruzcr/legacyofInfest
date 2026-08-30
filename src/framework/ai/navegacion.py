@@ -91,6 +91,10 @@ TOPE_DE_NODOS: int = 1_500
 #: y produce rutas que el cuerpo no puede recorrer.
 _VECINOS: tuple[tuple[int, int], ...] = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
+#: AUD-680 — límite práctico de navegantes simultáneos. Ver docstring del módulo:
+#: 30 navegantes = 7.2 ms/frame (43% del presupuesto). El juego usa 1-2.
+MAX_NAVEGANTES_RECOMENDADO: int = 4
+
 
 @dataclass(slots=True)
 class MallaDeNavegacion:
@@ -138,7 +142,7 @@ class MallaDeNavegacion:
 
 
 def a_estrella(malla: MallaDeNavegacion, inicio: tuple[int, int],
-               meta: tuple[int, int], tope: int = TOPE_DE_NODOS) -> list:
+               meta: tuple[int, int], limite_nodos: int = TOPE_DE_NODOS) -> list:
     """El camino de `inicio` a `meta`, sin incluir el origen.
 
     Devuelve **lista vacía** cuando no hay camino, cuando ya se está en la
@@ -174,7 +178,7 @@ def a_estrella(malla: MallaDeNavegacion, inicio: tuple[int, int],
             return ruta[1:]
 
         expandidos += 1
-        if expandidos > tope:
+        if expandidos > limite_nodos:
             return []
 
         for dx, dy in _VECINOS:

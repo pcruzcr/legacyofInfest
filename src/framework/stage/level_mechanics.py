@@ -56,7 +56,7 @@ _ESTADOS_SUBMARINOS: frozenset[str] = frozenset({
 })
 
 if TYPE_CHECKING:
-    from src.engine.core.clock import Clock
+    from src.engine.core.clock import DeltaClock as Clock
     from src.framework.ecs.world import World
     from src.framework.entities.player import Player
     from src.framework.stage.camera import Camera

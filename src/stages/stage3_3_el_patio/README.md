@@ -4,8 +4,8 @@ assignment_name: "El Patio"
 assignment_id: "stage3_3_el_patio"
 zone: 3
 student_name: "Rebeca"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Stage 3-3 — El Patio
@@ -103,9 +103,9 @@ porque a diferencia del cuarto del jefe, El Patio no tiene pared de fondo.
 
 | Objeto TMX (`type`) | Nombre narrativo | Cantidad | Notas |
 |---|---|---|---|
-| `Walker` | WalkerPalom | 3 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
-| `Flying` | FlyingHalcon | 5 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
-| `Shooter` | ShooterQuetzal | 3 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
+| `Walker` | WalkerPalom | 7 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
+| `Flying` | FlyingHalcon | 15 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
+| `Shooter` | ShooterQuetzal | 8 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
 
 Todos con la propiedad `zone=3` para cargar los sprites de zona correctos automáticamente.
 
@@ -125,6 +125,49 @@ out_B = clamp(orig_B · tinte_B / 255, 0, 255)
 
 Se aplica una sola vez, al cargar los 6 cuadros de animación, no en cada frame de juego.
 
+### Unidad VI — Animación con easing + interacción propia de EventBus
+
+Archivos: [`moneda_fx.py`](moneda_fx.py), [`stage3_3_el_patio.py`](stage3_3_el_patio.py),
+usando `ease_out_elastic` de `src/engine/utils/math_utils.py`.
+
+Cuando se recoge una moneda, el motor emite el evento del framework
+`EVENTO_RECOGIDO` (`src/framework/stage/interactable_system.py`) con
+`item_id`, `cantidad` y `pos` (dónde ocurrió). `MonedaFxController` se
+suscribe a ese evento en `on_stage_start()` — es la interacción propia: nadie
+más en el motor sabe que "El Patio" reacciona a que agarren monedas — y por
+cada una crea un `MonedaSparkle` en esa posición exacta.
+
+El destello no crece de forma lineal: su radio en el instante `t` (0 a 1
+sobre 0.5 s) sigue `ease_out_elastic(t)`, que **se pasa de 1 y vuelve**, dando
+el efecto de "rebote" en vez de un crecimiento uniforme:
+
+```
+radio(t) = RADIO_MAX · ease_out_elastic(t)
+alpha(t) = 255 · (1 − t)
+```
+
+### Unidad VII — Filtros (histograma + convolución)
+
+Archivo: [`fountain.py`](fountain.py), usando `FilterTools.compute_histogram`,
+`FilterTools.adjust_brightness` y `FilterTools.gaussian_blur`
+(`src/framework/processing/filter_tools.py`).
+
+**Histograma dirigiendo una decisión:** antes de teñir el sprite de la
+fuente, se calcula su histograma de luminancia y se promedia:
+
+brillo_medio = Σ (i · cantidad_de_píxeles_con_luminancia_i) / total_píxeles, para i en [0, 255]
+
+Si `brillo_medio < 140`, el sprite se aclara con `adjust_brightness(1.35)`
+**antes** de aplicar el tinte dorado — el histograma decide si hace falta el
+paso extra, no un número puesto a ojo.
+
+**Convolución (desenfoque gaussiano):** el aura de luz detrás de la fuente
+sale de desenfocar un círculo blanco sólido con `gaussian_blur(sigma=6.0)`.
+El resultado es un degradado de brillo del centro hacia afuera; ese mismo
+degradado (0 a 255) se reutiliza directamente como canal alfa de la textura
+final, así el halo se funde con el fondo en vez de recortarse como un
+cuadrado.
+
 ## 3. Cómo ejecutar
 
 ```bash
@@ -139,22 +182,143 @@ Verificado sin errores de consola durante la carga y el recorrido del nivel.
 
 | ID | X | Y |
 |----|---|---|
-| 0 | 448 | 576 |
+| 0 | 320 | 576 |
+| 1 | 816 | 576 |
+| 2 | 1264 | 576 |
+| 3 | 1650 | 576 |
+| 4 | 2130 | 576 |
+
+## 4b. Coleccionables
+
+10 objetos `Pickup` repartidos por el piso y sobre las escaleras de nubes
+(premian tomar la ruta de plataformeo). Cada uno lleva la propiedad
+`item_id="coin"`: sin ella el HUD no las cuenta, porque el contador de monedas
+sólo suma los objetos cuyo `item_id` es exactamente `"coin"` (si falta, el
+motor usa el `name` del objeto y la moneda queda fuera del contador).
+
+## 4c. Migración al motor actualizado (2026-08-26)
+
+El profesor publicó una versión nueva del motor en GitHub
+(`github.com/pcruzcr/legacyofInfest`, rama `dev`). Se migró el trabajo de esta
+carpeta a esa base siguiendo la regla de alcance: **solo se tocaron los
+archivos de `stage3_3_el_patio`**, nada del motor ni de otras entregas. El
+historial local resultó ser ancestro directo de `origin/dev` — sin conflictos
+de fondo. Se instaló la dependencia opcional `moderngl`, requerida por el
+análisis de diseño del calificador (el juego ya funcionaba sin ella).
+
+## 4d. Rediseño con desplazamiento horizontal y ascenso obligatorio (2026-08-26)
+
+El mapa pasó de 960 a **1600 px de ancho** (100 tiles) para que el
+desplazamiento horizontal de cámara se note de verdad — con 960 px casi no
+había margen de scroll (el viewport ya mide 800 px). El fondo cambió a una
+ambientación diurna de campus, propia (cielo, nubes, árboles, edificio),
+inspirada en una referencia pero no copiada, cargada vía
+`background_zone="stage3_3_el_patio"` desde `assets/backgrounds/stage3_3_el_patio/`.
+
+Se agregó una **zona de ascenso obligatorio** (`docs` del proyecto no tienen
+un objeto tipo "Escalera" real — trepar requeriría tocar `player.py`, fuera
+de alcance — así que el mismo efecto se logra con la técnica estándar de
+plataformas): `Solid_MuroBloqueo` (96×128 px, más alto que el salto máximo
+del jugador, ~87 px) corta el piso por completo entre las columnas 36-41; se
+sortea subiendo por 3 `Platform_NubeSub0{1,2,3}` (nube) y bajando por 2
+`Platform_NubeBaj0{1,2}` al otro lado. Verificado con la función de
+alcanzabilidad real del motor (`level_metrics.reachable_platforms`, con
+`collision_rects` + `one_way_rects` juntos): **17 de 19 rectángulos
+alcanzables desde el spawn** — los 2 no alcanzables son los muros de cierre
+del mapa (correcto, no son plataformas).
+
+**Aviso conocido del calificador automático:** `grade_stage.py` cuenta como
+"plataforma huérfana" cualquier rectángulo sólido que no llegue a 2/3 del
+alto del mapa y no sea alcanzable por salto — así clasificaba tanto los
+muros de cierre (corregido, ver 4e) como `Solid_MuroBloqueo`. A este último
+sí lo sigue marcando, porque su análisis de plataformas huérfanas solo mira
+`collision_rects` (sólidos) y no ve las plataformas de un solo sentido — no
+puede ver el camino de la escalera de nubes, aunque exista y esté verificado
+arriba con la física real del motor.
+
+## 4e. Correcciones de la retroalimentación del profesor (2026-08-26)
+
+El profesor calificó la primera entrega en 80,8% y señaló tres problemas.
+Se corrigieron los tres para esta entrega:
+
+1. **"Dos plataformas sin ruta desde el spawn"** — eran `Solid_WallLeft` y
+   `Solid_WallRight`. El calificador solo excluye del análisis de geometría a
+   un rectángulo si mide **al menos 2/3 del alto del mapa** (aquí, ~405 px) y
+   es más alto que ancho; con los muros terminando en la fila 20 (donde
+   empieza el cielo) medían apenas 256/192 px. Se bajaron a la fila 0 —dan la
+   vuelta completa del mapa—, con lo que ahora miden 576/512 px y se
+   reconocen correctamente como muros de cierre, no como plataformas. Al
+   medir solo 2 columnas de ancho, esto no tapa el fondo/cielo en el resto
+   del mapa.
+2. **`HazardZone` en la capa `Collision`** — `_load_collision()` no lee la
+   propiedad `type` de esa capa (solo distingue `Platform` de todo lo
+   demás), así que `HazardZone_01` se estaba cargando como **piso sólido**:
+   el efecto contrario al buscado. Se movió a la capa `Objects`, que es
+   donde `_process_objects()` sí reconoce el tipo `HazardZone` y aplica el
+   daño.
+3. **Falta `author`** — se agregó `author="Rebeca Arce A."` a las
+   propiedades del mapa.
+
+Puntaje con las tres correcciones aplicadas: **124/130 (95,4%)** — subió de
+90,8% a 95,4%. El único aviso que queda es el de `Solid_MuroBloqueo`
+explicado arriba, un límite conocido y documentado de la herramienta, no un
+error de diseño.
+
+## 4f. Nivel largo y más dificultad (2026-08-27)
+
+El mapa creció de 100 a **150 tiles (2400×608 px)**. Como el viewport interno
+del motor mide 800×600 px (`src/engine/core/settings.py`), eso deja **3 pantallas
+completas** de desplazamiento horizontal en lugar de 1, que era lo que se
+pedía: que el scroll se note.
+
+Lo que se añadió al alargarlo, manteniendo la misma dificultad relativa por
+tramo (no hay tramos vacíos de relleno):
+
+| | Antes (v3) | Ahora (v4) |
+|---|---|---|
+| Ancho del mapa | 100 tiles (1600 px) | **150 tiles (2400 px)** |
+| Enemigos | 12 | **30** (7 `Walker`, 15 `Flying`, 8 `Shooter`) |
+| Zonas de ascenso obligatorio | 1 | **2** (columnas 26 y 96) |
+| Monedas (`Pickup`) | 5 | **10** |
+| Checkpoints | 3 | **5** |
+| `HazardZone` | 1 | **3** |
+| Obstáculos de piso | 6 | **8** (rocas + cajones de madera) |
+
+**Sobre los enemigos:** el roster de la zona 3 es de aves, y el registro de
+tipos del motor (`entity_factory.py`) sólo reconoce `Walker`, `Flying` y
+`Shooter` — no existe un tipo "murciélago" ni "dron", y inventarlo obligaría a
+tocar código del profesor, que está fuera de alcance. El efecto de enjambre se
+consigue con la densidad de `Flying` (15 halcones), que es el tipo aéreo real
+del motor.
+
+**Segunda zona de ascenso:** se generó con la misma función que la primera
+(`zona_de_ascenso()` en el script generador), así que repite la geometría ya
+verificada: muro de 6 tiles de ancho × 8 de alto (128 px, por encima del salto
+máximo de ~87 px), 3 nubes subiendo antes y 2 bajando después.
+
+Puntaje del calificador automático con el nivel v4: **124/130 (95,4%)**, con
+`design_pacing` en 8/8 (reconoce "2 saltos exigentes"). El único aviso que
+queda es el de `Solid_MuroBloqueo` explicado en 4d — ahora aparece dos veces,
+una por zona de ascenso, por la misma razón conocida.
 
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
 |---|---|---|
-| `Platform_Step1/2/3` | Un solo sentido | Alturas distintas, para variar el salto entre el spawn y la salida |
-| `Solid_Cajon01/02` | Sólido (16 px) | Hay que saltarlos, están a ras de piso |
-| `HazardZone_01` | Daño 0.25 | Zona de peligro en el tramo medio del recorrido |
+| `Solid_MuroBloqueo01/02` | Sólido (96×128 px) | Cortan el piso; obligan a subir por las nubes |
+| `Platform_NubeSub01/02/03` | Un solo sentido | Escalera subiendo, ~48 px de salto cada una |
+| `Platform_NubeBaj01/02` | Un solo sentido | Escalera bajando, del otro lado del muro |
+| `Solid_Roca01…04` | Sólido (16 px), roca | Obstáculos de piso — hay que saltarlos |
+| `Solid_CajonMadera01…04` | Sólido (16 px), madera | Algunos van pegados a una roca: salto más exigente |
+| `HazardZone_01/02/03` | Daño 0.25 | Tres zonas de peligro repartidas por el recorrido |
 | `Solid_Planter01/02` | Sólido (32 px) | Jardineras — también sirven de cobertura contra las aves |
+| `Platform_Fountain` | Un solo sentido | Plataforma de piedra de la fuente, en el centro del nivel |
 
 ## 6. Notas de lógica personalizada
 
 La fuente (`Fountain`, en `fountain.py`) no es un enemigo ni un objeto del registro de
 tipos del TMX: se instancia manualmente en `on_stage_start()` de
-`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (496, 544)`, que coincide con el
+`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (1200, 544)`, que coincide con el
 centro del objeto `Platform_Fountain` de la capa `Collision`. Cura 0.25 corazones al
 jugador si se mantiene a menos de 28 px del centro, con un cooldown de 6 segundos.
 

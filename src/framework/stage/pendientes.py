@@ -85,6 +85,11 @@ class Pendiente:
     rect: pygame.Rect
     #: `True` si el lado alto está a la derecha.
     sube_a_la_derecha: bool = True
+    #: AUD-590 — colina suave 6×24 que usa `_altura_colina` de `generate_stage0_tmx.py:54`.
+    #: Con `suave=True` la superficie no es lineal sino una curva en S (coseno)
+    #: que empieza y termina horizontal, como la colina escalonada del Stage 0
+    #: pero continua. Se expone como propiedad `sube="suave"` en Tiled para demo.
+    suave: bool = False
 
     def altura_en(self, x: float) -> float | None:
         """La `y` de la superficie en esa `x`, o `None` si cae fuera.
@@ -103,6 +108,13 @@ class Pendiente:
         if not self.sube_a_la_derecha:
             avance = 1.0 - avance
         # avance 0 = pie de la cuesta (abajo), 1 = lo alto (arriba).
+        if self.suave:
+            # Curva suave 6×24 — usa la misma idea que `_altura_colina` de
+            # `generate_stage0_tmx.py`: rampa en S con coseno para que la
+            # pendiente empiece y termine horizontal. Es half-cosine:
+            # smoothstep = 0.5*(1 - cos(pi*avance)).
+            import math
+            avance = 0.5 * (1.0 - math.cos(math.pi * avance))
         return float(self.rect.bottom - avance * self.rect.height)
 
 

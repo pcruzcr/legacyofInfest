@@ -1,0 +1,20 @@
+# Perfil de progreso del modo taller. Se regenera con `course_mode.activar()`
+# y es distinto en cada máquina; versionarlo sembraría el progreso de quien lo
+# generó en el repositorio de todos.
+profiles/
+
+# Modelos entrenados en clase. Además de pesar, son pickles: distribuirlos por
+# el repositorio es justo lo que `scripts/train_reference_model.py` del motor
+# evita a propósito — se distribuyen los datos y el guion, no el binario.
+models/
+
+# Datasets generados. Se reproducen con semilla fija desde `cvcourse.synthetic`
+# y desde `engine_bridge.capturar_escena`, así que el guion es la fuente y las
+# imágenes son el resultado.
+datasets/engine_frames/
+datasets/synthetic_parts/
+datasets/features/
+
+# Salidas de laboratorio de los estudiantes.
+outputs/
+*.ipynb_checkpoints/

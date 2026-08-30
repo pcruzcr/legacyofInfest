@@ -15,6 +15,7 @@ from src.engine.core.game_context import GameContext
 from src.engine.core.registro import configurar_registro
 from src.engine.core.save_manager import SaveManager
 from src.engine.input.input_manager import InputManager
+from src.engine.render.render_facade import RenderFacade
 from src.engine.scene.scene_manager import SceneManager
 from src.framework import FrameworkUsageError
 
@@ -47,6 +48,10 @@ class EscenaConRutaDeGPU(Protocol):
     Así que el Protocol es el **contrato escrito** —quien quiera la ruta de
     GPU ya no tiene que deducir los nombres leyendo `_draw`— y la
     comprobación sigue siendo por pato, con `_soporta`.
+
+    AUD-659 — no se marca @runtime_checkable a propósito; ver _soporta y
+    test_el_fotograma_sin_escena.py. El cast en _draw sigue siendo seguro
+    porque _soporta ya verificó callable(getattr(...)).
     """
 
     def dibujar_mundo(self, destino: pygame.Surface) -> None: ...
@@ -126,6 +131,7 @@ class App:
         # soportar.
         self._gl_renderer: GLRenderer | None = None
         self._init_pygame()
+        self._render_facade = RenderFacade(prefer_gl=use_gl)
         self._init_subsystems()
         # AUD-458 — el kernel JIT de partículas se compila ANTES del bucle.
         self._precalentar_particulas()
@@ -231,8 +237,6 @@ class App:
             (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
             pygame.SRCALPHA,
         )
-        self._scaled_surface: pygame.Surface | None = None
-        self._last_scale: int = 0
         self.clock = DeltaClock()
         self.running: bool = False
         self._pintar_primer_fotograma()
@@ -460,7 +464,18 @@ class App:
         self.plugins.disparar("juego_arrancado", app=self)
         self.running = True
         consecutive_errors = 0
+        # AUD-654 — cachear el accesorio de preferencias fuera del bucle: `get()`
+        # dentro del while importaba y resolvía el singleton cada fotograma.
+        from src.engine.core.clock import DeltaClock as _DeltaClock
+        from src.engine.core.user_settings import get as _get_settings
+        _FUENTE_SLOW_MO = _DeltaClock.FUENTE_ASSIST_SLOW_MO
         while self.running and self.context.running:
+            slow_mo = _get_settings().assist_slow_mo
+            if slow_mo != 1.0:
+                self.clock.escalar(_FUENTE_SLOW_MO, slow_mo)
+            else:
+                self.clock.restaurar(_FUENTE_SLOW_MO)
+
             dt = self.clock.tick()
             self._process_events()
             self.event_bus.dispatch()
@@ -554,6 +569,9 @@ class App:
             self.scene_manager.current.process_events(events)
 
     def _draw(self, dt: float = 0.0) -> None:
+        # Facade — punto único para backend GL vs Software (AUD-725)
+        from src.engine.render.render_facade import GLBackend, SoftwareBackend
+        self._render_facade.set_backend(GLBackend() if self._use_gl and self._gl_renderer else SoftwareBackend())
         # AUD-222 — se olvida lo publicado en el fotograma anterior *antes* de
         # que dibuje nadie. Los menús no ejecutan post-procesado, así que sin
         # este borrón la pantalla de título heredaría el bloom del nivel del
@@ -580,8 +598,20 @@ class App:
             # dibuja el mundo y la interfaz por separado: el mundo entra en la
             # cadena de pasadas y la interfaz se compone después. Para todo lo
             # demás, `draw` sigue siendo el dibujo entero de una vez.
+            # Fix reporte Guillermo 4: si la subclase sobreescribe `draw()`
+            # (nombre que uno esperaría extender), respetarlo. `DibujoDeEscenario`
+            # es el contrato GPU; una subclase que trae su propio `draw` ya
+            # dijo que quiere controlar el orden.
             escena = self.scene_manager.current
-            if _soporta(escena, "dibujar_mundo"):
+            # ¿la clase concreta trae su propio draw distinto del de DibujoDeEscenario?
+            try:
+                from src.framework.scenes.stage_parts.dibujo import DibujoDeEscenario
+                sobreescribe_draw = type(escena).draw is not DibujoDeEscenario.draw
+            except Exception:
+                sobreescribe_draw = False
+            if sobreescribe_draw:
+                escena.draw(self.internal_surface)
+            elif _soporta(escena, "dibujar_mundo"):
                 cast("EscenaConRutaDeGPU", escena).dibujar_mundo(
                     self.internal_surface)
             else:
@@ -645,6 +675,8 @@ class App:
             if matriz is not None:
                 self._gl_renderer.config.color_matrix = matriz
                 self._gl_renderer.config.color_grading_enabled = True
+            else:
+                self._gl_renderer.config.color_grading_enabled = False
             # AUD-215 — el golpe que pidió la escena al recibir daño, y el
             # decaimiento. El impulso se recoge (y se borra) aquí; mantenerlo
             # vivo mientras se apaga es cosa del renderizador, que es quien
@@ -697,6 +729,13 @@ class App:
                 cast("EscenaConRutaDeGPU", escena).dibujar_ui(
                     self._ui_overlay_surface)
                 overlay = self._ui_overlay_surface
+            # AUD-622 — actualiza el origen de los godrays según la posición del sol.
+            # La escena expone su EnvironmentState en `_ambiente` (ambiente.py).
+            if hasattr(escena, "_ambiente") and escena._ambiente is not None:
+                self._gl_renderer.set_godray_origin_from_sun(
+                    escena._ambiente.altura_solar,
+                    escena._ambiente.azimut_solar,
+                )
             self._gl_renderer.render(
                 self.internal_surface, self._current_light_surface(),
                 overlay=overlay,

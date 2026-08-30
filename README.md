@@ -13,7 +13,7 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Consola de depuración (F11) con FPS, cola de eventos y árbol de módulos; cajas de colisión en F1
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 6.190 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 6.274 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt
@@ -28,17 +28,17 @@ diseñador es `docs/60_GUIA_COMPLETA_DEL_MOTOR.md`.
 Construido sobre el patrón Estado, el patrón Estrategia e inyección de
 dependencias:
 
-- **Jugador** — máquina de estados con **26** estados: `IDLE` `WALKING` `JUMPING`
+- **Jugador** — máquina de estados con **28** estados: `IDLE` `WALKING` `JUMPING`
   `FALLING` `CROUCHING` `SHORT_ATTACK` `LONG_ATTACK` `HURT` `DYING` `DASHING`
   `PARRY` `CHARGE_ATTACK` `DASH_ATTACK` `WALL_SLIDE` `LEDGE_GRAB` `GRAB`
-  `THROW` `SLIDE` `SWIMMING` `CLIMBING` `ZIPLINE` `ULTIMATE` `AERIAL_ATTACK`
-  `AERIAL_SLAM` `AIR_CHASE` `CHARGE_RELEASE`
+  `THROW` `SLIDE` `SWIMMING` `SWIM_ATTACK` `CLIMBING` `ZIPLINE` `ULTIMATE` `AERIAL_ATTACK`
+  `AERIAL_SLAM` `GROUND_POUND` `AIR_CHASE` `CHARGE_RELEASE`
 - **Escenarios** — carga de TMX con dibujado por pyscroll, capas de colisión,
   puntos de control, zonas de peligro, fosos, bloqueos de cámara y fondos con
-  parallax. **78 tipos de objeto** aceptados desde Tiled en ejecución (39
-  integrados del framework y 37 del registro una vez descubiertos los
+  parallax. **104 tipos de objeto** aceptados desde Tiled en ejecución (50
+  integrados del framework y 54 del registro una vez descubiertos los
   escenarios, más `Solid` y `Platform` en la capa `Collision`)
-- **Enemigos** — 30 tipos registrados sobre ocho arquetipos (caminante, volador,
+- **Enemigos** — 54 tipos registrados sobre ocho arquetipos base (caminante, volador,
   tirador, arquero, embestidor, bruto, hechicero, asesino) con una máquina de
   13 estados
 - **Jefes** — fases, telegrafiado, puntos débiles, parry, invocaciones y
@@ -61,7 +61,7 @@ src/
   framework/           framework de juego (entidades, escenario, ecs, ia, vfx,
                        ui, procesamiento, académico)
   stages/              el escenario 0 y las entregas de los estudiantes
-tests/                 6.190 pruebas sobre todos los módulos
+tests/                 6.274 pruebas sobre todos los módulos
 tools/                 generadores de mapas
 scripts/               validadores, calificadores y el previsualizador de TMX
 docs/                  documentación completa

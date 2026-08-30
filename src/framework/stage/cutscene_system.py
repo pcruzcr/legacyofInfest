@@ -151,10 +151,10 @@ class DialogueAction(CutsceneAction):
         self._box_surf = pygame.Surface((settings.INTERNAL_WIDTH - 40, 60), pygame.SRCALPHA)
         self._box_surf.fill((0, 0, 0, 200))
         self._hint_surf = self._font.render("[ENTER]", True, (140, 140, 150))
-        self._prev_speaker = None
-        self._prev_text = None
-        self._speaker_surf = None
-        self._text_surf = None
+        self._prev_speaker: str | None = None
+        self._prev_text: str | None = None
+        self._speaker_surf: pygame.Surface | None = None
+        self._text_surf: pygame.Surface | None = None
 
     def start(self) -> None:
         self._elapsed = 0.0

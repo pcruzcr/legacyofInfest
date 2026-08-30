@@ -17,13 +17,11 @@ queda mudo sin un solo error en consola.
 """
 from __future__ import annotations
 
-import logging
 import random
 from typing import Any
 
 from src.engine.core import settings
 from src.engine.core.events import Events
-from src.engine.core.experience import ExperienceSystem
 from src.framework.stage.interactable_system import EVENTO_RECOGIDO, EVENTO_WARP
 from src.framework.vfx.hit_effects import HitEffects
 
@@ -137,45 +135,22 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(EVENTO_WARP, _on_warp)
         self._vfx_handlers[EVENTO_WARP] = _on_warp
 
-        def _on_flag_set(**data: Any) -> None:
-            flag = str(data.get("flag", ""))
-            if flag:
-                self.context.banderas[flag] = True
-
-        self.context.event_bus.subscribe(Events.FLAG_SET, _on_flag_set)
-        self._vfx_handlers[Events.FLAG_SET] = _on_flag_set
-
-        # AUD-244 — abrir la conversación que pide un disparador del mapa.
-        #
-        # `StageLoader` lee `dialogue_tree_id` de los `MessageTrigger` desde
-        # AUD-127 y hasta ahora sólo `stage0` hacía algo con él, con árboles
-        # escritos a mano en Python. Los otros dieciséis mapas podían declarar
-        # una conversación y no ocurría nada, sin aviso.
-        #
-        # Los árboles se cargan de `data/dialogues/<stage_id>.json` con
-        # `DialogueTree.desde_datos`, que existe desde AUD-127 para que un
-        # diseñador que no programa pueda escribir un diálogo. Hasta hoy no
-        # tenía quien la llamara.
-        def _on_show_dialogue(**data: Any) -> None:
-            tree_id = str(data.get("tree_id", ""))
-            arbol = self._arboles_de_dialogo.get(tree_id)
-            if arbol is None:
-                # Un identificador que no existe es una errata del mapa, y
-                # callarse es justamente lo que hizo que esto tardara meses
-                # en verse.
-                if tree_id:
-                    logging.getLogger(__name__).warning(
-                        "diálogo: el mapa pide el árbol '%s' y no está en "
-                        "data/dialogues/%s.json", tree_id,
-                        getattr(self._stage_data, "stage_id", "?"),
-                    )
-                return
-            if not self._dialogue.active:
-                self._dialogue.start_dialogue(arbol)
-
-        self._vfx_handlers[Events.SHOW_DIALOGUE] = _on_show_dialogue
+        # AUD-733: banderas, diálogo y persistencia viven en
+        # `persistencia.py`. Se llama aquí al final para que `cerraduras`
+        # vea los eventos ya registrados.
+        self._suscribir_persistencia()  # type: ignore[attr-defined]
 
         def _on_enemy_died(**data: Any) -> None:
+            # Fix reporte Guillermo 7c: las cerraduras con abre_con_evento no se
+            # abrían si el evento no venía de un Disparador del mapa. Ahora
+            # cualquier ENEMY_DIED intenta abrir lo que escuche ese nombre, sin
+            # obligar a la escena a llamar a abrir_por_evento a mano.
+            try:
+                for evt in (str(data.get("entity_id", "")), Events.ENEMY_DIED, str(data.get("skill_drop", ""))):
+                    if evt:
+                        self._interactables.abrir_por_evento(evt)
+            except Exception:
+                pass
             pos = data.get("position", (0, 0))
             self._particle_system.get_emitter("death").emit(
                 float(pos[0]), float(pos[1]), HitEffects.DEATH,
@@ -249,6 +224,16 @@ class SenalesDeEscenario:
             self._camera.apply_shake(amplitude=3.0, duration=0.15)
             self._post_processing.flash((100, 200, 255), alpha=120, duration=0.1)
             self._post_processing.set_bloom(0.3, duration=0.15)
+            # P0: hit-stop 8f (0.133s) con FUENTE_HITSTOP — congela mundo y no la música (clock.py:104)
+            try:
+                if hasattr(self, "_collision") and self._collision is not None:
+                    self._collision.trigger_hitstop(8.0 / 60.0)
+                elif hasattr(self, "context") and getattr(self.context, "clock", None) is not None:
+                    from src.engine.core.clock import FUENTE_HITSTOP
+                    self.context.clock.escalar(FUENTE_HITSTOP, 0.0)
+                    # la restauración la hace CollisionSystem.update_hitstop con unscaled_dt
+            except Exception:
+                pass
 
         def _on_vfx_charge(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
@@ -265,6 +250,33 @@ class SenalesDeEscenario:
             # es el caso donde la sacudida direccional se nota más.
             self._camera.apply_shake(amplitude=4.0, duration=0.2,
                                      direccion=(0.0, 1.0))
+
+        # AUD-636 — polvo de aterrizaje. La fuerza (0-1) escala la cantidad:
+        # una caída corta levanta poco polvo y una larga una nube. El emisor
+        # emite dos ráfagas en vez de inventar un `count` dinámico — el
+        # `BurstConfig` es inmutable por diseño.
+        def _on_vfx_land_dust(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            fuerza = max(0.0, min(1.0, float(data.get("fuerza", 0.5))))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.DUST_LAND,
+            )
+            if fuerza > 0.6:
+                self._particle_system.get_emitter("dust").emit(
+                    float(pos[0]) + 4, float(pos[1]), HitEffects.DUST_LAND,
+                )
+
+        def _on_vfx_jump_dust(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.DUST_JUMP,
+            )
+
+        def _on_vfx_kill_flash(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("dust").emit(
+                float(pos[0]), float(pos[1]), HitEffects.KILL_FLASH,
+            )
 
         def _on_vfx_ultimate(**data: Any) -> None:
             pos = data.get("pos", (0, 0))
@@ -327,6 +339,30 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(Events.VFX_MUSGO_STEP, _on_vfx_musgo_step)
         self._vfx_handlers[Events.VFX_MUSGO_STEP] = _on_vfx_musgo_step
 
+        def _on_vfx_poison(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            # Nube verde + destello sutil cada 0.5s de veneno
+            try:
+                self._particle_system.get_emitter("hits").emit(
+                    float(pos[0]), float(pos[1] - 8), HitEffects.BUBBLE,
+                )
+            except Exception:
+                pass
+            try:
+                self._post_processing.flash((40, 160, 40), alpha=60, duration=0.12)
+            except Exception:
+                pass
+        self.context.event_bus.subscribe(Events.VFX_POISON, _on_vfx_poison)
+        self._vfx_handlers[Events.VFX_POISON] = _on_vfx_poison
+
+        # AUD-636 — polvo de aterrizaje/salto y destello de muerte.
+        self.context.event_bus.subscribe(Events.VFX_LAND_DUST, _on_vfx_land_dust)
+        self._vfx_handlers[Events.VFX_LAND_DUST] = _on_vfx_land_dust
+        self.context.event_bus.subscribe(Events.VFX_JUMP_DUST, _on_vfx_jump_dust)
+        self._vfx_handlers[Events.VFX_JUMP_DUST] = _on_vfx_jump_dust
+        self.context.event_bus.subscribe(Events.VFX_KILL_FLASH, _on_vfx_kill_flash)
+        self._vfx_handlers[Events.VFX_KILL_FLASH] = _on_vfx_kill_flash
+
         def _on_music_stinger(**data: Any) -> None:
             name = data.get("name", "stinger_boss_phase")
             vol = data.get("volume", 0.8)
@@ -337,26 +373,6 @@ class SenalesDeEscenario:
         self._vfx_handlers[Events.MUSIC_STINGER] = _on_music_stinger
 
         self._subscribe_sfx_handlers()
-
-        # SAVE_REQUESTED handler — persists game on checkpoint / save & quit
-        def _on_save_requested(**data: Any) -> None:
-            sm = self.context.save_manager
-            if sm is not None:
-                sm.auto_save(
-                    stage_id=data.get("stage_id", ""),
-                    stage_index=data.get("stage_index", 0),
-                    checkpoint_x=data.get("checkpoint_x", 0),
-                    checkpoint_y=data.get("checkpoint_y", 0),
-                    health=data.get("health", 100),
-                    max_health=data.get("max_health", 100),
-                    # AUD-251: el checkpoint se lleva las banderas de mundo.
-                    zone_flags=dict(getattr(self.context, "banderas", {})),
-                    # AUD-267: y la experiencia, que sin esto se perdía al
-                    # cerrar el juego aunque hubiera subido jugando.
-                    exp_total=ExperienceSystem.get_instance().exp,
-                )
-        self.context.event_bus.subscribe(Events.SAVE_REQUESTED, _on_save_requested)
-        self._vfx_handlers[Events.SAVE_REQUESTED] = _on_save_requested
 
     def _unsubscribe_all_handlers(self) -> None:
         for evt, handler in self._sfx_handlers.items():

@@ -71,12 +71,11 @@ SUBTITLE_FILE = ROOT / "src" / "engine" / "ui" / "subtitle_overlay.py"
 AWAITING_THEIR_BOSS = {
     "SFX_BOSSES_GAVILAN_DIVE",
     "SFX_BOSSES_GAVILAN_MASK_BEAM",
-    # `SFX_BOSSES_PABURU_EYE_BEAM` estaba aquí y ya no: la entrega de Paburu lo
-    # emite (`boss_paburu.py`). La lista encogió, que es lo que se dijo que
-    # pasaría. `SFX_BOSSES_PABURU_WAVE` sigue esperando a su fase.
-    "SFX_BOSSES_PABURU_WAVE",
-    "SFX_BOSSES_REY_SPIT",
-    "SFX_BOSSES_REY_SPLIT",
+    # `SFX_BOSSES_PABURU_EYE_BEAM` y `SFX_BOSSES_PABURU_WAVE` estaban aquí y ya no:
+    # la entrega de Paburu los emite (`boss_paburu.py`). La lista encogió, que es
+    # lo que se dijo que pasaría.
+    # `SFX_BOSSES_REY_SPIT`/`REY_SPLIT` también salieron: `boss_rey.py` los emite
+    # desde su nueva fase (el trabajo en `src/stages/boss_rey/` aún sin commitear).
     # La reliquia aparece al derrotar a un jefe de zona; hoy sólo existe el
     # Venado y su recompensa se resuelve por la escena de créditos.
     "SFX_BOSSES_RELIC_APPEAR",

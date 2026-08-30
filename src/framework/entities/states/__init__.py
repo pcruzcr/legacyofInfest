@@ -19,6 +19,7 @@ from src.framework.entities.states.airborne import (
     AirborneState,
     AirChaseState,
     FallingState,
+    GroundPoundState,
     JumpingState,
 )
 from src.framework.entities.states.attack import (
@@ -31,6 +32,10 @@ from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 from src.framework.entities.states.damage import (
     DyingState,
     HurtState,
+)
+from src.framework.entities.states.debuff import (
+    PossessedState,
+    StaggerState,
 )
 from src.framework.entities.states.grounded import (
     CrouchingState,
@@ -81,6 +86,7 @@ __all__ = (
     "DyingState",
     "FallingState",
     "GrabState",
+    "GroundPoundState",
     "HurtState",
     "IdleState",
     "JumpingState",
@@ -88,8 +94,10 @@ __all__ = (
     "LongAttackState",
     "ParryState",
     "PlayerStateBase",
+    "PossessedState",
     "ShortAttackState",
     "SlideState",
+    "StaggerState",
     "SwimAttackState",
     "SwimmingState",
     "ThrowState",

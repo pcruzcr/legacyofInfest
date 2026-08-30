@@ -1,3 +1,5 @@
+# Autor: Alejandro Josué Rodríguez Zamora
+# Stage 4-2 «El Gran Shamán Paburu» — Legacy of InFest
 """
 Module: intro
 System: stages.boss_paburu
@@ -7,7 +9,7 @@ Description: Secuencia de entrada de El Gran Shaman Paburu — Stage 4-2.
 POR QUÉ EXISTE
 El combate arrancaba en seco: se cargaba la escena y la cabeza ya estaba
 ahí, encendida, atacando. El GDD §4 describe otra cosa — Paburu aparece
-DORMIDO, con los ojos cerrados, y despierta cuando John y Jill entran al
+DORMIDO, con los ojos cerrados, y despierta cuando John y Jin entran al
 cementerio. Ese despertar es su presentación y no estaba en ningún lado.
 
 CÓMO ESTÁ HECHO
@@ -21,12 +23,24 @@ Es el mismo patrón que usa `stages/stage0/stage0.py` para su intro, así
 que un lector del proyecto ya lo conoce.
 
 LA SECUENCIA
-    1. El silencio     — la arena casi a oscuras, solo la luna.
-    2. El despertar    — los cuatro cuencos se encienden uno a uno.
+    1. El silencio     — la Sala del Juicio casi a oscuras, solo rescoldos.
+    2. El despertar    — los cuatro braseros se encienden uno a uno.
     3. Los ojos        — la piedra abre los ojos y nace el aura.
     4. El nombre       — la placa con el título.
 
 Se salta entera con ESC.
+
+AUDITORÍA POST-CATACUMBA (tarea #43)
+La secuencia se escribió cuando la pelea era en el círculo de la
+superficie y la mudanza a la catacumba obligó a revisarla entera — la
+lección de PAB-07 aplicada a tiempo. El movimiento salió ileso: todas
+las alturas son RELATIVAS al ancla del jefe (`Aparicion` sube 150 px
+desde donde esté, `Transformacion` vuelve a `_anchor`), así que la
+coreografía funciona a cualquier coordenada del mundo. Lo que sí estaba
+roto era el GUION: dos líneas señalaban cosas del círculo de arriba
+—«las marcas bajo sus pies», «el del centro es Kavë»— que en la Sala no
+existen; ahora señalan el columbario, que es lo que el jugador tiene
+delante. Ver la nota sobre LINEAS.
 
 NOTA SOBRE `CutsceneScript.draw`
 El motor dibuja la acción actual **y todas las que vienen después**
@@ -357,22 +371,32 @@ class Transformacion(AccionBase):
 # ── El texto ──────────────────────────────────────────────────────
 # Sale del lore del GDD §2.1, §2.2 y §2.3. Paburu **no está furioso**:
 # está aterrado de volver a equivocarse. El orden es: la espera, los
-# guardianes, los nombres del piso, Kavë, y la decisión de cerrar los ojos
-# —que es exactamente lo que el jugador va a pelear en la Forma 1—.
+# guardianes, los nombres de los nichos, Kavë, y la decisión de cerrar los
+# ojos —que es exactamente lo que el jugador va a pelear en la Forma 1—.
 #
 # La línea de los guardianes ANUNCIA, no describe. Antes decía "los tres
 # que miran desde arriba", porque estaban ahí en el cielo desde el primer
 # frame; ahora no aparecen hasta la Forma 2, así que señalarlos sería
-# señalar un cielo vacío. Decir "aún no me atrevo a llamarlos" hace dos
+# señalar un techo vacío. Decir "aún no me atrevo a llamarlos" hace dos
 # cosas: explica por qué no están, y convierte su aparición en la Máscara
 # en el cumplimiento de algo que el jugador ya escuchó.
+#
+# REESCRITURA POST-CATACUMBA (#43): las líneas 3 y 4 señalaban el círculo
+# de la superficie — «las marcas bajo sus pies» eran las marcas del
+# círculo sorteado, y «el del centro» su marca central. En la Sala del
+# Juicio no hay ninguna de las dos; lo que hay es el COLUMBARIO: los
+# nichos en filas tallados en el muro, a la vista durante toda la charla.
+# Ahora las líneas señalan eso. El giro de Kavë mejora con la mudanza:
+# su nombre NO está en los nichos porque ella no murió esperando — fue
+# juzgada. Es la diferencia exacta que atormenta a Paburu, y antes la
+# línea no la decía.
 LINEAS = (
     "Cuatro siglos esperé a alguien digno... y cuatro siglos temí que llegara.",
-    "Tuve tres guardianes. Llevan siglos esperandome, y aun no me atrevo a llamarlos.",
-    "Las marcas bajo sus pies son nombres. Portadores que murieron esperando su prueba.",
-    "El del centro es Kave. A ella si la juzgue. Y me equivoque.",
-    "No confio en mis ojos. Los cerrare, como los cerre con ella.",
-    "Si sobreviven a mi error... les mostrare mi rostro.",
+    "Tuve tres guardianes. Llevan siglos esperándome, y aún no me atrevo a llamarlos.",
+    "Estos nichos guardan nombres. Portadores que murieron esperando su prueba.",
+    "Hay un nombre que no está en los muros: Kavë. A ella sí la juzgué. Y me equivoqué.",
+    "No confío en mis ojos. Los cerraré, como los cerré con ella.",
+    "Si sobreviven a mi error... les mostraré mi rostro.",
 )
 
 
@@ -386,7 +410,7 @@ def construir(escena: BossPaburuScene, boss: BossPaburu,
     """
     paso = ambiente_final / 4.0
     acciones: list[CutsceneAction] = [
-        # 1. El silencio. La arena queda casi negra y se sostiene un
+        # 1. El silencio. La Sala queda casi negra y se sostiene un
         #    instante: sin esta pausa el resto no se lee como un despertar.
         Penumbra(escena, escena._lighting.ambient_brightness, 0.18, 0.7),
         # 2. El despertar, un cuenco por vez.

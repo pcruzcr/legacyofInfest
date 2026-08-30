@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pygame
 
+from src.engine.core import settings
 from src.engine.core.events import Events
+from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_base import EnemyBase, EnemyState
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.framework.entities.player import Player
@@ -55,6 +60,17 @@ class EnemyBrute(EnemyBase):
     def _patrol_behavior(self, dt: float) -> None:
         speed = 40.0
         self.position.x += self.facing_direction * speed * dt
+        # Colisión con muros
+        if self._collision_rects:
+            rect = pygame.Rect(int(self.position.x), int(self.position.y), self.rect.width, self.rect.height)
+            for tile in self._collision_rects:
+                if rect.colliderect(tile):
+                    if self.facing_direction > 0:
+                        self.position.x = float(tile.left - self.rect.width)
+                    else:
+                        self.position.x = float(tile.right)
+                    self.facing_direction *= -1
+                    break
         distance = abs(self.position.x - self._patrol_origin.x)
         if distance >= 64:
             self.facing_direction *= -1
@@ -81,6 +97,52 @@ class EnemyBrute(EnemyBase):
             self._shockwave_timer -= dt
             if self._shockwave_timer <= 0:
                 self._shockwave_active = False
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        zone_key = f"zone{zone}" if zone > 0 else "zone1"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None)
+        sid = str(species_id).lower() if species_id else None
+        for key in ("attack",):
+            frames: list[pygame.Surface] = []
+            if sid:
+                for cand in [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                ]:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+            if not frames:
+                legacy = base / f"enemy_{key}_{zone_key}.png"
+                if legacy.exists():
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(legacy, fw, fh)
+                    except Exception:
+                        tmp = []
+                    if tmp and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+            if frames:
+                self._sprite_frames[key] = frames
+            else:
+                # placeholder con masa/mazo enorme distinguible de walk
+                placeholder = []
+                col = (158, 216, 244)
+                for _ in range(4):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    # maza arriba
+                    pygame.draw.rect(surf, (120, 100, 80), (fw // 2 - 2, 1, 4, 6))
+                    pygame.draw.rect(surf, (80, 60, 40), (fw // 2 - 1, 7, 2, fh // 2))
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
 
     def _get_animation_key(self) -> str:
         if self._shockwave_active:

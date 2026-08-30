@@ -39,7 +39,15 @@ encarga normales.
 """
 from __future__ import annotations
 
-import moderngl
+from typing import Any
+
+try:
+    import moderngl  # type: ignore[import-untyped]
+    _HAS_MODERNGL = True
+except ImportError:  # pragma: no cover
+    moderngl = None  # type: ignore[assignment]
+    _HAS_MODERNGL = False
+
 import numpy as np
 import pygame
 
@@ -70,11 +78,15 @@ class SpriteBatchGPU:
 
     def __init__(
         self,
-        ctx: moderngl.Context,
+        ctx: moderngl.Context | Any,  # type: ignore[name-defined]
         ancho: int,
         alto: int,
         max_ordenes: int = 8192,
     ) -> None:
+        if not _HAS_MODERNGL or moderngl is None:
+            raise ImportError(
+                "ModernGL no esta instalado - instala con pip install -e .[accel] para el camino GL"
+            )
         self.ctx = ctx
         self._ancho = ancho
         self._alto = alto
@@ -221,6 +233,9 @@ class SpriteBatchGPU:
         """
         # `_atlas[id]` lanza KeyError con un id desconocido en vez de dibujar
         # con la textura equivocada, que no daría error: daría arte.
+        # AUD-676 — guarda explícita de capacidad antes de escribir la fila
+        if self._cuentas >= len(self._instancias):
+            self._crecer()
         _color, _normales, ancho_atlas, alto_atlas = self._atlas[atlas_id]
         self._atlas_de_cada_orden.append(atlas_id)
         u0, v0, u1, v1 = _rect_a_uv(recorte, ancho_atlas, alto_atlas)
@@ -232,6 +247,8 @@ class SpriteBatchGPU:
         tam_x, tam_y = recorte[2], recorte[3]
         tint = tinte or _TINTE_BLANCO
 
+        # AUD-676 — el check previo ya creció si hacía falta; este post-check
+        # maneja el caso en que acabamos de llenar la última plaza.
         fila = self._instancias[self._cuentas]
         fila[0], fila[1] = x, y
         fila[2], fila[3] = tam_x, tam_y
@@ -240,7 +257,6 @@ class SpriteBatchGPU:
         fila[12:16] = tint
         fila[16] = 1.0 if iluminado else 0.0
         self._cuentas += 1
-
         if self._cuentas >= len(self._instancias):
             self._crecer()
 

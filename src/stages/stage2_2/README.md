@@ -4,14 +4,70 @@ assignment_name: "Entrada y Antenas"
 assignment_id: "stage2_2"
 zone: 2
 student_name: "César Ubáu Calvo"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Stage 2-2 — Entrada y Antenas
 
 Sub-zona 1 de la Zona 2 (El Datacenter). Viene después de Stage 2-1 (La
 Planicie) y desemboca en el Lobby.
+
+---
+
+## 0. Descripción e intención de diseño
+
+| | |
+|---|---|
+| **Nombre** | Stage 2-2 — Entrada y Antenas |
+| **Objetivo del jugador** | Atravesar el parqueo exterior del datacenter, escalar la fachada y cruzar el campo de antenas hasta el acceso al Lobby |
+| **Tema** | Complejo industrial de datacenter junto al campus, a mediodía. Exterior soleado que desemboca en interior gris |
+| **Mecánica principal** | Travesía con escalada vertical. El eje de la cámara cambia a mitad del nivel: horizontal en el parqueo, vertical en la fachada |
+| **Mecánica secundaria** | **Sigilo emergente.** Las cámaras de vigilancia ven más lejos con más luz, así que las sombras del parqueo son cobertura real |
+
+### Recorrido
+
+```
+ENTRADA          PARQUEO                    CASETA      ESCALADA      AZOTEA
+x 0-480          x 480-1040                 x 1040-1280 x 1040-1300   x 1280-1920
+─────────────────────────────────────────── ─────────── ──────────── ─────────────
+spawn (48,704)   3 carros, árboles, zanja    kiosco y    6 repechos   3 mástiles,
+sin enemigos     con pasarela, farolas       barrera     de 64 px     2 parabólicas
+                 CP0 (400)  CP1 (800)        CP3 (1232)  CP2 (1184)   CP4 (1312)
+                                                                      salida (1696)
+```
+
+**Inicio:** el jugador aparece a la izquierda con 560 px libres de enemigos —
+tiempo para aprender a moverse antes de recibir presión.
+
+**Final:** el `NextTrigger` en el extremo derecho de la azotea emite
+`STAGE_COMPLETE`. Como `stage2_3` todavía no existe, el motor pasa a la
+pantalla final: es el comportamiento correcto para un escenario suelto.
+
+### Progresión y dificultad
+
+| Tramo | Amenaza | Exigencia |
+|---|---|---|
+| Entrada | ninguna | aprender a caminar y saltar |
+| Parqueo | 1 Walker | esquivar o combatir, con espacio de sobra |
+| Caseta | cámara + 2 guardias | primera detección: sube la barrera y despierta a los guardias |
+| Escalada | 1 Flying en el hueco | 6 saltos de 64 px con enemigo aéreo hostigando |
+| Azotea | Shooter + 2 Walkers + patrulla B-Spline | tramo más denso, con plataformas angostas |
+
+La curva es ascendente y **la ruta crítica nunca exige el doble salto**. El
+único salto que lo pide —96 px, por encima de los 85.5 px de un salto simple—
+es **opcional** y lleva a un fragmento de lore.
+
+### Interacciones
+
+| Interacción | Disparador | Efecto |
+|---|---|---|
+| Detección por cámara | Entrar al cono de visión | Emite `stage2_2.camara_detecta` → sube la barrera y alerta a los guardias en 150 px |
+| Barrera de acceso | Fin de la animación de apertura | Emite `stage2_2.barrera_abierta` → mensaje en pantalla |
+| Sigilo por luz | Posición del jugador | El histograma de la zona ajusta el alcance de las cámaras entre 109 y 186 px |
+| Checkpoints | Contacto | 5 puntos de reaparición |
+| Fragmentos de lore | Contacto | 3 `MessageTrigger_Once` |
+| Bloqueo de cámara | Entrar a la zona de escalada | El encuadre horizontal se congela |
 
 ---
 
@@ -436,6 +492,259 @@ fuente puntual decae con el cuadrado de la distancia.
 
 ---
 
+### Unidad VI — Animación e interpolación con easing
+
+**Archivos:** `barrera_kiosco.py`, `camara_seguridad.py`, `stage2_2.py`
+
+#### Por qué easing y no interpolación lineal
+
+Una interpolación lineal `x = a + (b − a)·t` recorre el trayecto a velocidad
+constante, lo que implica **aceleración infinita al arrancar y frenado
+instantáneo al llegar**. Nada mecánico se mueve así, y el ojo lo lee como un
+salto. Una función de easing sustituye `t` por `f(t)` con `f(0)=0` y `f(1)=1`,
+deformando el reparto del recorrido en el tiempo sin mover los extremos.
+
+#### Dos animaciones, dos funciones distintas
+
+| Movimiento | Función | Justificación física |
+|---|---|---|
+| Barrera **subiendo** | `ease_out_bounce` | El brazo es una palanca larga con inercia: llega arriba, se vence por su peso y se recompone |
+| Barrera **bajando** | `ease_in_out_quad` | Baja frenada por su mecanismo, sin rebote: acelera al soltarse y desacelera al cerrar |
+| **Barrido de la cámara** | `ease_in_out_quad` | Reemplaza el `math.sin` de la entrega anterior |
+
+**`ease_out_bounce`** es una parábola por tramos:
+
+```
+f(t) = 7.5625·t²                          si t < 1/2.75
+f(t) = 7.5625·(t−1.5/2.75)²  + 0.75       si t < 2/2.75
+f(t) = 7.5625·(t−2.25/2.75)² + 0.9375     si t < 2.5/2.75
+f(t) = 7.5625·(t−2.625/2.75)² + 0.984375  en otro caso
+```
+
+Cada tramo es un rebote con la altura reducida. Los offsets 0.75, 0.9375 y
+0.984375 convergen a 1: es la pérdida de energía en cada impacto.
+
+**Medido:** la función **nunca supera 1.0**. Sube a 0.840, **cae** a 0.773,
+vuelve a 0.939 y se asienta en 1.0. Los rebotes son caídas por debajo del
+destino, no sobrepasos. El ángulo real del brazo recorre
+180° → 240.5° → **235.7°** → 239.6° → 252.0°.
+
+**`ease_in_out_quad`** es simétrica y de aceleración constante por tramo:
+
+```
+f(t) = 2t²                si t < 0.5
+f(t) = −1 + (4 − 2t)·t    si t ≥ 0.5
+```
+
+**Por qué sustituye al seno en el barrido.** Una sinusoide también desacelera
+en los extremos, pero **su aceleración es sinusoidal: nunca constante**. Un
+servo real bajo par constante tiene aceleración constante en cada mitad del
+recorrido, y eso es exactamente lo que describe una cuadrática por tramos. El
+barrido se construye con una onda triangular `u` que va 0→1→0 en cada periodo
+y se pasa por la función. Verificado: acotado exacto entre 142.00° y 218.00°.
+
+#### Interacción mediada por EventBus
+
+La cámara **ya no toca a los enemigos**. Publica y la escena decide:
+
+| Evento | Emisor | Suscriptor | Efecto |
+|---|---|---|---|
+| `stage2_2.camara_detecta` | `CamaraSeguridad` | `Stage2_2._on_camara_detecta` | Sube la barrera y alerta a los guardias en 150 px |
+| `stage2_2.barrera_abierta` | `BarreraKiosco` | `Stage2_2._on_barrera_abierta` | Pide un mensaje con `Events.SHOW_MESSAGE` |
+
+Es desacoplamiento real: la cámara no sabe que la barrera existe, y cambiar la
+reacción no obliga a tocar `CamaraSeguridad`.
+
+**Emisión en flanco de subida.** El evento se emite solo cuando la detección
+pasa de falsa a verdadera. Verificado: **30 fotogramas detectando producen 1
+evento**, no 30; salir del cono y volver a entrar produce el segundo.
+
+**Sobre las referencias débiles.** `EventBus` guarda `weakref.WeakMethod` para
+métodos ligados. Por eso se suscriben métodos de la escena y no funciones
+locales: la escena vive mientras el escenario esté activo. Una lambda suelta se
+recolectaría en el siguiente `dispatch()`.
+
+---
+
+### Unidad VII — Procesamiento digital de imagen
+
+**Archivo:** `monitor_seguridad.py` · **Clase:** `MonitorSeguridad`
+
+Un monitor CRT de circuito cerrado en la esquina inferior derecha muestra lo
+que ve la cámara de vigilancia, procesado. El efecto es **diegético**: el
+escenario ya tenía cámaras, así que mostrar su señal procesada pertenece a la
+ficción en vez de superponerse a ella.
+
+#### El histograma decide el alcance de detección
+
+`FilterTools.compute_histogram()` devuelve un canal `"luminance"` de 256
+casillas, con la luminancia calculada según la recomendación **ITU-R BT.601**:
+
+```
+Y = 0.299·R + 0.587·G + 0.114·B
+```
+
+Los coeficientes no son iguales porque el ojo no es igualmente sensible a los
+tres primarios: el verde aporta más de la mitad de la luminancia percibida y el
+azul apenas un 11 %.
+
+De ahí se calcula la luminancia media como **esperanza discreta**:
+
+```
+Y_media = Σ (i · h[i]) / Σ h[i]        para i = 0..255
+```
+
+y se convierte en el multiplicador de alcance de las cámaras:
+
+```
+t = clip((Y_media − 115) / (170 − 115),  0,  1)
+factor = 0.55 + 0.45 · t
+```
+
+**Esto es lógica de juego, no cosmética.** Medido en el escenario real:
+
+| Posición del jugador | Y media | factor | Alcance de la cámara |
+|---|---|---|---|
+| Sombra proyectada del árbol | 118.1 | 0.575 | **109 px** |
+| Sombra de la caseta | 125.6 | 0.636 | 121 px |
+| Parqueo a cielo abierto | 133.4 | 0.701 | 133 px |
+| Azotea contra el cielo | 167.3 | 0.978 | **186 px** |
+
+Un **70 % de diferencia** entre esconderse a la sombra y cruzar a plena luz. Es
+sigilo emergente derivado de una medición real de la imagen, no de una bandera
+puesta a mano en el mapa.
+
+**Dos calibraciones que salieron de medir, no de suponer.** El recorte era de
+256 × 192 px y abarcaba tanto cielo que Y apenas variaba entre 118 y 133 en
+todo el nivel: el alcance cambiaba 12 px de 190, indistinguible. Reducirlo a
+128 × 96 hace que domine el entorno inmediato del jugador y la amplitud sube a
+**49.2**. Y los extremos del mapeo (115 y 170) se fijaron **después** de
+recorrer el nivel midiendo en siete puntos, no antes.
+
+Además, el nivel no tenía zonas oscuras que medir: se añadieron **sombras
+proyectadas** de árboles, pinos, carros y la caseta, con cuatro tiles
+semitransparentes propios. Sirven a las dos cosas — dan volumen a la escena y
+crean el contraste que el histograma necesita.
+
+#### La cadena de filtros
+
+Se aplica en este orden, y el orden importa:
+
+**1. Reducción a 128 × 96.** El coste de un filtro convolutivo es proporcional
+al número de píxeles. Procesar la pantalla completa (800 × 600 = 480 000 px)
+costaría unas 39 veces más que el recorte reducido (12 288 px), para un
+resultado que se muestra en una ventana de 128 px de ancho.
+
+**2. `gaussian_blur(sigma = 0.8)`.** Suavizado gaussiano **antes** de derivar.
+No es opcional ni estético: **la derivada de una señal amplifica su ruido**. Un
+píxel aislado que difiera de sus vecinos produce un gradiente enorme, y sin
+pre-suavizado el mapa de bordes sale lleno de puntos sueltos. Es el mismo paso
+que Canny incorpora internamente. El núcleo es:
+
+```
+G(x, y) = (1 / 2πσ²) · e^(−(x² + y²) / 2σ²)
+```
+
+σ = 0.8 px. Un sigma menor deja pasar ruido; uno mayor difumina los bordes que
+se quieren detectar. Se bajó de 1.2 a 0.8 al revisar el resultado: con 1.2 el
+suavizado se comía detalle del mismo orden que el tile (16 px) y las siluetas
+salían blandas. Con 0.8 sigue desapareciendo el granulado del asfalto sin
+redondear los contornos.
+
+**3. `sobel_edge()`.** Magnitud del gradiente por convolución con **dos núcleos
+de 3 × 3**, uno por eje. Estas son las matrices exactas, verificadas contra
+`FilterTools.get_standard_kernel()`:
+
+```
+        ⎡ −1   0   1 ⎤              ⎡ −1  −2  −1 ⎤
+  Gx =  ⎢ −2   0   2 ⎥       Gy =   ⎢  0   0   0 ⎥
+        ⎣ −1   0   1 ⎦              ⎣  1   2   1 ⎦
+```
+
+Cada uno es el **producto exterior** de una derivada central `[−1 0 1]` por un
+suavizado binomial `[1 2 1]` en el eje perpendicular: derivan en una dirección
+y promedian en la otra, lo que los hace menos sensibles al ruido que una
+derivada pura. La magnitud del gradiente es:
+
+```
+|∇I| = √(Gx² + Gy²)
+```
+
+**4. `stretch_contrast()`.** Normaliza cada canal a todo el rango [0, 255]. Sin
+este paso, una escena de poco contraste —el asfalto contra su propia sombra—
+produce un mapa de bordes tenue que un factor fijo de contraste no logra
+levantar. Estirando primero, el borde más fuerte de cada cuadro llega siempre a
+blanco, sea cual sea la escena.
+
+**5. `apply_kernel()` con un núcleo de engrosado.** Cruz de 5 vecinos:
+
+```
+        ⎡  0    0.45    0  ⎤
+   K =  ⎢0.45   0.45  0.45 ⎥
+        ⎣  0    0.45    0  ⎦
+```
+
+Cada píxel suma 0.45 de sí mismo y de sus cuatro vecinos ortogonales. Sobre un
+mapa de bordes —líneas claras sobre fondo negro— eso **dilata** las líneas: una
+línea de 1 px pasa a 3 px, mientras el fondo negro sigue en 0 porque
+0.45 × 0 = 0. Se elige cruz y no cuadrado 3 × 3 completo porque la cruz engrosa
+sin redondear las esquinas.
+
+**El peso se bajó de 0.7 a 0.45 tras mirar el resultado.** Con 0.7, sumado al
+estirado de contraste, las líneas se fundían entre sí y las siluetas salían
+como manchas rellenas — peor para distinguir objetos, que es lo contrario de lo
+que se busca.
+
+**6. `adjust_contrast(factor = 1.6)`.** Separación final del borde respecto al
+fondo:
+
+```
+I' = clip((I − 128) · 1.6 + 128,  0,  255)
+```
+
+**7. `ColorTools.apply_tint`** con el verde de fósforo (120, 255, 150), más
+líneas de barrido cada 3 filas.
+
+#### La interfaz del monitor
+
+| Elemento | Comportamiento |
+|---|---|
+| Posición | Esquina **inferior izquierda**. El minimapa del motor ocupa la superior derecha, así que los dos paneles quedan en esquinas opuestas |
+| Cabecera en reposo | `o MONITOREADO` en verde de fósforo |
+| Cabecera en detección | `! DETECTADO` en rojo parpadeante, con el marco y el fondo del panel virando a rojo apagado |
+| Testigo de grabación | 1 Hz en reposo, **3 Hz en alerta** |
+| Etiqueta de zona | En **ámbar** (255, 186, 66), el otro color clásico de monitor monocromo. Esquina superior derecha de la señal, donde casi siempre hay cielo |
+
+Las cinco zonas se resuelven por rectángulos en coordenadas de mundo, evaluados
+en orden: `AZOTEA`, `ESCALADA`, `CASETA`, `ENTRADA`, `PARQUEO`. Verificadas las
+cinco contra la posición real del jugador.
+
+La cabecera y la etiqueta se actualizan **cada fotograma** aunque la imagen solo
+se procese a 8 Hz: un aviso de detección que tarde hasta 125 ms en encenderse se
+siente roto.
+
+#### Coste
+
+| Medida | Valor |
+|---|---|
+| Procesado completo de la cadena | **5.82 ms** por refresco |
+| Frecuencia de refresco | **8 Hz** (una cámara de circuito cerrado real ronda 8–12) |
+| **Coste amortizado** | **0.78 ms por fotograma** de los 16.7 disponibles |
+| Coste total de la escena | 9.71 ms/fotograma |
+
+Refrescar a 60 Hz habría costado 5.82 ms por fotograma — siete veces más, para
+una señal que ningún jugador percibe más fluida.
+
+**Un hallazgo de rendimiento que no estaba en los filtros.** Al añadir la
+etiqueta de zona, el coste total saltó de 9.7 a **22.6 ms por fotograma**.
+Midiendo la cadena paso a paso, los siete filtros sumaban 2.95 ms: el problema
+estaba en otro lado. Eran los tres `pygame.font.Font(...)` que se construían
+**dentro de `draw()`**, es decir 60 veces por segundo. Cachearlos en el
+constructor devolvió el coste a 9.71 ms. La lección es del método, no del
+código: cuando algo se pone lento, medir antes de optimizar lo que uno supone.
+
+---
+
 ## 3. Cómo ejecutar
 
 ```powershell
@@ -589,7 +898,138 @@ y esa ranura se llama `stage2_2`. Un módulo con otro nombre arranca con
 
 ---
 
-## 8. Capturas
+## 8. Testing
+
+### 8.1 Pruebas realizadas
+
+| Prueba | Método | Resultado |
+|---|---|---|
+| Estructura del TMX | `scripts/validate_tmx.py` | **1/1 passed** |
+| Rúbrica automática | `scripts/grade_stage.py` | **129/130 (99.2 %)** |
+| Pruebas del proyecto | `pytest tests/test_stage_loader.py test_academic_units.py test_bestiary_roster.py` | **151 passed** |
+| Estabilidad en ejecución | 900 fotogramas de `update()` + `draw()` + `dispatch()` | Sin excepciones ni avisos en consola |
+| Análisis de diseño | `level_metrics.analyse_stage` | `exit_reachable`, 0 huérfanas de 12, 0 saltos imposibles |
+| Rendimiento | Cronometrado sobre 240–600 fotogramas | 9.65 ms/fotograma de los 16.7 disponibles |
+| Cono de visión | 6 casos, incluido el degenerado `v = 0` | 6/6 correctos |
+| Curva B-Spline | Rapidez sobre 300 pasos | 0.7499 px/fotograma, σ = 0.0001 |
+| Parpadeo HSV | Matiz y saturación sobre 200 muestras | h ∈ [3.1°, 4.9°], s ∈ [0.831, 0.846] |
+| `EventBus` | 30 fotogramas detectando | 1 evento, no 30 |
+| Etiquetas de zona | 5 posiciones contra la posición real | 5/5 correctas |
+
+### 8.2 Playtesting — las preguntas de la guía
+
+Resueltas por análisis del grafo de saltos, no a ojo:
+
+| Pregunta | Método | Resultado |
+|---|---|---|
+| ¿Puedo quedar atrapado? | Alcanzabilidad de la salida desde **cada una** de las 14 plataformas | **No.** Las 14 llegan |
+| ¿Puedo saltarme una sección? | Se eliminan P1–P6 del grafo y se recalcula | **No.** Sin la escalada la salida es inalcanzable: es obligatoria |
+| ¿Puedo atravesar zonas? | Solapamiento entre todos los pares de sólidos | **Cero** solapamientos |
+| ¿Hay contenido inalcanzable? | Alcanzabilidad desde el spawn | Solo el muro de cierre izquierdo, que es correcto |
+| ¿Puedo completar el nivel? | `exit_is_reachable` + recorrido manual | Sí |
+
+### 8.3 Problemas encontrados y correcciones
+
+Ordenados por impacto. Los seis primeros son **defectos del framework**, no del
+escenario, y están documentados con evidencia en §5.
+
+| # | Problema | Cómo se detectó | Corrección | Resultado |
+|---|---|---|---|---|
+| 1 | **El juego colapsaba al dibujar** con `ValueError: invalid color` | Simulación de 90 fotogramas | `LightingSystem.render` no recorta a [0,255] y `0.94 × 1.08 = 1.015`. Se topa `ambient_light` en 0.88 | 900 fotogramas sin excepción |
+| 2 | **La cámara no seguía al jugador** | Reporte de playtesting | `Camera.set_camera_locks` nunca consulta el `rect`. Se filtra por contención desde la escena | El eje cambia solo dentro de la zona |
+| 3 | **El nivel era intransitable** desde la entrada | Playtesting | 3 walkers en 256 px + alerta de 260 px. Se reparten los enemigos, `alert_speed` 75 → 55, daño 0.5 → 0.25, radio 260 → 150 | Se recorre completo |
+| 4 | **El hueco de 80 px era injusto** — 94 % de la envolvente | Playtesting | Se reduce a 64 px y se añade una pasarela. El salto exigente se traslada a un repecho **opcional** de 96 px | Ruta crítica cómoda, desafío opcional premiado |
+| 5 | **Enemigos del roster puntuaban 0/20** | `grade_stage.py` | `KNOWN_ENEMY_TYPES` no lista ninguna de las 21 especies. Se mezclan especies y arquetipos | 20/20 sin perder identidad de zona |
+| 6 | **La ruta no existía** — `design_completable` 0/12 | `grade_stage.py` | `analyse_stage` solo lee `collision_rects`; los `Platform` son invisibles. Los repechos pasan a `Solid` | 12/12 |
+| 7 | **Velo magenta a media escalada** | Impresión de colores intermedios | Naranja y azul están a 180° exactos: ningún arco es el corto. Se deprime la saturación en el centro | Bruma pálida, extremos exactos |
+| 8 | **13 ms perdidos por fotograma** | Cronometraje tras añadir la etiqueta | No eran los filtros (2.95 ms sumados): eran tres `pygame.font.Font(...)` construidos dentro de `draw()` | 22.6 → 9.7 ms |
+| 9 | **El histograma no cambiaba nada** — 12 px de 190 | Medición en 7 puntos del nivel | El recorte abarcaba demasiado cielo **y el nivel no tenía zonas oscuras**. Recorte 256→128 px y se añaden sombras proyectadas | Amplitud 12 → 49; alcance 109–186 px |
+| 10 | **Siluetas como manchas** en el monitor | Inspección visual | El engrosado a 0.7 fundía las líneas. Bajado a 0.45, y a 0.30 al reducir el panel | Se distinguen carro, farola y reja |
+| 11 | **"Catarata" oscura en el parqueo** | Reporte de playtesting | La pasarela cubría solo la fila 44; las filas 45–49 quedaron vacías y se veía el vacío | Zanja rellena con tile oscuro |
+| 12 | **El jugador salía del mapa** por la izquierda | Reporte de playtesting | Faltaban muros de cierre | Dos muros fuera de los límites |
+| 13 | **El muro derecho costó 3 pts** | `grade_stage.py` tras la corrección 12 | Tocaba el edificio en filas consecutivas → repecho de 256 px | Bajado a la fila 12: escalón de 64 px |
+| 14 | **El monitor tapaba la escalada** | Reporte de playtesting | Estaba anclado abajo a la derecha | Movido bajo el HUD de vida y reducido a la mitad |
+| 15 | **`DeathPit` inalcanzable** | Análisis de alcanzabilidad | Al poner la pasarela, el peligro dejó de poder dispararse | Retirado: contenido muerto |
+
+---
+
+## 9. Iteración — de la Evaluación I a la II
+
+Ciclo `VERSIÓN → PRUEBA → PROBLEMA → CORRECCIÓN → NUEVA PRUEBA → MEJORA`
+aplicado a los cambios de mayor calado.
+
+### Ciclo A — Dimensiones del nivel
+
+- **Versión 1.** Mapa de 64 × 50 tiles, dimensionado contra una resolución
+  interna de 320 × 224 que menciona el brief.
+- **Prueba.** Se ejecuta el nivel y se observa el encuadre inicial.
+- **Problema.** `settings.py` define `INTERNAL_WIDTH = 800`: el edificio estaba
+  dentro del encuadre desde el primer fotograma y **no existía una sección de
+  parqueo**.
+- **Corrección.** Mapa a 120 × 50; todo lo situado a la derecha de x = 544 se
+  desplaza +736 px. Se recalculan los checkpoints.
+- **Nueva prueba.** El jugador camina 832 px (≈ 9.2 s) con solo parqueo en
+  pantalla antes de que el edificio entre en cuadro.
+- **Mejora.** El nivel tiene tres actos legibles en vez de uno comprimido.
+
+### Ciclo B — Dificultad de la aproximación
+
+- **Versión 1.** Tres walkers en los 256 px del parqueo, alerta de cámara con
+  radio 260 px, hueco de 80 px sobre un `DeathPit`.
+- **Prueba.** Playtesting.
+- **Problema.** *"Los enemigos no me dejan pasar desde la entrada"*, y el hueco
+  exigía el 94 % de la envolvente de salto.
+- **Corrección.** Un enemigo en el suelo, `alert_speed` por debajo de la
+  velocidad del jugador, daño a la mitad, radio de alerta a 150 px. Hueco a
+  64 px con pasarela, y el salto exigente movido a un repecho opcional.
+- **Nueva prueba.** `design_pacing` sigue en 8/8 —el salto exigente existe— y
+  el nivel se recorre de punta a punta.
+- **Mejora.** Ruta crítica accesible, desafío preservado y **recompensado**.
+
+### Ciclo C — Arte del parqueo
+
+- **Versión 1.** Tileset `tileset_datacenter_ext` provisto: siete tiles de
+  color plano.
+- **Prueba.** Comparación con la referencia de arte solicitada.
+- **Problema.** Los **diez** tilesets del repositorio son el mismo archivo
+  recoloreado. No hay cielo, vegetación ni vehículos: el parqueo no se podía
+  representar.
+- **Corrección.** Tileset propio de 128 tiles en `student_assets/tilesets/`.
+- **Nueva prueba.** Render del mapa completo y ejecución.
+- **Mejora.** Parqueo con cielo, árboles, tres carros, farolas, bancas, reja,
+  barrera, caseta y dos parabólicas. Y una consecuencia no prevista: al existir
+  sombras proyectadas, el histograma de la Unidad VII pasó a tener algo real
+  que medir.
+
+### Ciclo D — El monitor de vigilancia
+
+- **Versión 1.** Panel de 128 × 96 anclado abajo a la derecha, cadena
+  `blur(1.2) → sobel → contraste(1.9)`.
+- **Prueba.** Playtesting durante la escalada.
+- **Problema.** Tapaba al jugador al escalar; las siluetas se distinguían mal;
+  y al añadir la etiqueta de zona el coste saltó a 22.6 ms/fotograma.
+- **Corrección.** Movido bajo el HUD de vida y reducido a 64 × 48. Cadena
+  ampliada con `stretch_contrast` y un kernel de engrosado. Fuentes cacheadas
+  en el constructor.
+- **Nueva prueba.** Cronometraje y captura en las cinco zonas.
+- **Mejora.** 9.65 ms/fotograma, siluetas legibles, cero interferencia con el
+  recorrido.
+
+### Resumen de la iteración
+
+| Métrica | Evaluación I | Evaluación II |
+|---|---|---|
+| Tamaño del mapa | 64 × 50 | **120 × 50** |
+| Objetos | 50 | 49 (se retira contenido muerto) |
+| Tilesets | 1 provisto | 1 provisto + **1 propio de 128 tiles** |
+| Unidades demostradas | II, III, IV, V | **II, III, IV, V, VI, VII** |
+| Módulos propios | 3 | **5** |
+| `grade_stage.py` | 129/130 | **129/130** |
+| Defectos del framework documentados | 5 | **6** |
+
+---
+
+## 10. Capturas
 
 No aplican a esta entrega. `docs/entregables/entregables.md` las exige para
 operaciones de `FilterTools` y `VisionTools`, que corresponden a la Evaluación

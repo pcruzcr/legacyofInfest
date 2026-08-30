@@ -537,12 +537,13 @@ class TestDesdeElMapa:
 
     #: Mapas donde `Slope` puede aparecer sin que sea una fuga accidental
     #: hacia una entrega calificada: `stage_mecanicas` es el laboratorio que
-    #: lo estrenó, y `stage4_1` es contenido de profesorado — «Entregable:
+    #: lo estrenó y `stage0` es la referencia (AUD-590 suave 6×24 demo).
+    #: `stage4_1` es contenido de profesorado — «Entregable:
     #: profesorado (no se asigna a estudiantes)», `docs/niveles/
     #: 13_STAGE_4_1.md` — que usa un slope de verdad para la loma de su Fase
-    #: 3 (AUD-463). Lo que esta prueba de verdad protege es que el tipo no
-    #: aparezca en ninguna de las 26 entregas de estudiantes.
-    _MAPAS_CON_PENDIENTE_ESPERADOS = frozenset({"stage_mecanicas", "stage4_1"})
+    #: 3 (AUD-463) cuando exista. Lo que esta prueba de verdad protege es
+    #: que el tipo no aparezca en ninguna de las 26 entregas de estudiantes.
+    _MAPAS_CON_PENDIENTE_ESPERADOS = frozenset({"stage_mecanicas", "stage0"})
 
     def test_ningun_mapa_entregado_tiene_pendientes(self) -> None:
         """Lo que hace segura una integración en la resolución de colisión: el

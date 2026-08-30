@@ -127,6 +127,29 @@ class TestSearch:
         walker._last_seen = None
         walker._search_behavior(DT)  # no debe lanzar
 
+    def test_search_behavior_clamps_to_arena_bounds(self, walker) -> None:
+        """AUD-615: SEARCH no puede sacar al enemigo de su arena."""
+        from src.framework.entities.enemy_base import EnemyState
+
+        walker.state = EnemyState.SEARCH
+        # Arena de 800x600, enemigo en el centro
+        arena = pygame.Rect(0, 0, 800, 600)
+        walker.set_arena_bounds(arena)
+        walker.position = pygame.Vector2(400.0, 300.0)
+        walker.rect.center = (400, 300)
+        # Última posición vista muy a la derecha (fuera de la arena)
+        walker._last_seen = pygame.Vector2(2000.0, 300.0)
+
+        walker._search_behavior(DT)
+
+        # Con margen de 16 px, no debe pasar de 800 - 16 - 24 (ancho) = 760
+        assert walker.position.x <= 760, (
+            f"el enemigo se salió de la arena en SEARCH: x={walker.position.x}"
+        )
+        assert walker.rect.right <= 784, (
+            f"el rect del enemigo se salió de la arena: right={walker.rect.right}"
+        )
+
 
 # ── RECOVER: la ventana de castigo ───────────────────────────────
 

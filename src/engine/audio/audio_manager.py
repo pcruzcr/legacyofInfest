@@ -207,6 +207,27 @@ class AudioManager:
         # ignoraba el volumen del bus de efectos (y el silencio del maestro).
         self.sound_bank.play(name, volume=self.mezcla.ganancia(BUS_EFECTOS, volume))
 
+    def play_layer(
+        self, name: str, volume: float = 1.0, loops: int = -1
+    ) -> pygame.mixer.Channel | None:
+        """Play a sound layer (stem) with looping, returning the channel.
+
+        Designed for AudioLayerMixer: each layer gets its own channel with
+        independent volume control. Uses the effects bus for gain staging.
+        """
+        if self._muted:
+            return None
+        sound = self.sound_bank.get(name)
+        if sound is None:
+            return None
+        channel = pygame.mixer.find_channel()
+        if channel is None:
+            return None
+        channel.play(sound, loops=loops)
+        if not self._muted:
+            channel.set_volume(self.mezcla.ganancia(BUS_EFECTOS, volume))
+        return channel
+
     def play_ambient(self, path: str | Path, volume: float = 0.5, loops: int = -1) -> None:
         """Play ambient audio layer (wind, rain, machinery) with crossfade."""
         try:

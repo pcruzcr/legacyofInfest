@@ -6,6 +6,7 @@ import orjson
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.core.user_settings import user_data_dir
 from src.engine.input.action_map import DEFAULT_KEY_BINDINGS, Action
 from src.engine.scene.base_scene import BaseScene
@@ -44,20 +45,20 @@ def _key_name(key: int) -> str:
 
 
 _ACTION_LABELS: dict[Action, str] = {
-    Action.MOVE_LEFT: "Move Left",
-    Action.MOVE_RIGHT: "Move Right",
-    Action.MOVE_UP: "Move Up",
-    Action.MOVE_DOWN: "Move Down",
-    Action.JUMP: "Jump",
-    Action.CROUCH: "Crouch",
-    Action.SHORT_ATTACK: "Attack (Short)",
-    Action.LONG_ATTACK: "Attack (Long)",
-    Action.DASH: "Dash",
-    Action.GRAB: "Grab",
-    Action.RANGED_ATTACK: "Disparar",
-    Action.CONFIRM: "Confirm",
-    Action.CANCEL: "Cancel",
-    Action.PAUSE: "Pause",
+    Action.MOVE_LEFT: _("ui.move_left"),
+    Action.MOVE_RIGHT: _("ui.move_right"),
+    Action.MOVE_UP: _("ui.move_up"),
+    Action.MOVE_DOWN: _("ui.move_down"),
+    Action.JUMP: _("ui.jump"),
+    Action.CROUCH: _("ui.crouch"),
+    Action.SHORT_ATTACK: _("ui.attack_short"),
+    Action.LONG_ATTACK: _("ui.attack_long"),
+    Action.DASH: _("ui.dash"),
+    Action.GRAB: _("ui.grab"),
+    Action.RANGED_ATTACK: _("ui.ranged_attack"),
+    Action.CONFIRM: _("ui.confirm"),
+    Action.CANCEL: _("ui.cancel"),
+    Action.PAUSE: _("ui.pause"),
 }
 
 
@@ -179,7 +180,7 @@ class KeybindingScene(BaseScene):
         # AUD-069: rejilla de dos columnas, así que la navegación sigue siendo
         # propia; lo que se unifica es la paleta, la tipografía y los atajos.
         start_y = draw_screen(
-            surface, "CONTROLES", "Elige una acción y pulsa Enter para cambiarla",
+            surface, "ui.controls", "ui.choose_action",
         ) + Theme.SPACE_S
 
         cols = self._num_cols
@@ -225,13 +226,13 @@ class KeybindingScene(BaseScene):
 
         if self._waiting_for_key:
             draw_key_hints(surface, [
-                ("Cualquier tecla", "Asignar"),
-                ("Esc", "Cancelar"),
+                ("Cualquier tecla", "ui.nav.assign"),
+                ("Esc", "ui.cancel"),
             ])
         else:
             draw_key_hints(surface, [
-                ("←→↑↓", "Navegar"),
-                ("Enter", "Cambiar"),
-                ("Esc", "Volver"),
+                ("←→↑↓", "ui.nav.navigate"),
+                ("Enter", "ui.change"),
+                ("Esc", "ui.back"),
             ])
 

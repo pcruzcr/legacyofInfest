@@ -56,15 +56,57 @@ class EnemyMedusa(EnemyFlying):
         self.contact_knockback = 0.0
         self.rect.width = 20
         self.rect.height = 18
+        self._sprite_fw = self.SPRITE_ANCHO
+        self._sprite_fh = self.SPRITE_ALTO
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         self._sprite_fw = self.SPRITE_ANCHO
         self._sprite_fh = self.SPRITE_ALTO
-        try:
-            self._sprite_frames["fly"] = AssetLoader.load_sprite_sheet(
-                SPRITE_PATH, self.SPRITE_ANCHO, self.SPRITE_ALTO)
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("enemy_medusa: failed to load sprite %s", SPRITE_PATH)
+        fw = self.SPRITE_ANCHO
+        fh = self.SPRITE_ALTO
+        zone_key = f"zone{zone}" if zone > 0 else "zone4"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None) or "Medusa"
+        sid = str(species_id).lower()
+        for key, expected in [("walk", 4), ("hurt", 3), ("die", 5), ("fly", 4)]:
+            frames: list[pygame.Surface] = []
+            for cand in [
+                base / f"enemy_{sid}_{key}.png",
+                base / f"enemy_{sid}_walk.png" if key == "walk" else None,
+                settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                SPRITE_PATH if key in ("fly", "walk") else None,
+            ]:
+                if cand is None or not cand.exists():
+                    continue
+                try:
+                    tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                except Exception:
+                    continue
+                if tmp and tmp[0].get_size() == (fw, fh):
+                    frames = tmp
+                    break
+            if frames:
+                self._sprite_frames[key] = frames
+                if key == "walk":
+                    # compatibilidad: la medusa usa fly como anim_key, duplicar
+                    self._sprite_frames["fly"] = frames
+            else:
+                # placeholder translúcido para medusa
+                placeholder = []
+                col = (96, 140, 148)
+                if key == "hurt":
+                    col = (190, 120, 140)
+                elif key == "die":
+                    col = (72, 106, 112)
+                for _ in range(expected):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((0, 0, 0, 0))
+                    pygame.draw.ellipse(surf, (*col, 190), (2, 1, fw - 4, fh - 4))
+                    pygame.draw.ellipse(surf, (255, 255, 255, 40), (2, 1, fw - 4, fh - 4), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
+                if key == "walk":
+                    self._sprite_frames["fly"] = placeholder
 
     def _get_animation_key(self) -> str:
         return "fly"

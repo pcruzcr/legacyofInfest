@@ -500,6 +500,9 @@ def validate_tmx(path: Path) -> bool:
                 f"desplazan al cargar."
             )
 
+    # ── AUD-XXX — Zero-Bug Policy: validación de tiles ─────────────────────
+    _validate_tiles(root, path)
+
     _validate_objects(root, path)
 
     return len(_errors) == 0
@@ -573,6 +576,160 @@ def _validate_objects(root: ET.Element, path: Path) -> None:
         )
     elif spawns > 1:
         error(f"Hay {spawns} objetos PlayerSpawn; debe haber exactamente uno.")
+
+
+def _validate_tiles(root: ET.Element, tmx_path: Path) -> None:
+    """Zero-Bug Policy: validación exhaustiva de tiles.
+
+    Comprueba:
+    1. IDs de tile en capas están dentro de los rangos válidos de tilesets
+    2. Tilesets no tienen rangos de firstgid superpuestos
+    3. Tiles animados referencian IDs válidos
+    4. Propiedades de tile requeridas (solido, etc.) en tilesets
+    5. Capas de colisión tienen tiles válidos
+    """
+
+    # Construir rangos de tilesets (incluye .tsx externos)
+    tileset_ranges: list[tuple[int, int, str]] = []
+    tileset_details: dict[str, dict] = {}  # name -> {firstgid, tilecount, tiles}
+
+    for ts in root.findall("tileset"):
+        firstgid = int(ts.get("firstgid", 1))
+        name = ts.get("name", "")
+        tilecount = int(ts.get("tilecount", 0))
+        source = ts.get("source", "")
+
+        if source:
+            # Tileset externo .tsx
+            tsx_path = (tmx_path.parent / source).resolve()
+            if not tsx_path.exists():
+                error(f"Tileset externo no encontrado: {source}")
+                continue
+            try:
+                tsx_tree = ET.parse(tsx_path)
+                tsx_root = tsx_tree.getroot()
+                # Leer tilecount del atributo del tileset .tsx
+                tsx_tilecount = int(tsx_root.get("tilecount", 0))
+                tiles = {}
+                for tile in tsx_root.findall("tile"):
+                    tid = int(tile.get("id", -1))
+                    if tid >= 0:
+                        props = {p.get("name", ""): p.get("value", "")
+                                 for p in tile.findall("./properties/property")}
+                        anim = tile.find("animation")
+                        frames = []
+                        if anim is not None:
+                            for frame in anim.findall("frame"):
+                                frames.append({
+                                    "tileid": int(frame.get("tileid", -1)),
+                                    "duration": int(frame.get("duration", 0))
+                                })
+                        tiles[tid] = {"properties": props, "animation": frames}
+                tileset_details[name] = {
+                    "firstgid": firstgid,
+                    "tilecount": tsx_tilecount,
+                    "tiles": tiles,
+                    "source": source
+                }
+                tileset_ranges.append((firstgid, firstgid + tsx_tilecount - 1, name))
+            except ET.ParseError as e:
+                error(f"Error parseando tileset externo {source}: {e}")
+        else:
+            # Tileset inline
+            tiles = {}
+            for tile in ts.findall("tile"):
+                tid = int(tile.get("id", -1))
+                if tid >= 0:
+                    props = {p.get("name", ""): p.get("value", "")
+                             for p in tile.findall("./properties/property")}
+                    anim = tile.find("animation")
+                    frames = []
+                    if anim is not None:
+                        for frame in anim.findall("frame"):
+                            frames.append({
+                                "tileid": int(frame.get("tileid", -1)),
+                                "duration": int(frame.get("duration", 0))
+                            })
+                    tiles[tid] = {"properties": props, "animation": frames}
+            tileset_details[name] = {
+                "firstgid": firstgid,
+                "tilecount": tilecount,
+                "tiles": tiles,
+                "source": None
+            }
+            tileset_ranges.append((firstgid, firstgid + tilecount - 1, name))
+
+    # 1. Verificar rangos superpuestos
+    tileset_ranges.sort(key=lambda x: x[0])
+    for i in range(len(tileset_ranges) - 1):
+        start1, end1, name1 = tileset_ranges[i]
+        start2, end2, name2 = tileset_ranges[i + 1]
+        if end1 >= start2:
+            error(
+                f"Rangos de tileset superpuestos: '{name1}' ({start1}-{end1}) "
+                f"y '{name2}' ({start2}-{end2})"
+            )
+
+    # 2. Validar tiles en capas
+    layers = root.findall("layer")
+    for layer in layers:
+        layer_name = layer.get("name", "")
+        data = layer.find("data")
+        if data is None:
+            continue
+        encoding = data.get("encoding", "csv")
+        raw = (data.text or "").strip()
+        if encoding != "csv":
+            continue
+        try:
+            tile_ids = [int(x) for x in raw.replace("\n", "").split(",") if x.strip()]
+        except ValueError:
+            continue  # Ya se reportó antes
+
+        # Verificar IDs fuera de rango
+        for tid in tile_ids:
+            if tid == 0:
+                continue  # 0 = tile vacío
+            if not any(start <= tid <= end for start, end, _ in tileset_ranges):
+                error(
+                    f"Capa '{layer_name}': tile ID {tid} fuera de rango "
+                    f"(rangos válidos: {[(s, e) for s, e, _ in tileset_ranges]})"
+                )
+
+        # Verificar tiles animados referencian IDs válidos
+        for tid in set(tile_ids):
+            if tid == 0:
+                continue
+            # Encontrar qué tileset contiene este tile
+            for start, end, ts_name in tileset_ranges:
+                if start <= tid <= end:
+                    local_id = tid - start
+                    ts_detail = tileset_details.get(ts_name, {})
+                    tiles = ts_detail.get("tiles", {})
+                    if local_id in tiles:
+                        tile_info = tiles[local_id]
+                        # Verificar animación
+                        for frame in tile_info.get("animation", []):
+                            frame_tid = frame["tileid"] + start  # frame tileid es local
+                            if not any(s <= frame_tid <= e for s, e, _ in tileset_ranges):
+                                error(
+                                    f"Tileset '{ts_name}': animación en tile local {local_id} "
+                                    f"referencia tileid {frame['tileid']} (global {frame_tid}) "
+                                    f"fuera de rango"
+                                )
+                    break
+
+    # 3. Validar propiedades requeridas en tiles de colisión
+    # Los tiles con 'solido=true' deben tener 'nombre'
+    for ts_name, detail in tileset_details.items():
+        for local_id, tile_info in detail.get("tiles", {}).items():
+            props = tile_info.get("properties", {})
+            if props.get("solido") == "true":
+                if "nombre" not in props:
+                    warn(
+                        f"Tileset '{ts_name}' tile {local_id}: tiene solido=true "
+                        f"pero falta propiedad 'nombre'"
+                    )
 
 
 def find_tmx_files(base: Path) -> list[Path]:

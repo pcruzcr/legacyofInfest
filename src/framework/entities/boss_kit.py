@@ -104,6 +104,16 @@ class BossAttack:
     #: ella el parry sólo evita daño y no invita a arriesgarse.
     aturde_al_parry: float = 1.2
 
+    def __post_init__(self) -> None:
+        # 1. Telegrafía obligatoria — windup <0.35 es ilegible y vuelve el combate ensayo/error
+        if self.windup < MIN_READABLE_WINDUP:
+            import logging
+            logging.getLogger(__name__).warning(
+                "BossAttack %r windup %.2fs < %.2fs — clamp a mínimo legible",
+                self.name, self.windup, MIN_READABLE_WINDUP,
+            )
+            object.__setattr__(self, "windup", MIN_READABLE_WINDUP)
+
     def available_in(self, phase: int) -> bool:
         return not self.phases or phase in self.phases
 
@@ -142,7 +152,7 @@ class WeakPoint:
         self, boss_rect: pygame.Rect,
         escala: float = 1.0, facing: int = 1,
     ) -> pygame.Rect:
-        """El rect del punto débil sobre el cuerpo vivo (AUD-606).
+        """El rect del punto débil sobre el cuerpo vivo (AUD-606, fix B-050).
 
         `escala` multiplica offset y tamaño para seguir al jefe escalado por
         fase; `facing` espeja el offset X cuando el jefe mira a la izquierda,
@@ -150,11 +160,24 @@ class WeakPoint:
         (`ancho − offset_x − ancho_caja`). Los valores por defecto conservan
         el comportamiento histórico —offsets crudos sin espejar— para quien
         llame con la firma vieja.
+
+        B-050: con escala !=1 el espejado debe hacerse sobre el ancho sin
+        escalar y luego escalar (escala·(ancho−offset−w)), no sobre el ancho ya
+        agrandado. Antes se hacía (boss_rect.width−offset−w)*escala con
+        boss_rect.width ya escalado → doble escala y ~15 px de desplazamiento
+        en fase 2 del Venado (1.25×) mirando a la izquierda.
         """
-        ox, oy = self.offset
-        w, h = self.size
+        ox_f, oy_f = float(self.offset[0]), float(self.offset[1])
+        w_f, h_f = float(self.size[0]), float(self.size[1])
+        ox, oy = ox_f, oy_f
+        w, h = int(w_f), int(h_f)
         if facing < 0:
-            ox = boss_rect.width - ox - w
+            # B-050 fix: espejar sobre ancho base, luego escalar
+            if escala not in (0, 1.0):
+                base_w = boss_rect.width / escala
+                ox = base_w - ox_f - w_f
+            else:
+                ox = boss_rect.width - ox_f - w_f
         return pygame.Rect(
             int(boss_rect.x + ox * escala),
             int(boss_rect.y + oy * escala),

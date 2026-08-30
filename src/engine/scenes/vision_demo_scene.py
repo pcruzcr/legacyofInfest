@@ -7,6 +7,7 @@ import numpy as np
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -49,8 +50,16 @@ if TYPE_CHECKING:
 
 
 MODE_NAMES = [
-    "THRESHOLD", "OTSU", "ERODE", "DILATE", "OPEN",
-    "CLOSE", "COMPONENTS", "REGIONS", "WATERSHED", "FEATURES",
+    _("ui.vision_demo.modes.threshold"),
+    _("ui.vision_demo.modes.otsu"),
+    _("ui.vision_demo.modes.erode"),
+    _("ui.vision_demo.modes.dilate"),
+    _("ui.vision_demo.modes.open"),
+    _("ui.vision_demo.modes.close"),
+    _("ui.vision_demo.modes.components"),
+    _("ui.vision_demo.modes.regions"),
+    _("ui.vision_demo.modes.watershed"),
+    _("ui.vision_demo.modes.features"),
 ]
 
 FEATURE_METHODS: list[Literal["hog", "lbp", "color_hist", "combined"]] = ["hog", "lbp", "color_hist", "combined"]
@@ -606,7 +615,7 @@ class VisionDemoScene(BaseScene):
             feat_label = self._font_overlay_small.render(f"Descriptor: {method.upper()}", True, COLOR_HIGHLIGHT)
             self._inter_overlay.blit(feat_label, (bx + 6, by + box_h - 30))
 
-        hint = self._font_overlay_small.render("Press I to close intermediate view", True, (100, 100, 140))
+        hint = self._font_overlay_small.render(_("ui.vision_demo.press_i_close"), True, (100, 100, 140))
         self._inter_overlay.blit(hint, (bx + 6, by + box_h - 12))
 
         surface.blit(self._inter_overlay, (0, 0))

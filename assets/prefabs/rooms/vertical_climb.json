@@ -1,0 +1,28 @@
+{
+    "name": "vertical_climb",
+    "description": "Sección vertical - trepa lianas y tirolesas, 3-4 pantallas de altura",
+    "pacing": "traversal",
+    "width": 10,
+    "height": 30,
+    "layers": {
+        "Collision": [
+            {"type": "Solid", "x": 0, "y": 464, "width": 160, "height": 16},
+            {"type": "Platform", "x": 32, "y": 384, "width": 32, "height": 8},
+            {"type": "Platform", "x": 96, "y": 320, "width": 32, "height": 8},
+            {"type": "Platform", "x": 64, "y": 256, "width": 32, "height": 8},
+            {"type": "Platform", "x": 96, "y": 192, "width": 32, "height": 8},
+            {"type": "Platform", "x": 32, "y": 128, "width": 32, "height": 8},
+            {"type": "Platform", "x": 64, "y": 64, "width": 32, "height": 8}
+        ],
+        "Objects": [
+            {"type": "PlayerSpawn", "x": 16, "y": 448},
+            {"type": "Vine", "x": 48, "y": 192, "width": 16, "height": 128, "props": {"velocidad": "70", "ancho_de_agarre": "12"}},
+            {"type": "Zipline", "x": 80, "y": 320, "width": 16, "height": 16, "props": {"destino_dx": "64", "destino_dy": "-96", "velocidad": "190", "radio_de_enganche": "14"}},
+            {"type": "Vine", "x": 32, "y": 224, "width": 16, "height": 96, "props": {"velocidad": "70", "ancho_de_agarre": "12"}},
+            {"type": "Zipline", "x": 64, "y": 160, "width": 16, "height": 16, "props": {"destino_dx": "32", "destino_dy": "-64", "velocidad": "190", "radio_de_enganche": "14"}},
+            {"type": "Vine", "x": 96, "y": 64, "width": 16, "height": 64, "props": {"velocidad": "70", "ancho_de_agarre": "12"}},
+            {"type": "Checkpoint", "x": 16, "y": 448, "width": 16, "height": 32, "props": {"checkpoint_id": "0"}},
+            {"type": "Checkpoint", "x": 96, "y": 64, "width": 16, "height": 32, "props": {"checkpoint_id": "1"}}
+        ]
+    }
+}

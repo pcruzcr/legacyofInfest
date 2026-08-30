@@ -1,0 +1,22 @@
+{
+    "name": "tutorial_basic_jump",
+    "description": "Salto básico de 2 baldosas - zona segura para aprender salto",
+    "pacing": "tutorial",
+    "width": 10,
+    "height": 8,
+    "layers": {
+        "Collision": [
+            {"type": "Solid", "x": 0, "y": 112, "width": 160, "height": 16},
+            {"type": "Solid", "x": 208, "y": 112, "width": 160, "height": 16}
+        ],
+        "Terrain": [
+            {"tile": 1, "x": 0, "y": 112},
+            {"tile": 1, "x": 16, "y": 112}
+        ],
+        "Objects": [
+            {"type": "PlayerSpawn", "x": 16, "y": 96},
+            {"type": "MessageTrigger", "x": 16, "y": 80, "width": 32, "height": 32, "props": {"text": "Pulsa Espacio para saltar"}},
+            {"type": "Checkpoint", "x": 48, "y": 96, "width": 16, "height": 32, "props": {"checkpoint_id": "0"}}
+        ]
+    }
+}

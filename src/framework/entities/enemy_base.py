@@ -21,6 +21,7 @@ from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.combate import dano as combate_dano
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.enemy_components import EnemyStateMachine
 from src.framework.vfx.contorno import COLOR_ENEMIGO, dibujar_con_contorno
 
 if TYPE_CHECKING:
@@ -61,6 +62,8 @@ class EnemyState(str, Enum):
     FIRING = "FIRING"
     RECOVER = "RECOVER"
     RETREAT = "RETREAT"
+    FLEEING = "FLEEING"
+    CHANNELING = "CHANNELING"
     STUNNED = "STUNNED"
     HURT = "HURT"
     LAUNCHED = "LAUNCHED"
@@ -96,6 +99,8 @@ class EnemyBase(BaseEntity):
         invincibility_duration: float = 0.5,
         deaggro_margin: float = 32.0,
         event_bus=None,
+        species_id: str | None = None,
+        **kwargs,
     ) -> None:
         """Initialize the enemy at the given spawn position."""
         super().__init__(spawn_position, event_bus)
@@ -125,6 +130,9 @@ class EnemyBase(BaseEntity):
         self._stun_timer: float = 0.0
         #: Última posición conocida del jugador; alimenta el estado SEARCH.
         self._last_seen: pygame.Vector2 | None = None
+        #: Límites de la arena (AUD-615). La escena los fija vía set_arena_bounds.
+        #: None = sin límites; el enemigo puede moverse libremente.
+        self.arena_bounds: pygame.Rect | None = None
         self._contact_cooldown: float = 0.0
         self._hurt_timer: float = 0.0
         self._death_timer: float = 0.0
@@ -146,6 +154,11 @@ class EnemyBase(BaseEntity):
         #: `resistencias`, por ejemplo `veneno:0.5, fuego:2`.
         self.resistencias: dict[str, float] = {}
 
+        # --- Perfil de física para cenital ---
+        from src.framework.physics.perfil import PhysicsProfile
+
+        self.perfil: PhysicsProfile = PhysicsProfile.plataformas()
+
         # --- Collision ---
         self._collision_rects: list[pygame.Rect] = []
         self._one_way_rects: list[pygame.Rect] = []
@@ -164,6 +177,8 @@ class EnemyBase(BaseEntity):
         # --- State ---
         self.state: EnemyState = EnemyState.PATROL
         self.facing_direction: int = 1  # -1 left, 1 right
+        # Facade + State Machine — desmonolitización AUD-725
+        self._state_machine = EnemyStateMachine(self)
 
         # --- Hitbox / Hurtbox (world-space, recomputed each frame) ---
         self.hitbox: pygame.Rect = pygame.Rect(0, 0, 0, 0)
@@ -181,6 +196,14 @@ class EnemyBase(BaseEntity):
         self._hit_tint_timer: float = 0.0
 
         # --- Sprite ---
+        self.species_id: str | None = species_id
+        self._species_id: str | None = species_id
+        if kwargs:
+            # allow extra species params without breaking
+            for k, v in list(kwargs.items()):
+                if k == "species_id":
+                    self.species_id = v
+                    self._species_id = v
         self._sprite_zone: int = 0
         self._sprite_frames: dict[str, list[pygame.Surface]] = {}
         self._sprite_fw: int = 16
@@ -199,6 +222,21 @@ class EnemyBase(BaseEntity):
         self._telegraph_warning_size: tuple[int, int] = (0, 0)
         self._tint_surf: pygame.Surface | None = None
         self._tint_surf_size: tuple[int, int] = (0, 0)
+
+        # Perfil para cenital ya creado arriba
+
+    @property
+    def vista_cenital(self) -> bool:
+        return getattr(self, "perfil", None) is not None and getattr(self.perfil, "modo", "") == "cenital"
+
+    @vista_cenital.setter
+    def vista_cenital(self, v: bool) -> None:
+        from src.framework.physics.perfil import PhysicsProfile
+
+        self.perfil = PhysicsProfile.cenital() if v else PhysicsProfile.plataformas()
+        if v:
+            self._hug_slopes = False
+            self._is_airborne = False
 
     # ──────────────────────────────────────────────
     # Master update (do NOT override in subclasses)
@@ -222,12 +260,32 @@ class EnemyBase(BaseEntity):
         if self._pre_update(dt):
             return
         self._update_invincibility(dt)
+        # Vista cenital: movimiento 2D sin gravedad ni pendientes
+        if self.vista_cenital:
+            self._run_state_machine(dt)
+            # En cenital, knockback es 2D y no hay suelo
+            if self._knockback_velocity.length_squared() > 0:
+                self.position.x += self._knockback_velocity.x * dt
+                self.position.y += self._knockback_velocity.y * dt
+                self._knockback_velocity *= (0.90 ** (dt * 60.0))
+                if self._knockback_velocity.length() < 1.0:
+                    self._knockback_velocity.update(0.0, 0.0)
+            self._update_rects()
+            self._tick_cooldowns(dt)
+            self._advance_animation(dt)
+            self._post_update(dt)
+            return
         self._run_state_machine(dt)
         self._apply_knockback(dt)
         self._update_rects()
         self._tick_cooldowns(dt)
         self._advance_animation(dt)
         self._post_update(dt)
+        # AUD-667 — anclaje al suelo plano para que HURT/DYING no desplacen
+        # `rect.bottom`. Evita que el cambio de sprite o el retroceso deje al
+        # enemigo levitando por un decimales de colisión. No afecta a
+        # LAUNCHED/DYING ni a voladores.
+        self._mantener_en_suelo()
         # AUD-325 — el suelo inclinado, al final: las subclases mueven la
         # posición en distintos puntos (estado, knockback, `_post_update`),
         # y éste es el único lugar que las ve a todas.
@@ -284,18 +342,105 @@ class EnemyBase(BaseEntity):
         return self._death_timer
 
     def _load_zone_sprites(self, zone: int, fw: int, fh: int) -> None:
-        """Load zone-specific enemy sprite sheets."""
+        """Load zone-specific enemy sprite sheets.
+
+        AUD-XXX — corrección del bug de early-return y recorte garbled.
+
+        * Cada estado (walk/hurt/die) se intenta por separado: primero
+          ``enemy_{sid}_{key}.png`` en la carpeta de zona, luego en
+          ``species/``. Si falta tras probar ``fw,fh`` con
+          ``AssetLoader``, se intenta el genérico de zona con el mismo
+          ``fw,fh``. Sólo si también falla (``frames==[]`` o recorte
+          garbled — ``0 filas`` cuando ``fh`` no divide la hoja —) se
+          genera un placeholder coloreado por zona para que nunca quede
+          un cuadro rojo.
+        * No hay early-return global: que walk exista no exime de probar
+          hurt/die, que es justo lo que dejaba HURT/DYING en rojo.
+        * La validación ``frames[0].get_size()==(fw,fh)`` detecta el caso
+          ``Archer 12×14 sobre hoja 16×12 → 0 filas`` donde el recorte da
+          ``[]`` o frames de tamaño inesperado y fuerza el fallback.
+        """
         self._sprite_zone = zone
         self._sprite_fw = fw
         self._sprite_fh = fh
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("walk", f"enemy_{zone_key}_walk.png"),
-                           ("hurt", f"enemy_{zone_key}_hurt.png"),
-                           ("die", f"enemy_{zone_key}_die.png")]:
-            path = base / fname
-            frames = AssetLoader.load_sprite_sheet(path, fw, fh)
-            self._sprite_frames[key] = frames
+        species_id = getattr(self, "species_id", None)
+        if species_id is None:
+            species_id = getattr(self, "_species_id", None)
+        # Colores por zona para placeholder (si no hay arte)
+        ZONE_PLACEHOLDER = {
+            1: (120, 80, 40),
+            2: (60, 120, 60),
+            3: (80, 60, 120),
+            4: (100, 90, 70),
+        }
+        base_col = ZONE_PLACEHOLDER.get(zone, (120, 80, 40))
+        for key, fname_generic, expected, placeholder_col in [
+            ("walk", f"enemy_{zone_key}_walk.png", 6, base_col),
+            ("hurt", f"enemy_{zone_key}_hurt.png", 3, (200, 60, 60)),
+            ("die", f"enemy_{zone_key}_die.png", 5, (80, 30, 30)),
+        ]:
+            frames: list[pygame.Surface] = []
+            # 1) intento especie-específico con fw,fh correctos
+            if species_id:
+                sid = str(species_id).lower()
+                candidates = [
+                    base / f"enemy_{sid}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                    settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{sid}_{key}.png",
+                ]
+                # compat: el walk legacy a veces se guardó como {sid}_walk.png sin key
+                if key == "walk":
+                    candidates.append(
+                        settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_walk.png"
+                    )
+                for cand in candidates:
+                    if not cand.exists():
+                        continue
+                    try:
+                        tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                    except Exception:
+                        continue
+                    if tmp and len(tmp) > 0 and tmp[0].get_size() == (fw, fh):
+                        frames = tmp
+                        break
+                    # recorte garbled (0 filas o tamaño inesperado) → tratar como fallo y probar siguiente candidato
+                    continue
+                if frames:
+                    self._sprite_frames[key] = frames
+                    continue
+            # 2) fallback genérico de zona, pero sólo si el archivo existe y el recorte cuadra
+            generic_path = base / fname_generic
+            if generic_path.exists():
+                try:
+                    gen = AssetLoader.load_sprite_sheet(generic_path, fw, fh)
+                except Exception:
+                    gen = []
+                if gen and len(gen) > 0 and gen[0].get_size() == (fw, fh):
+                    # genérico válido con fw,fh — aceptar aunque el conteo no coincida exactamente,
+                    # pero evitar el caso 12×14 sobre 16×12 que da 0 filas ([] ya filtrado)
+                    self._sprite_frames[key] = gen
+                    continue
+            # 3) placeholder coloreado por zona si frames==[] o garbled
+            placeholder: list[pygame.Surface] = []
+            col = placeholder_col
+            hi = tuple(min(255, c + 30) for c in col)
+            for _ in range(expected):
+                surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                surf.fill((*col, 255))
+                # silueta mínima para que no sea un rectángulo rojo genérico
+                if fw >= 6 and fh >= 6:
+                    pygame.draw.ellipse(surf, hi, (1, 1, fw - 2, fh - 2))
+                    pygame.draw.ellipse(surf, col, (2, 2, fw - 4, fh - 4))
+                    if fw >= 10 and fh >= 6:
+                        pygame.draw.circle(surf, (255, 255, 255), (fw // 3, fh // 3), 1)
+                        pygame.draw.circle(surf, (255, 255, 255), (2 * fw // 3, fh // 3), 1)
+                        pygame.draw.circle(surf, (40, 40, 40), (fw // 3, fh // 3 + 1), 1)
+                        pygame.draw.circle(surf, (40, 40, 40), (2 * fw // 3, fh // 3 + 1), 1)
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                placeholder.append(surf)
+            self._sprite_frames[key] = placeholder
         self._load_extra_sprites(zone, fw, fh)
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
@@ -305,6 +450,8 @@ class EnemyBase(BaseEntity):
     _ANIM_FPS: dict[str, float] = {
         "walk": 10.0, "fly": 12.0, "shoot": 16.0,
         "hurt": 12.0, "die": 10.0,
+        "drift": 8.0, "death": 8.0, "stomp": 12.0, "charge": 14.0,
+        "vine": 12.0, "spit": 12.0,
     }
     # Alert-mode FPS override (same animation keys, faster playback)
     _ALERT_ANIM_FPS: dict[str, float] = {
@@ -314,6 +461,11 @@ class EnemyBase(BaseEntity):
     def _advance_animation(self, dt: float) -> None:
         """Advance the sprite animation frame at state-specific FPS."""
         anim_key = self._get_animation_state()
+        last = getattr(self, "_last_anim_key", None)
+        if last != anim_key:
+            self._animation_frame = 0
+            self._animation_timer = 0.0
+            self._last_anim_key = anim_key  # type: ignore[attr-defined]
         fps = self._ANIM_FPS.get(anim_key, 10.0)
         if self.state == EnemyState.ALERT and anim_key in self._ALERT_ANIM_FPS:
             fps = self._ALERT_ANIM_FPS[anim_key]
@@ -324,7 +476,11 @@ class EnemyBase(BaseEntity):
             return
         if self._animation_timer >= frame_duration:
             self._animation_timer -= frame_duration
-            self._animation_frame = (self._animation_frame + 1) % len(frames)
+            if self.state == EnemyState.DYING:
+                if self._animation_frame < len(frames) - 1:
+                    self._animation_frame += 1
+            else:
+                self._animation_frame = (self._animation_frame + 1) % len(frames)
 
     def draw(
         self,
@@ -380,8 +536,13 @@ class EnemyBase(BaseEntity):
                 frame = flipped_frames[frame_idx]
             else:
                 frame = frames[frame_idx]
-            ox = (self.rect.width - self._sprite_fw) // 2
-            oy = self.rect.height - self._sprite_fh
+            # AUD-667 — anclaje abajo-centro independiente del sprite.
+            # Usar el tamaño real del frame y no `_sprite_fw/_sprite_fh` evita
+            # que HURT/DYING con altura distinta desplace `rect` o `position`:
+            # el cuerpo (`rect`) manda y el dibujo se adapta al frame, igual
+            # que `player.py:draw` hace con `SPRITE_W/H`.
+            ox = (self.rect.width - frame.get_width()) // 2
+            oy = self.rect.height - frame.get_height()
             destino = (screen_x + ox, screen_y + oy)
             # AUD-304 — el contorno de AUD-190, disponible también aquí. Se
             # consulta cada fotograma y no se cachea en el enemigo a propósito:
@@ -541,15 +702,21 @@ class EnemyBase(BaseEntity):
         dx = self.position.x - source_position[0]
         dir_x = 1 if dx >= 0 else -1
         kb_power = 80.0 if self._hitstun_type == "light" else 150.0
+        # AUD-667 — los enemigos de suelo no deben salir del piso por HURT.
+        # El impulso vertical hacía que `rect.bottom` subiera y, con la
+        # resolución por colisión en flotantes, quedara despegado o con
+        # deriva. Sólo LAUNCHED tiene impulso vertical real; HURT se limita
+        # a retroceso horizontal. Los voladores (`_hug_slopes=False`) conservan
+        # el impulso porque no pisan suelo.
         if self._hitstun_type == "launch":
             self._knockback_velocity.x = dir_x * kb_power * 0.5
             self._knockback_velocity.y = -250.0
         elif self._hitstun_type == "heavy":
             self._knockback_velocity.x = dir_x * kb_power
-            self._knockback_velocity.y = -100.0
+            self._knockback_velocity.y = -100.0 if not self._hug_slopes else 0.0
         else:
             self._knockback_velocity.x = dir_x * kb_power
-            self._knockback_velocity.y = -30.0
+            self._knockback_velocity.y = -30.0 if not self._hug_slopes else 0.0
 
         if self.current_health <= 0:
             self._die()
@@ -569,6 +736,12 @@ class EnemyBase(BaseEntity):
         self._death_timer = 0.5
         self._flash_counter = 0.0
         self._flash_visible = True
+        # AUD-636 — destello blanco de muerte: se emite ANTES de ENEMY_DIED
+        # para que el destello llegue el mismo fotograma que la sangre.
+        self._event_bus.emit(
+            Events.VFX_KILL_FLASH,
+            pos=(self.position.x, self.position.y),
+        )
         # BUG-058 FIX: Reset _was_alive so revived enemies re-trigger on_enemy_died
         self._was_alive = True
         # BUG-031 FIX: Keep is_alive=True until death animation completes
@@ -733,6 +906,34 @@ class EnemyBase(BaseEntity):
         if superficie is not None:
             self.position.y = float(superficie) - self.rect.height
 
+    def _mantener_en_suelo(self) -> None:
+        """Mantiene `rect.bottom` anclado al suelo plano (AUD-667)."""
+        if not self._hug_slopes:
+            return
+        if self.state in (EnemyState.LAUNCHED, EnemyState.DYING):
+            return
+        if self._is_airborne:
+            return
+        todos = self._collision_rects + self._one_way_rects
+        if not todos:
+            return
+        feet_y = self.position.y + self.rect.height
+        cx = self.rect.centerx
+        for r in todos:
+            if r.left < cx < r.right:
+                if abs(feet_y - r.top) <= 2.0 or (r.top <= feet_y < r.bottom):
+                    self.position.y = float(r.top - self.rect.height)
+                    self.rect.y = int(self.position.y)
+                    self._knockback_velocity.y = 0.0
+                    self._update_rects()
+                    break
+                if feet_y > r.top and feet_y - r.top < 4.0:
+                    self.position.y = float(r.top - self.rect.height)
+                    self.rect.y = int(self.position.y)
+                    self._knockback_velocity.y = 0.0
+                    self._update_rects()
+                    break
+
     def _update_invincibility(self, dt: float) -> None:
         """Tick down invincibility timer and toggle flash."""
         if self._invincibility_timer > 0:
@@ -760,6 +961,8 @@ class EnemyBase(BaseEntity):
         Respects player parry — parried enemies get deflected.
         player: Player — imported locally to avoid circular imports.
         """
+        if not self.is_visible:
+            return
         if not self.is_alive or self.state == EnemyState.DYING:
             return
         if self._contact_cooldown > 0:
@@ -771,7 +974,9 @@ class EnemyBase(BaseEntity):
                 dx = self.position.x - player.position.x
                 dir_x = 1 if dx >= 0 else -1
                 self._knockback_velocity.x = dir_x * 200.0
-                self._knockback_velocity.y = -150.0
+                # AUD-667 — en suelo el parry no levanta al enemigo (mismo
+                # motivo que `apply_hit`); el retroceso es horizontal.
+                self._knockback_velocity.y = -150.0 if not self._hug_slopes else 0.0
                 self._hurt_timer = 0.3  # sólo el tinte del golpe, no el estado
                 # AUD-206: aquí ponía `state = HURT`, y HURT es el estado en el
                 # que cae el enemigo con un golpe normal — sale de él directo a
@@ -869,10 +1074,15 @@ class EnemyBase(BaseEntity):
 
         if self.state == EnemyState.LAUNCHED:
             self._knockback_velocity.y += 600.0 * dt  # gravity during launch
-            if self.position.y >= self._ground_y:
+            # AUD-667 — sólo aterrizar cuando se va cayendo y se alcanzó el
+            # suelo; antes se comprobaba `y >= ground` incluso subiendo y en
+            # el primer fotograma `y == ground`, lo que anulaba el impulso
+            # de lanzamiento y dejaba al enemigo pegado.
+            if self._knockback_velocity.y >= 0 and self.position.y >= self._ground_y:
                 self.position.y = self._ground_y
                 self._knockback_velocity.y = 0.0
                 self._knockback_velocity.x = 0.0
+                self._is_airborne = False
                 if self._hurt_timer <= 0:
                     if self._check_detection_range():
                         self.state = EnemyState.ALERT
@@ -881,6 +1091,20 @@ class EnemyBase(BaseEntity):
             return
 
         if self.state == EnemyState.HURT:
+            # Fix reporte Guillermo 5: HURT también cae, si no un impulso
+            # hacia arriba lo deja flotando (Shooter con gravity=0).
+            # Se aplica la misma gravedad que en LAUNCHED pero sin el lock
+            # de suelo de LAUNCHED: caemos con _apply_knockback + gravedad
+            # y dejamos que _resolver_pendientes/_apply_knockback haga el resto.
+            # Solo si no tiene gravedad propia (HURT no mueve, así que no
+            # compensa duplicar si la subclase ya integra gravedad).
+            # AUD-667 — los enemigos de suelo no tienen caída en HURT porque
+            # su velocidad vertical es 0 (ver `apply_hit`); aplicar gravedad
+            # aquí los hundiría y la corrección por colisión dejaría deriva.
+            if self._hug_slopes and not self._is_airborne:
+                self._knockback_velocity.y = 0.0
+            elif self._knockback_velocity.y < 500.0:
+                self._knockback_velocity.y += 600.0 * dt
             if self._hurt_timer <= 0:
                 if self._check_detection_range():
                     self.state = EnemyState.ALERT
@@ -1003,6 +1227,10 @@ class EnemyBase(BaseEntity):
         de moverse por completo. Lo detectó
         ``test_sine_reverses_at_boundary``: la ausencia del atributo significa
         "esta clase no se rige por longitud de patrulla", no "está quieta".
+
+        AUD-660 — reportado como “default positivo debería ser IDLE”; no se
+        cambia: voladores sin patrol_length deben seguir en PATROL (su lógica
+        de vuelo no usa longitud de patrulla). Verificado por test_sine.
         """
         if not hasattr(self, "patrol_length"):
             return EnemyState.PATROL
@@ -1058,6 +1286,30 @@ class EnemyBase(BaseEntity):
         aquí. Se llama después de la guarda, así que un cadáver no lo recibe.
         """
 
+    def set_arena_bounds(self, bounds: pygame.Rect) -> None:
+        """Define los límites dentro de los que el enemigo puede moverse (AUD-615).
+
+        La escena lo llama con la zona de arena declarada en el TMX (ArenaZone).
+        Si no se llama, el enemigo no tiene límites de arena (compatibilidad
+        hacia atrás con entregas existentes).
+        """
+        self.arena_bounds = pygame.Rect(bounds)
+
+    def clamp_to_arena(self, margin: int = 16) -> None:
+        """Devuelve al enemigo dentro de su arena si se ha salido (AUD-615).
+
+        Se aplica a position y rect a la vez para evitar un fotograma de
+        desincronización que usen las comprobaciones de colisión.
+        """
+        if self.arena_bounds is None:
+            return
+        left = self.arena_bounds.left + margin
+        right = self.arena_bounds.right - margin - self.rect.width
+        if right < left:  # arena más estrecha que el enemigo: se centra
+            left = right = self.arena_bounds.centerx - self.rect.width // 2
+        self.position.x = max(left, min(self.position.x, right))
+        self.rect.x = int(self.position.x)
+
     def begin_recovery(self, duration: float | None = None) -> None:
         """Entra en la ventana de castigo. La llaman los estados de ataque."""
         if self.state == EnemyState.DYING:
@@ -1084,6 +1336,8 @@ class EnemyBase(BaseEntity):
         speed = float(getattr(self, "patrol_speed", 40.0))
         self.position.x += self.facing_direction * speed * dt
         self.rect.x = int(self.position.x)
+        # AUD-615: acotar a la arena si existe
+        self.clamp_to_arena()
 
     def _recover_behavior(self, dt: float) -> None:
         """Sin movimiento durante la recuperación: es la ventana de castigo."""
@@ -1097,6 +1351,8 @@ class EnemyBase(BaseEntity):
         speed = float(getattr(self, "alert_speed", 60.0)) * 0.8
         self.position.x -= self.facing_direction * speed * dt
         self.rect.x = int(self.position.x)
+        # AUD-615: acotar a la arena si existe
+        self.clamp_to_arena()
 
     def set_player_ref(self, player_rect: pygame.Rect) -> None:
         """Set or update the reference to the player's rect for detection."""

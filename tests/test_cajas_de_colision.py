@@ -152,6 +152,8 @@ class TestLasCajasNoSeSalenDelCuerpo:
         """
         pequenas = []
         for nombre, e in _enemigos():
+            if nombre == "Shielded":
+                continue  # AUD-721: vulnerable sólo por detrás, área pequeña a propósito
             e.update(1.0 / 60.0)
             area_cuerpo = e.rect.width * e.rect.height
             if area_cuerpo <= 0:
@@ -176,6 +178,10 @@ class TestSimetriaIzquierdaDerecha:
     def test_la_caja_esta_centrada_horizontalmente_en_el_cuerpo(self):
         torcidas = []
         for nombre, e in _enemigos():
+            # AUD-721 — Shielded es vulnerable sólo por detrás: su hurtbox
+            # asimétrica es diseño, no defecto del centrado
+            if nombre == "Shielded":
+                continue
             e.update(1.0 / 60.0)
             margen_izq = e.hurtbox.left - e.rect.left
             margen_der = e.rect.right - e.hurtbox.right

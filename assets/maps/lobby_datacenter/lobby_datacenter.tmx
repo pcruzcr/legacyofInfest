@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="40" height="14" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="43">
  <properties>
-  <property name="bgm_track" value="bgm_stage0"/>
-  <property name="schema_version" value="1"/>
-  <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="stage_id" value="lobby_datacenter"/>
-  <property name="stage_name" value="2-3  EL LOBBY"/>
-  <property name="time_limit" type="int" value="120"/>
+  <property name="bgm_track" value="bgm_stage0" />
+  <property name="schema_version" value="1" />
+  <property name="author" value="Alejandro Luna" />
+  <property name="stage_id" value="lobby_datacenter" />
+  <property name="stage_name" value="2-3  EL LOBBY" />
+  <property name="time_limit" type="int" value="120" />
  </properties>
- <tileset firstgid="1" source="../../tilesets/tileset_datacenter.tsx"/>
+ <tileset firstgid="1" source="../../tilesets/tileset_datacenter.tsx" />
  <layer id="1" name="BG_Far" width="40" height="14">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -100,67 +100,67 @@
 </data>
  </layer>
  <objectgroup id="6" name="Objects">
-  <object id="1" name="PlayerSpawn_01" type="PlayerSpawn" x="48" y="192"/>
+  <object id="1" name="PlayerSpawn_01" type="PlayerSpawn" x="48" y="192" />
   <object id="2" name="Checkpoint_01" type="Checkpoint" x="320" y="160" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="0"/>
+    <property name="checkpoint_id" type="int" value="0" />
    </properties>
   </object>
-  <object id="3" name="NextTrigger_01" type="NextTrigger" x="635" y="160" width="5" height="64"/>
+  <object id="3" name="NextTrigger_01" type="NextTrigger" x="635" y="160" width="5" height="64" />
   <object id="20" name="Walker_01" type="Walker" x="124" y="183" width="129" height="33">
    <properties>
-    <property name="facing" value="left"/>
-    <property name="patrol_length" type="float" value="96"/>
-    <property name="zone" type="int" value="2"/>
+    <property name="facing" value="left" />
+    <property name="patrol_length" type="float" value="96" />
+    <property name="zone" type="int" value="2" />
    </properties>
   </object>
   <object id="32" name="Waypoint_01" type="Waypoint" x="483" y="118">
    <properties>
-    <property name="owner_id" value="Flying_01"/>
-    <property name="waypoint_index" type="int" value="0"/>
+    <property name="owner_id" value="Flying_01" />
+    <property name="waypoint_index" type="int" value="0" />
    </properties>
-   <point/>
+   <point />
   </object>
   <object id="33" name="Waypoint_02" type="Waypoint" x="578" y="117">
    <properties>
-    <property name="owner_id" value="Flying_01"/>
-    <property name="waypoint_index" type="int" value="1"/>
+    <property name="owner_id" value="Flying_01" />
+    <property name="waypoint_index" type="int" value="1" />
    </properties>
-   <point/>
+   <point />
   </object>
   <object id="34" name="Waypoint_03" type="Waypoint" x="580" y="165">
    <properties>
-    <property name="owner_id" value="Flying_01"/>
-    <property name="waypoint_index" type="int" value="2"/>
+    <property name="owner_id" value="Flying_01" />
+    <property name="waypoint_index" type="int" value="2" />
    </properties>
-   <point/>
+   <point />
   </object>
   <object id="35" name="Waypoint_04" type="Waypoint" x="483" y="162">
    <properties>
-    <property name="owner_id" value="Flying_01"/>
-    <property name="waypoint_index" type="int" value="3"/>
+    <property name="owner_id" value="Flying_01" />
+    <property name="waypoint_index" type="int" value="3" />
    </properties>
-   <point/>
+   <point />
   </object>
   <object id="36" name="Flying_01" type="Flying" x="502" y="139" width="82" height="28">
    <properties>
-    <property name="flight_mode" value="bezier"/>
-    <property name="flight_speed" type="float" value="50"/>
-    <property name="zone" type="int" value="2"/>
+    <property name="flight_mode" value="bezier" />
+    <property name="flight_speed" type="float" value="50" />
+    <property name="zone" type="int" value="2" />
    </properties>
   </object>
   <object id="37" name="Shooter_01" type="Shooter" x="413.5" y="192.5" width="89" height="31">
    <properties>
-    <property name="fire_rate" type="float" value="1.5"/>
-    <property name="projectile_speed" type="float" value="120"/>
-    <property name="zone" type="int" value="2"/>
+    <property name="fire_rate" type="float" value="1.5" />
+    <property name="projectile_speed" type="float" value="120" />
+    <property name="zone" type="int" value="2" />
    </properties>
   </object>
  </objectgroup>
  <objectgroup id="7" name="Collision">
-  <object id="10" name="Solid_Floor" x="0" y="192" width="640" height="32"/>
-  <object id="39" name="Wall_Left" x="0" y="82" width="4" height="224"/>
-  <object id="42" name="Wall_Right" x="658.5" y="158.5" width="10" height="65"/>
+  <object id="10" name="Solid_Floor" x="0" y="192" width="640" height="32" />
+  <object id="39" name="Wall_Left" x="0" y="82" width="4" height="224" />
+  <object id="42" name="Wall_Right" x="658.5" y="158.5" width="10" height="65" />
  </objectgroup>
  <layer id="8" name="FG_Overlay" width="40" height="14">
   <data encoding="csv">

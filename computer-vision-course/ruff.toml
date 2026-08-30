@@ -1,0 +1,28 @@
+# Configuración de ruff **sólo** para el curso.
+#
+# Extiende la del motor en lugar de sustituirla: el curso se somete a las
+# mismas reglas y sólo añade las excepciones que su estructura obliga. Un
+# fichero de configuración que empieza de cero acabaría siendo más permisivo
+# sin que nadie lo hubiera decidido.
+extend = "../pyproject.toml"
+
+[lint.per-file-ignores]
+# E402 — imports después de código.
+#
+# Los ejemplos, las soluciones y los guiones se lanzan directamente
+# (`python examples/.../algo.py`), así que tienen que montar `sys.path` ANTES
+# de poder importar `cvcourse` y `src.*`. Es un problema de huevo y gallina: el
+# preámbulo es justo lo que hace que el import funcione, y no puede ir después.
+#
+# La alternativa sería instalar el curso como paquete (`pip install -e`), pero
+# eso obligaría a cada estudiante a un paso de instalación más para ejecutar un
+# ejemplo suelto, y el material tiene que poder abrirse y correrse tal cual.
+"examples/**/*.py" = ["E402"]
+"solutions/**/*.py" = ["E402"]
+"scripts/**/*.py" = ["E402"]
+"tests/conftest.py" = ["E402"]
+"tests/test_datasets.py" = ["E402"]
+# Los notebooks tienen el mismo problema, celda por celda: la de arranque monta
+# `sys.path` antes de poder importar `cvcourse`. Ruff lint los `.ipynb` y trata
+# cada celda como un módulo.
+"notebooks/*.ipynb" = ["E402"]

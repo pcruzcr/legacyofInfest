@@ -3,7 +3,7 @@ Module: bestiary_registry
 System: framework.entities
 Academic Unit: N/A
 
-Las 21 especies de enemigo que `docs/18_ENEMY_ROSTER.md` especifica.
+Las 35 especies de enemigo que `docs/18_ENEMY_ROSTER.md` especifica.
 
 Por qué existe este módulo (AUD-046)
 ------------------------------------
@@ -53,7 +53,35 @@ class SpeciesSpec:
         kwargs = dict(self.params)
         kwargs.update(overrides)
         kwargs.setdefault("zone", self.zone)
-        return cls(spawn_position, **kwargs)
+        # AUD-XXX — el species_id debe estar disponible antes de que
+        # EnemyBase._load_zone_sprites intente cargar
+        # enemy_{sid}_{key}.png; antes se fijaba después de construir y
+        # nunca se recargaban los sprites, dejando walk/hurt/die en
+        # placeholder genérico o rojo cuando fw,fh no cuadraba.
+        # Se pasa también como kwarg por si la subclase lo recoge en su
+        # __init__; si lo ignora, se reasigna tras construir y se fuerza
+        # recarga.
+        kwargs.setdefault("species_id", self.species_id)
+        try:
+            ent = cls(spawn_position, **kwargs)
+        except TypeError:
+            # la subclase no acepta species_id → construir sin él y fijar después
+            kwargs.pop("species_id", None)
+            ent = cls(spawn_position, **kwargs)
+        try:
+            ent.species_id = self.species_id
+            ent._species_id = self.species_id
+        except Exception:
+            pass
+        # Recarga con species_id ya conocido para que el fallback por zona
+        # use fw,fh correctos y no quede garbled (ej. Archer 12×14 sobre
+        # hoja 16×12 → 0 filas).
+        try:
+            if hasattr(ent, "_sprite_fw") and hasattr(ent, "_sprite_fh") and hasattr(ent, "_sprite_zone"):
+                ent._load_zone_sprites(ent._sprite_zone, ent._sprite_fw, ent._sprite_fh)
+        except Exception:
+            pass
+        return ent
 
 
 def _walker() -> type:
@@ -71,10 +99,94 @@ def _shooter() -> type:
     return EnemyShooter
 
 
+def _shielded() -> type:
+    from src.framework.entities.enemy_shielded import EnemyShielded
+    return EnemyShielded
+
+
+def _swimmer() -> type:
+    from src.framework.entities.enemy_swimmer import EnemySwimmer
+    return EnemySwimmer
+
+
+def _cangrejo() -> type:
+    from src.framework.entities.enemy_cangrejo import EnemyCangrejo
+    return EnemyCangrejo
+
+
+def _medusa() -> type:
+    from src.framework.entities.enemy_medusa import EnemyMedusa
+    return EnemyMedusa
+
+
+def _pezabismal() -> type:
+    from src.framework.entities.enemy_pez_abismal import EnemyPezAbismal
+    return EnemyPezAbismal
+
+
+def _climber() -> type:
+    from src.framework.entities.enemy_climber import EnemyClimber
+    return EnemyClimber
+
+
+def _flying_bomber() -> type:
+    from src.framework.entities.enemy_flying_bomber import EnemyFlyingBomber
+    return EnemyFlyingBomber
+
+
+def _terrain_shaper() -> type:
+    from src.framework.entities.enemy_terrain_shaper import EnemyTerrainShaper
+    return EnemyTerrainShaper
+
+
+def _summoner() -> type:
+    from src.framework.entities.enemy_summoner import EnemySummoner
+    return EnemySummoner
+
+
+def _archer() -> type:
+    from src.framework.entities.enemy_archer import EnemyArcher
+    return EnemyArcher
+
+
+def _brute() -> type:
+    from src.framework.entities.enemy_brute import EnemyBrute
+    return EnemyBrute
+
+
+def _charger() -> type:
+    from src.framework.entities.enemy_charger import EnemyCharger
+    return EnemyCharger
+
+
+def _caster() -> type:
+    from src.framework.entities.enemy_caster import EnemyCaster
+    return EnemyCaster
+
+
+def _assassin() -> type:
+    from src.framework.entities.enemy_assassin import EnemyAssassin
+    return EnemyAssassin
+
+
 _BASE_CLASSES = {
     "EnemyWalker": _walker,
     "EnemyFlying": _flying,
     "EnemyShooter": _shooter,
+    "EnemyShielded": _shielded,
+    "EnemySwimmer": _swimmer,
+    "EnemyCangrejo": _cangrejo,
+    "EnemyMedusa": _medusa,
+    "EnemyPezAbismal": _pezabismal,
+    "EnemyClimber": _climber,
+    "EnemyFlyingBomber": _flying_bomber,
+    "EnemyTerrainShaper": _terrain_shaper,
+    "EnemySummoner": _summoner,
+    "EnemyArcher": _archer,
+    "EnemyBrute": _brute,
+    "EnemyCharger": _charger,
+    "EnemyCaster": _caster,
+    "EnemyAssassin": _assassin,
 }
 
 
@@ -172,8 +284,79 @@ _ZONE3 = [
     }),
 ]
 
+# ── Zona 4 — Cementerio / Mina inundada ─────────────────────────────
+# Atemporal: la regla de oro del 4-1 sigue (nada daña en la mina), pero la
+# presencia suma lectura ambiental. Estas 4 especies no son combate: enseñan
+# volumen, corriente y deriva sin romper la regla del nivel.
+
+_ZONE4 = [
+    SpeciesSpec("Cangrejo", "EnemyCangrejo", 4, "Cangrejo de mina", {
+        "max_health": 1.0, "damage_on_contact": 0.0, "patrol_length": 80.0, "patrol_speed": 22.0,
+    }),
+    SpeciesSpec("Medusa", "EnemyMedusa", 4, "Medusa de pozo", {
+        "max_health": 1.0, "damage_on_contact": 0.0, "flight_mode": 'sine',
+        "flight_speed": 26.0, "sine_amplitude": 14.0, "sine_frequency": 0.4,
+    }),
+    SpeciesSpec("PezAbismal", "EnemyPezAbismal", 4, "Pez abismal", {
+        "max_health": 1.0, "damage_on_contact": 0.0, "flight_mode": 'sine',
+        "flight_speed": 85.0, "sine_amplitude": 16.0, "sine_frequency": 0.5,
+    }),
+    SpeciesSpec("AssassinSombra", "EnemyAssassin", 4, "Sombra del cementerio", {
+        "max_health": 2.0, "damage_on_contact": 0.5, "patrol_length": 64.0,
+    }),
+]
+
+# ── Huérfanos cableados — 5 arquetipos vacíos + 4 mecánicos ──────────
+# Antes 5 arquetipos (Archer/Brute/Caster/Charger/Assassin) estaban vacíos
+# y 9 clases huérfanas (Shielded, Swimmer, Climber, FlyingBomber,
+# TerrainShaper, Summoner + las 3 de mina) no tenían especie ni registro.
+# Se cablean con zonas existentes (no nuevos biomas): Datacenter para
+# Shielded/Brute/Charger, Heredia para Archer/Caster/Summoner/Shaper,
+# Universidad para Climber, Cementerio para Assassin.
+
+_EXTRA_ZONA1 = [
+    SpeciesSpec("Climber", "EnemyClimber", 1, "Trepador de lianas", {
+        "max_health": 2.0, "damage_on_contact": 0.5, "climb_speed": 70.0, "zipline_speed": 190.0,
+    }),
+]
+
+_EXTRA_ZONA2 = [
+    SpeciesSpec("Shielded", "EnemyShielded", 2, "Guardia con escudo", {
+        "max_health": 3.0, "damage_on_contact": 0.5, "shield_health": 3.0, "patrol_length": 80.0, "patrol_speed": 35.0,
+    }),
+    SpeciesSpec("Swimmer", "EnemySwimmer", 2, "Nadador de esclusa", {
+        "max_health": 2.0, "damage_on_contact": 0.5, "swim_speed": 70.0,
+    }),
+    SpeciesSpec("FlyingBomber", "EnemyFlyingBomber", 2, "Bombardero de datacenter", {
+        "max_health": 2.0, "damage_on_contact": 0.5, "flight_mode": 'sine',
+        "flight_speed": 50.0, "sine_amplitude": 30.0, "sine_frequency": 1.0,
+    }),
+    SpeciesSpec("BruteGolemHielo", "EnemyBrute", 2, "Gólem de hielo", {
+        "max_health": 5.0, "damage_on_contact": 0.75, "patrol_length": 64.0,
+    }),
+    SpeciesSpec("ChargerWolf", "EnemyCharger", 2, "Lobo de planicie", {
+        "max_health": 3.5, "damage_on_contact": 1.0, "charge_speed": 250.0,
+    }),
+]
+
+_EXTRA_ZONA3 = [
+    SpeciesSpec("ArcherQuetzal", "EnemyArcher", 3, "Arquero quetzal", {
+        "max_health": 2.5, "damage_on_contact": 0.25, "fire_rate": 0.5,
+        "projectile_speed": 110.0, "projectile_damage": 0.5,
+    }),
+    SpeciesSpec("CasterHealer", "EnemyCaster", 3, "Curandero de Heredia", {
+        "max_health": 2.5, "damage_on_contact": 0.25,
+    }),
+    SpeciesSpec("TerrainShaper", "EnemyTerrainShaper", 3, "Modelador de terreno", {
+        "max_health": 3.0, "damage_on_contact": 0.5, "patrol_length": 80.0,
+    }),
+    SpeciesSpec("Summoner", "EnemySummoner", 3, "Invocador de Heredia", {
+        "max_health": 4.0, "damage_on_contact": 0.5, "patrol_length": 60.0,
+    }),
+]
+
 SPECIES: dict[str, SpeciesSpec] = {
-    spec.species_id: spec for spec in (*_ZONE1, *_ZONE2, *_ZONE3)
+    spec.species_id: spec for spec in (*_ZONE1, *_ZONE2, *_ZONE3, *_ZONE4, *_EXTRA_ZONA1, *_EXTRA_ZONA2, *_EXTRA_ZONA3)
 }
 
 

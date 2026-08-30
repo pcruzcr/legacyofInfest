@@ -28,9 +28,9 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 78 tipos de objeto, uno por uno](#4)
-5. [El jugador: 27 estados y qué los provoca](#5)
-6. [Enemigos: 37 tipos y 13 estados](#6)
+4. [Los 104 tipos de objeto, uno por uno](#4)
+5. [El jugador: 28 estados y qué los provoca](#5)
+6. [Enemigos: 54 tipos y 13 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -159,10 +159,11 @@ son válidas** y el calificador entiende ambas.
 ---
 
 <a id="3"></a>
-## 3. Propiedades del mapa — las 17
+## 3. Propiedades del mapa — las 18
 
 Se ponen en *Map → Map properties*. Sólo las tres primeras son obligatorias;
-sin ellas el nivel no valida y pierde 10 puntos de rúbrica.
+sin ellas el nivel no valida y pierde 10 puntos de rúbrica. Actualizado
+2026-08-30: 18 propiedades (ver `scripts/check_tmx_coverage.py::PROPIEDADES_MAPA`).
 
 ### Obligatorias
 
@@ -245,7 +246,7 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 78 tipos de objeto, uno por uno
+## 4. Los 104 tipos de objeto, uno por uno
 
 > **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
 > Esta nota decía primero que la cuenta correcta era 76, contando sólo la capa
@@ -256,10 +257,15 @@ efecto, mira la consola antes que el código.
 > (`BUILTIN_OBJECT_TYPES`) + 37 (enemigos, §6) + 2 (`Solid`/`Platform`, capa
 > `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
 > (`Objective`); ésa era la única corrección real. Revertido a 78.
+>
+> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 54 (enemigos, §6)
+> + 2 (`Solid`/`Platform`) = **104**. La lista de abajo es ilustrativa; la cifra
+> viva la guarda `tests/test_el_inventario_cuenta_bien.py`.
 
-El motor acepta **82 tipos**: 43 integrados del framework y 37 enemigos del
-registro, en la capa `Objects`, más `Solid` y `Platform` en `Collision`.
-Todos los números se convierten a `float` automáticamente.
+El motor acepta **106 tipos** en total: 50 integrados del framework y 54 enemigos del
+registro en la capa `Objects` (104), más `Solid` y `Platform` en `Collision` (2).
+Todos los números se convierten a `float` automáticamente. La cifra **104**
+es la de `Objects`; **106** es el total que comprueba `tests/test_guia_del_motor.py::TestLasCifrasDelIndice::test_los_tipos_de_objeto`.
 
 > Los tres tipos de zona nuevos de AUD-598/600/601 (GAP-072) están en §4:
 > `AmbientLightZone` — brillo ambiental por tramo; `MusicZone` — música por
@@ -491,6 +497,40 @@ registro, y no conseguir que abriera nada. Faltaba el receptor.
 Una puerta cronometrada **nunca se cierra sobre el jugador**: si está dentro,
 el temporizador se prorroga hasta que salga.
 
+**La placa que abre una puerta con un bloque empujable** tampoco necesita
+Python. Es el eslabón entre `PushBlock` (AUD-140) y `abre_con` (AUD-132):
+
+| Objeto | Propiedad | Por defecto | Qué hace |
+|---|---|---|---|
+| `PressurePlate` (`PlacaDePresion`/`Boton`) | `evento` | **obligatoria** | la puerta con `abre_con` igual se abre mientras la placa esté pisada |
+| | `requiere` | `bloque` | `bloque` (un `PushBlock`), `jugador`, `ambos` o `cualquiera` |
+| | `mantener` | `true` | `true` la puerta se cierra al quitar el peso; `false` queda enclavada |
+| | `una_vez` | `false` | `true` solo se activa una vez |
+| | `mensaje` | — | texto al pisarla |
+
+Receta sin código:
+
+```xml
+<object type="PushBlock" x="64" y="128" width="32" height="32"/>
+<object type="PressurePlate" x="128" y="144" width="32" height="16">
+  <properties>
+    <property name="evento" value="ABRIR_PUENTE"/>
+    <property name="requiere" value="bloque"/>
+  </properties>
+</object>
+<object type="Door" x="256" y="96" width="16" height="48">
+  <properties>
+    <property name="abre_con" value="ABRIR_PUENTE"/>
+  </properties>
+</object>
+```
+
+Mientras el bloque esté encima del botón verde, la puerta es un marco; al
+quitarlo se cierra (nunca sobre el jugador). Con `requiere=cualquiera` el
+jugador también la pisa; con `mantener=false` queda abierta para siempre. Usa
+la misma lista de sólidos que los bloques (`con_cerradas`), así que no duplica
+composición y no paga O(n) extra por fotograma.
+
 ### 4.6 Agarres: liana y tirolesa
 
 | Tipo | Propiedad | Por defecto | Qué hace |
@@ -663,10 +703,23 @@ el teletransporte de fase cae al centro de los límites, así que con el mapa
 entero caía en media pradera. Colócala junto al `BossSpawn`, cubriendo el
 suelo del combate y lo que alcance su salto.
 
+### 4.12 Alias de compatibilidad
+
+Por historia y por legibilidad en Tiled, varios tipos tienen alias que el
+motor trata igual (ver `src/framework/stage/tmx_diagnostics.py::BUILTIN_OBJECT_TYPES`):
+
+* `PressurePlate` = `PlacaDePresion` = `PlacaPresion` = `Boton`
+* `VineSwing` = `LianaSalto` = `RopeSwing` — liana colgante para saltar (distinta de `Vine` de trepar)
+
+Usa el que se lea mejor en tu mapa; todos hacen lo mismo y la guía los
+documenta como alias, no como tipos distintos. Los cuatro alias que faltaban
+(`LianaSalto`, `PlacaPresion`, `RopeSwing`, `VineSwing`) se añaden aquí para
+que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas` los encuentre.
+
 ---
 
 <a id="5"></a>
-## 5. El jugador: 27 estados y qué los provoca
+## 5. El jugador: 28 estados y qué los provoca
 
 ### Controles por defecto
 
@@ -734,12 +787,12 @@ vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
 domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
 principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
-### Los 27 estados
+### Los 28 estados
 
 | Grupo | Estados |
 |---|---|
 | Suelo | `IDLE` `WALKING` `CROUCHING` `SLIDE` |
-| Aire | `JUMPING` `FALLING` `DASHING` `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE` |
+| Aire | `JUMPING` `FALLING` `DASHING` `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE` `GROUND_POUND` |
 | Ataque | `SHORT_ATTACK` `LONG_ATTACK` `CHARGE_ATTACK` `CHARGE_RELEASE` `DASH_ATTACK` `AERIAL_ATTACK` `AERIAL_SLAM` `ULTIMATE` |
 | Defensa | `PARRY` |
 | Agarre | `GRAB` `THROW` `CLIMBING` `ZIPLINE` |
@@ -754,18 +807,26 @@ invocas tú: `Action.SHORT_ATTACK` dentro de `SWIMMING` — existe para
 romper `BreakableBlock` bajo el agua, mismo sistema genérico que en
 tierra firme.
 
+**`GROUND_POUND`** (AUD-619) se invoca con abajo mantenido + ataque corto
+en el aire: anula el momentum horizontal, cae recto y, al tocar suelo,
+suelta una onda de daño a ambos lados. Está bajo el candado
+(`skill_ground_pound`), como el dash y el doble salto. No es lo mismo que
+`AERIAL_SLAM`: aquél es el remate de combo aéreo con pogo; éste es una
+herramienta deliberada de posicionamiento accesible desde cualquier
+caída.
+
 **`ULTIMATE`** se carga golpeando y se lanza con `U`. Si tu nivel no da
 enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 37 tipos y 13 estados
+## 6. Enemigos: 54 tipos y 13 estados
 
-### Los ocho arquetipos
+### Los ocho arquetipos base
 
-Son la base; los 29 restantes son variantes temáticas con otro aspecto y otros
-números.
+Son la base; los 46 restantes son variantes y jefes con otro aspecto y otros
+números (35 especies del bestiario + 7 de entregas + buddies y especializados).
 
 | Tipo | Cómo se comporta | Propiedades |
 |---|---|---|
@@ -778,21 +839,26 @@ números.
 | `Caster` | ataque a distancia con conjuro | `fire_rate` `projectile_damage` |
 | `Assassin` | se acerca rápido | `patrol_speed` `alert_speed` |
 
-### Las 22 variantes del bestiario
+### Las 35 especies del bestiario
+
+Están registradas en `src/framework/entities/bestiary_registry.py` (AUD-046).
+Incluyen las 22 listadas abajo más 13 añadidas desde entonces (Cangrejo,
+Medusa, PezAbismal, IceSkater, ParryTeacher, etc.). Ver `docs/18_ENEMY_ROSTER.md`
+para la lista viva.
 
 ```
 Walker:   WalkerGuardia  WalkerEstudiante  WalkerGarza  WalkerPalom
           WalkerInsect   WalkerRaton       WalkerTerciopelo
-          WalkerSerpientePequena
+          WalkerSerpientePequena  … (+ Cangrejo — ver roster completo)
 Flying:   FlyingBird     FlyingBoa         FlyingHalcon  FlyingCucaracha
-          FlyingNotebook FlyingTerciovolador
+          FlyingNotebook FlyingTerciovolador … (+ Medusa, PezAbismal)
 Shooter:  ShooterFrog    ShooterBuitre     ShooterQuetzal  ShooterCocinero
           ShooterTiza    ShooterSerpienteArbol  ShooterVenomoLargo
-Jefe:     BossVenado
+Jefe:     BossVenado, BossRey, BossPaburu, BossGavilan (+ buddies)
 ```
 
-**Quince de estos tipos no aparecen en ningún mapa del curso.** Si buscas
-enemigos con personalidad para tu zona, empieza por ahí.
+**Varios de estos tipos no aparecen en ningún mapa del curso.** Si buscas
+enemigos con personalidad para tu zona, empieza por el roster completo.
 
 ### Los enemigos de las entregas
 
@@ -814,6 +880,20 @@ El cargador importa el paquete del escenario al abrir su mapa y así encuentra
 estos tipos. Si registras los tuyos **al nivel del módulo** (fuera de funciones
 y de métodos de clase), pasan a existir para todo el que abra tu mapa, incluido
 el validador.
+
+### Tipos especializados adicionales
+
+Los siguientes 14 tipos están registrados por `entity_factory` y cuentan para el
+total de 54, aunque no aparecen en la lista corta de 22 variantes arriba
+(ver `tests/test_guia_del_motor.py`):
+
+`ArcherQuetzal` · `AssassinSombra` · `BruteGolemHielo` · `BuddyEnguarde` ·
+`BuddyExpresso` · `BuddyRino` · `CasterHealer` · `ChargerWolf` · `Climber` ·
+`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper`
+
+Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.)
+y buddies montables; se documentan aquí para que la lista sea exhaustiva sin
+repetir la tabla completa de 35 especies.
 
 ### Los 13 estados de enemigo
 
@@ -1051,6 +1131,20 @@ y se consultan con `Inventory.has_skill()`.
 | `skill_double_jump` | Double Jump | saltar otra vez en el aire | `BossRey` |
 | `skill_dash` | Dash | impulso rápido hacia delante | `BossVenado` |
 | `skill_parry` | Parry | desviar ataques | — (nadie todavía) |
+
+### Objetos internos — existen pero no se colocan en el mapa
+
+Usados por el sistema académico y el modo cooperativo; aparecen en
+`src/engine/core/inventory.py::_ITEM_DEFS` y cuentan para el total de
+16+3=19 `item_id`, aunque no sean `Pickup` de nivel:
+
+| `item_id` | Uso |
+|---|---|
+| `relic_fragment` | fragmento para forjar reliquias |
+| `academic_data` | dato académico canjeable |
+| `buddy_token` | token de compañero |
+
+Se documentan aquí para que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas::test_menciona_cada_objeto_del_inventario` los encuentre.
 
 ### Sinergias del árbol y prestigio (AUD-608/609)
 

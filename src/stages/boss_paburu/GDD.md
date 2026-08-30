@@ -26,7 +26,7 @@ Hace siglos, antes de que las reliquias existieran como amenaza, Paburu aplicó 
 
 Después descubrió que sí era digna. Que el error fue suyo.
 
-Por eso selló las reliquias y se selló a sí mismo: no para castigar al mundo, sino porque **no confiaba en su propio juicio**. Los siglos de espera no fueron vigilancia — fueron penitencia. Cuando John y Jill llegan, Paburu no está furioso: está **aterrado de volver a equivocarse**.
+Por eso selló las reliquias y se selló a sí mismo: no para castigar al mundo, sino porque **no confiaba en su propio juicio**. Los siglos de espera no fueron vigilancia — fueron penitencia. Cuando John y Jin llegan, Paburu no está furioso: está **aterrado de volver a equivocarse**.
 
 Esto reescribe el combate entero. Cada forma es un intento de juzgar sin repetir el error:
 - **Forma 1 (Piedra):** juzga sin mirar — ojos cerrados, ataques ciegos y mecánicos. Es como juzgó a Kavë.
@@ -132,7 +132,7 @@ Todos los números son punto de partida; se ajustan con playtesting.
 
 **Destello espectral (siembra):** Durante esta forma, 2-3 veces, la pantalla parpadea brevemente en visión espectral (`threshold_binary`) de forma automática, sin control del jugador. Dura 0.2 s. Nadie explica qué fue. **Es la siembra de la mecánica de la Forma 4.**
 
-**Transición 2→3:** La máscara se disuelve. La Pepita y La Perla vuelan al arena desde John y Jill. Paburu las atrapa. *Se enciende el segundo cuenco.* El juego **elige aleatoriamente** 3A o 3B.
+**Transición 2→3:** La máscara se disuelve. La Pepita y La Perla vuelan al arena desde John y Jin. Paburu las atrapa. *Se enciende el segundo cuenco.* El juego **elige aleatoriamente** 3A o 3B.
 
 ---
 
@@ -199,7 +199,7 @@ Selección aleatoria por sesión (semilla por partida). Dos peleas distintas; el
 ### Secuencia de derrota (canon §6.7 + ampliación propia)
 
 1. A 0 de vida, el espíritu **no cae — asciende**.
-2. Las reliquias vuelan de vuelta hacia John y Jill.
+2. Las reliquias vuelan de vuelta hacia John y Jin.
 3. Paburu abre los brazos. **Hold de 4 segundos.**
 4. ★ **Los recuerdos:** aparecen los tres ecos, uno por uno, con un frame congelado del momento de su derrota. Cada uno se inclina y se disuelve. *(Aquí es donde entra tu cinemática: no son enemigos, son sus guardianes despidiéndose.)*
 5. Paburu devuelve la reverencia.

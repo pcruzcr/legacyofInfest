@@ -202,6 +202,18 @@ def build_table() -> str:
                       "escribir ese nombre como `type`; sin `boss`, o con uno "
                       "que no esté registrado, el cargador avisa. Lo pide "
                       "`17_BOSS_SPEC.md` §8.2 en todo mapa de jefe"),
+        "PressurePlate": ("Rectángulo (el **botón** del suelo)",
+                           "`evento` (**obligatoria**: la puerta con `abre_con` "
+                           "igual se abre mientras la placa esté pisada) · "
+                           "`requiere` (`bloque` por defecto, o `jugador`/`ambos`/ "
+                           "`cualquiera`) · `mantener` (bool, true: al quitar el "
+                           "peso la puerta se cierra; false la deja enclavada) · "
+                           "`una_vez` (bool, false) · `mensaje`. Se activa con un "
+                           "`PushBlock` encima y usa la misma lista de sólidos que "
+                           "los bloques (no duplica composición)"),
+        "PlacaDePresion": ("Rectángulo", "Alias de `PressurePlate`, mismas propiedades"),
+        "PlacaPresion": ("Rectángulo", "Alias de `PressurePlate`, mismas propiedades"),
+        "Boton": ("Rectángulo", "Alias de `PressurePlate`, mismas propiedades"),
         "Spring": ("Rectángulo (rebota en todo su ancho)",
                    "`impulso` (px/s, -520; negativo es hacia arriba) · "
                    "`rearme` (s, 0.15)"),
@@ -215,6 +227,11 @@ def build_table() -> str:
         "Vine": ("Rectángulo (alto = lo que se trepa)",
                  "`ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, "
                  "70)"),
+        "VineSwing": ("Rectángulo (pareja de lianas para saltar)",
+                      "`largo` (px, 48) · `amplitud` (px, 28) · `periodo` "
+                      "(s, 1.6) · `radio_agarre` (px, 20)"),
+        "LianaSalto": ("Rectángulo", "Alias de `VineSwing`, mismas propiedades"),
+        "RopeSwing": ("Rectángulo", "Alias de `VineSwing`, mismas propiedades"),
         "Zipline": ("Rectángulo (la esquina es el enganche)",
                     "`destino_dx` (px, 96), `destino_dy` (px, 64) "
                     "**relativos** · `velocidad` (px/s, 190) · "

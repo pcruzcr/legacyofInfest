@@ -27,6 +27,20 @@ import re
 import sys
 from pathlib import Path
 
+
+def _safe_print(*args, **kwargs) -> None:
+    """Print que no falla con caracteres Unicode en consola Windows cp1252."""
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Reemplazar caracteres no codificables
+        safe_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                arg = arg.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding)
+            safe_args.append(arg)
+        print(*safe_args, **kwargs)
+
 _RAIZ = Path(__file__).resolve().parent.parent
 if str(_RAIZ) not in sys.path:
     sys.path.insert(0, str(_RAIZ))
@@ -35,7 +49,7 @@ from src.engine.core.i18n import IDIOMAS  # noqa: E402
 
 #: Dónde buscar los literales que se muestran. Son los tres directorios cuyas
 #: cadenas pasan por `draw_screen` o `draw_key_hints`.
-_DIRECTORIOS = ("src/engine/scenes", "src/engine/ui", "src/framework/ui")
+_DIRECTORIOS = ("src/engine/scenes", "src/engine/ui", "src/engine/core", "src/framework/ui")
 
 _TITULOS = re.compile(
     r'draw_(?:screen|top_bar)\s*\(\s*\w+\s*,\s*'
@@ -98,12 +112,26 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Comprueba los catálogos de idioma")
     parser.add_argument("--ci", action="store_true",
                         help="falla si hay entradas huérfanas")
+    parser.add_argument("--permitted-orphans", type=Path,
+                        help="Archivo JSON con huérfanas permitidas por idioma")
     args = parser.parse_args()
 
     visibles = cadenas_visibles()
     literales = todos_los_literales()
     print(f"Cadenas del kit de interfaz: {len(visibles)}")
     print(f"Literales totales en el código de interfaz: {len(literales)}\n")
+
+    # Cargar huérfanas permitidas si se proporciona archivo
+    permitidas: dict[str, set[str]] = {}
+    if args.permitted_orphans:
+        try:
+            with open(args.permitted_orphans, encoding="utf-8") as f:
+                data = json.load(f)
+            for lang, entries in data.items():
+                permitidas[lang] = set(entries)
+        except Exception as e:
+            print(f"[ERROR] No se pudo leer archivo de huérfanas permitidas: {e}")
+            return 1
 
     problemas = 0
     for idioma in IDIOMAS:
@@ -121,6 +149,11 @@ def main() -> int:
 
         vacias = [k for k, v in catalogo.items() if not str(k).strip() or not str(v).strip()]
         huerfanas = sorted(set(catalogo) - literales)
+        
+        # Filtrar huérfanas permitidas
+        permitidas_por_idioma = permitidas.get(idioma, set())
+        huerfanas = sorted(h for h in huerfanas if h not in permitidas_por_idioma)
+        
         sin_traducir = sorted(visibles - set(catalogo))
 
         print(f"  {idioma}: {len(catalogo)} entradas")
@@ -130,11 +163,11 @@ def main() -> int:
         if huerfanas:
             # Huérfana = traducción de algo que ya no existe. Es el síntoma de
             # que alguien renombró una cadena y el catálogo se quedó atrás.
-            print(f"    [AVISO] {len(huerfanas)} entrada(s) sin uso en el código:")
+            _safe_print(f"    [AVISO] {len(huerfanas)} entrada(s) sin uso en el código:")
             for h in huerfanas[:8]:
-                print(f"             {h!r}")
+                _safe_print(f"             {h!r}")
             if len(huerfanas) > 8:
-                print(f"             ... y {len(huerfanas) - 8} más")
+                _safe_print(f"             ... y {len(huerfanas) - 8} más")
             if args.ci:
                 problemas += 1
         if sin_traducir:

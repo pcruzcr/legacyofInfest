@@ -87,7 +87,11 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         icon_color=(60, 180, 60), damage_bonus=0.5,
     ),
     "sunken_crown": ItemDef(
-        id="sunk_crown", name="Corona hundida",
+        # AUD-611 - AUD-608 dejó aquí `id="sunk_crown"` de arrastre. La clave,
+        # el recogible de stage0 y la documentación dicen `sunken_crown`, y
+        # `restaurar()` descarta los id que no reconoce: un guardado que
+        # referenciara el id del atributo perdería la corona al cargar.
+        id="sunken_crown", name="Corona hundida",
         description="+3 de vida máxima, +0,8 de daño",
         icon_color=(220, 200, 40), max_hp_bonus=3.0, damage_bonus=0.8,
     ),
@@ -158,7 +162,26 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         description="Botón de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
 ),
-}
+
+    # AUD-637 -- Collectible Identity: nuevos tipos de coleccionables con identidad
+    #: Fragmento de reliquia -- lore del mundo, se entrega en SecretRoom
+    "relic_fragment": ItemDef(
+        id="relic_fragment", name="Fragmento de reliquia",
+        description="Un fragmento de historia olvidada. Cortalo y leelo.",
+        icon_color=(220, 200, 40),
+    ),
+    #: Dato académico -- se entrega en laboratorios/bibliotecas del juego
+    "academic_data": ItemDef(
+        id="academic_data", name="Dato académico",
+        description="Investigacion de campo: conocimiento puro, sin uso inmediato.",
+        icon_color=(100, 180, 255),
+    ),
+    #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
+    "buddy_token": ItemDef(
+        id="buddy_token", name="Token de compañero",
+        description="Un llamado de ayuda. Usalo para invocar un compañero.",
+        icon_color=(200, 180, 220),
+    ),}
 
 
 def _migrar_inventario() -> None:

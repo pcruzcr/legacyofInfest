@@ -51,18 +51,20 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 
 ## 2. Estándares globales de recursos
 
-### 2.1 Estándares visuales
+### 2.1 Estándares visuales — PSX 2D Alta Calidad (Tributo Vintage Moderno)
 
 | Propiedad | Estándar |
 |---|---|
-| Formato de píxel | PNG con canal alfa (RGBA) |
-| Profundidad de color | 8 bits por canal |
-| Restricción de paleta | Máximo 16 colores por hoja de sprites |
-| Paleta global | Máximo 256 colores en todo el juego |
-| Tamaño de píxel | 1:1 — sin renderizado de subpíxeles |
-| Anti-aliasing | Nunca |
-| Transparencia | Binaria (totalmente transparente u opaca) O alfa suave (sólo para efectos) |
-| Resolución interna | Todos los recursos se diseñan para el render interno de 800×600 |
+| Formato de píxel | PNG con canal alfa (RGBA) **32-bit** |
+| Profundidad de color | **32 bits por píxel (8bpc RGBA) — paleta extendida real**, hasta **256+ colores por tileset/sprite** con dithering ordenado PSX para degradados, sin banding. Se mantiene estética pixel 1:1 pero con riqueza cromática moderna. |
+| Restricción de paleta | **Extendida:** 64-128 colores por tileset, 32-64 por sprite, **1024 global** — permite detalle (madera veteada, piedra con oclusión, metal con reflejo) sin perder legibilidad. Se valida con presupuesto laxo, no con límite SNES estricto. |
+| Tamaño de píxel | 1:1 — sin subpíxeles (escalado `nearest` para tiles/sprites, `smoothscale` solo HUD) |
+| Anti-aliasing | Nunca en tiles/sprites (sí en HUD `hud_frame` degradado `LANCZOS` AUD-527) |
+| Transparencia | Binaria O alfa suave para efectos (humo, agua, luces) |
+| Resolución interna | 800×600 — todo se diseña nativo 800×600, sin estirar 320×224 |
+| 2.5D / Profundidad | `profundidad_min 0.85 profundidad_max 1.0 profundidad_curva 1.5 orden_por_y true` + `sombras_proyectadas true` (AUD-277/339) |
+| Iluminación | `Light` con normal maps **8-bit** `*_n.png` (8 dirs + esquinas) + sombras dithered PSX, bloom suave |
+| Estilo | **PSX 2D Tributo Vintage Moderno:** pixel art nítido con detalle HD, dithering Bayer 4×4 para sombras, outline 1px, paleta por zona con acentos, normal maps para luz, sin blur salvo HUD |
 
 > **AUD-527 (2026-08-18) — excepción declarada para el HUD.** Decisión del
 > dueño: modernizar el HUD, rompiendo a propósito "sin antialiasing, sin
@@ -96,7 +98,9 @@ Alto de la hoja = alto_fotograma (una sola fila — sin hojas multifila)
 | Tamaño de baldosa | 16×16 píxeles |
 | Disposición de hoja | Cuadrícula por filas |
 | Máximo de baldosas por conjunto | 256 |
-| Dimensiones de hoja | 128×128 px (cuadrícula de 8×8 baldosas) |
+| Dimensiones de hoja | 256×256 px (cuadrícula de 16×16 baldosas) — 32 colores, variantes de borde para autotiling (mantiene grilla 16×16, sólo más variantes) |
+| Normal map | `*_n.png` 1-bit (128,128,255 plano + 4 direcciones de borde) para `Light` con `sombras_proyectadas` |
+| Tileset líquido | `tileset_liquidos.png` 128×32 animado 4f para `HazardZone`/`WaterZone` (estilo pixel, nearest) |
 
 ### 2.4 Estándares de audio
 
@@ -204,21 +208,42 @@ Tamaño de fotograma: **32×32 píxeles** en todas las animaciones.
 | `player_hurt.png` | 4 | 12 | No | HURT |
 | `player_die.png` | 8 | 10 | No | DYING |
 | `player_swim.png` | 4 | 10 | Sí | SWIMMING |
+| `player_parry.png` | 4 | 16 | No | PARRY |
+| `player_climb.png` | 4 | 6 | Sí | CLIMBING |
+| `player_zipline.png` | 2 | 8 | Sí | ZIPLINE |
+
+> **AUD-XXX — PSX 32-bit HQ encapuchado oscuro, 2 piernas, espada separada.**
+> Esta fila fija el defecto de *tres piernas*: la espada se dibujaba como una pierna
+> (mismo color/posición que las piernas en `PLAYER_IDLE`/`PLAYER_JUMP` y en los
+> ataques el arco caía sobre la columna central del sprite). Ahora **siempre 2
+> piernas** (columnas en `x=11` y `x=18`, ancho 4px, pies en `y=27`, anchor
+> abajo-centro idéntico en las 13 hojas, `offset_x=-6`, `offset_y=rect.height-32`
+> en `player.py:draw`) y la **espada es arma separada** (metálica clara
+> `220,224,236` + highlight `255,255,255`, nunca `42,52,92` de pierna, con
+> empuñadura cruz `182,162,90`). Cada estado tiene pose distinta y legible
+> (no copia `IDLE`): `fall` ≠ `jump` (caída con brazos abiertos y estela),
+> `hurt` ≠ `idle` (retroceso rojizo), `climb`/`zipline` ≠ `jump` (colgado con
+> manos arriba/cable), `parry` (bloqueo vertical con chispa). Outline 1px
+> `(14,14,20)` y sombra dithered Bayer 4×4 en base 4px (`_psx_outline_y_sombra`).
 
 `player_swim.png` (AUD-525) alterna una patada abierta con la silueta
 cerrada del salto — antes `SWIMMING` reutilizaba `player_jump.png` sin
 variación entre fotogramas, así que nadar se veía como quedarse de pie
 clavado bajo el agua.
 
-**Paleta:**
-El jugador (protagonista encapuchado) usa una paleta restringida de exactamente 12 colores:
-- 3 tonos de sombra de capucha (gris azulado oscuro, medio, gris claro)
-- 2 tonos de piel (canela cálida, sombra)
-- 2 tonos de tela (azul marino oscuro, medio)
-- 2 tonos de cuerda/cinturón (marrón, marrón oscuro)
-- 1 brillo de ojos (dorado pálido — visible sólo en escenas muy oscuras)
-- 1 negro puro (contorno)
-- 1 transparente puro
+**Paleta — PSX 32-bit HQ extendida (36 colores, no SNES 16):**
+El jugador encapuchado oscuro usa paleta extendida **32-bit RGBA 36 colores**
+(outline `(14,14,20)`, 12 antiguos → 36 actuales):
+- 4 tonos capucha oscura (`18,22,38`, `34,40,68`, `54,60,92`, `78,86,118`)
+- 3 piel (`130,90,60` sombra, `190,135,95` medio, `235,195,150` luz)
+- 4 tela/túnica (`38,48,86`, `58,70,118`, `84,96,144`, `108,120,168` highlight)
+- 3 pierna (`42,52,92`, `60,72,122`, `78,90,148`)
+- 2 bota (`62,42,28`, `42,28,18`)
+- 5 espada (`222,224,236` hoja, `188,192,210` medio, `148,158,180` sombra, `182,162,90` empuñadura, `255,255,255` brillo)
+- 3 cinturón (`110,82,48`, `78,58,32`, `192,162,92` hebilla)
+- 2 ojos (`245,210,90`, `180,140,40`)
+- extras Bayer/highlight (`220,190,120`, `180,220,255`, `255,180,180`, `255,255,180`) + outline + transparente
+- **Ancla:** todas las hojas **abajo-centro** (`y=27` pies, `bottom=28` con outline), centrado `x=-6` sobre colisión 20px.
 
 ---
 
@@ -252,6 +277,19 @@ Ubicación: `assets/sprites/enemies/zoneN/`
 Donde `N` es el número de zona (1–3). Todos los sprites usan tamaño de
 fotograma 16×16 (marcador de posición; el tamaño real depende del reemplazo
 temático).
+
+> **AUD-455 / AUD-590 — alias `LaSodaWalkerRaton` vs `WalkerRaton` (37 vs 36).**
+> `tests/test_bestiary_roster.py` ya parsea el roster y el código sin queja:
+> el bestiario registra 35 especies (`WalkerInsect`, `WalkerRaton`, etc.) y
+> `src/stages/stage1_2_la_soda/stage1_2_la_soda.py` registra dos alias con
+> prefijo `LaSoda` (`LaSodaWalkerRaton`, `LaSodaFlyingCucaracha`) para **no
+> pisar** el registro del bestiario del motor (ver `entity_factory.py:35`).
+> El conteo de *strings* válidos para `type` es por tanto **37** (35 + 2
+> alias); el conteo de *especies del roster* sigue siendo **35/36** según si
+> se cuenta el genérico `Walker`/`Flying`/`Shooter`. No es divergencia:
+> es a propósito para que la entrega de la soda no sustituya la especie base
+> y el validador lo avise (`stage1_1.tmx` usa `WalkerInsect` directo y por
+> eso ve el `[WARN]` de sustitución). No «arregles» el alias sin consultar.
 
 ---
 
@@ -351,16 +389,17 @@ Ubicación: `assets/tilesets/`
 
 | Fichero | Se usa en | Tema | Tamaño |
 |---|---|---|---|
-| `tileset_stage0.png` | Stage 0 | Corredor de piedra neutral | 1024×1024 |
-| `tileset_jungle_stone.png` | Zona 1, escenarios 1-1, 1-4 | Jungla de montaña con piedra | 128×128 |
-| `tileset_cafeteria.png` | Zona 1, escenario 1-2 | Cafetería interior, piso ajedrezado | 128×128 |
-| `tileset_aulas.png` | Zona 1, escenario 1-3 | Interior de aula, madera y yeso | 128×128 |
-| `tileset_planicie.png` | Zona 2, escenario 2-1 | Llanura agrícola abierta | 128×128 |
-| `tileset_datacenter_ext.png` | Zona 2, escenario 2-2 | Exterior de concreto, antenas | 128×128 |
-| `tileset_datacenter.png` | Zona 2, escenarios 2-3, 2-4 | Piso de acero, mamparas de vidrio, servidores | 128×128 |
-| `tileset_heredia_stone.png` | Zona 3, escenarios 3-1, 3-4 | Sendero de piedra y arquitectura de bungaló | 128×128 |
-| `tileset_heredia_interior.png` | Zona 3, escenarios 3-2, 3-3 | Salón interior, patio | 128×128 |
-| `tileset_cemetery.png` | Zona Final | Lápidas, tallas ceremoniales | 128×128 |
+| `tileset_stage0.png` | Stage 0 | Corredor de piedra neutral | 1024×1024 + `tileset_stage0_n.png` |
+| `tileset_jungle_stone.png` | Zona 1, escenarios 1-1, 1-4 | Jungla de montaña con piedra | 256×256 + `_n.png` |
+| `tileset_cafeteria.png` | Zona 1, escenario 1-2 | Cafetería interior, piso ajedrezado | 256×256 + `_n.png` |
+| `tileset_aulas.png` | Zona 1, escenario 1-3 | Interior de aula, madera y yeso | 256×256 + `_n.png` |
+| `tileset_planicie.png` | Zona 2, escenario 2-1 | Llanura agrícola abierta | 256×256 + `_n.png` |
+| `tileset_datacenter_ext.png` | Zona 2, escenario 2-2 | Exterior de concreto, antenas | 256×256 + `_n.png` |
+| `tileset_datacenter.png` | Zona 2, escenarios 2-3, 2-4 | Piso de acero, mamparas de vidrio, servidores | 256×256 + `_n.png` |
+| `tileset_heredia_stone.png` | Zona 3, escenarios 3-1, 3-4 | Sendero de piedra y arquitectura de bungaló | 256×256 + `_n.png` |
+| `tileset_heredia_interior.png` | Zona 3, escenarios 3-2, 3-3 | Salón interior, patio | 256×256 + `_n.png` |
+| `tileset_cemetery.png` | Zona Final | Lápidas, tallas ceremoniales | 256×256 + `_n.png` |
+| `tileset_liquidos.png` | HazardZone/WaterZone | Líquido animado 4f (agua/peligro) | 128×32 (4×32×32) + `_n.png` |
 
 ### 7.1 Categorías de baldosas del tileset
 

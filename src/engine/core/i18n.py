@@ -3,7 +3,7 @@ Module: i18n
 System: engine.core
 Academic Unit: N/A
 
-Traducción de la interfaz. Español por defecto.
+Traducción de la interfaz con claves canónicas. Español por defecto.
 
 F3.1 — por qué no se usa `gettext`
 ----------------------------------
@@ -32,30 +32,40 @@ Cómo se usa
 
     from src.engine.core.i18n import _
 
-    titulo = _("INVENTARIO")
+    titulo = _("ui.inventory_title")  # → "INVENTARIO" (es) / "INVENTORY" (en)
 
-La clave **es el literal que hay en el código**, no un identificador
-abstracto: `_("INVENTARIO")`, no `_("menu.inventory.title")`. Así una cadena
-sin traducir sigue mostrando algo legible en vez de un identificador o un
-hueco, y el `grep` para encontrar dónde sale un texto sigue funcionando.
+La clave es un **identificador canónico** (p.ej. `ui.cancel`, `menu.start`),
+no el texto visible. Esto permite:
+- Round-trip fiable entre idiomas (AUD-307)
+- Cambiar el texto visible sin romper claves
+- `grep` fiable para encontrar dónde se usa una cadena
 
-Los dos idiomas tienen catálogo, y ésa es una decisión que conviene explicar:
-lo natural sería que el idioma de las claves no necesitara ninguno. Pero el
-código heredado mezcla literales en español (`"INVENTARIO"`, `"Objetos
-recogidos"`) con literales en inglés (`"COLLISION LAB"`, `"GAME OVER"`), y
-renombrar los segundos exigiría tocar treinta archivos de escena de golpe.
-Con catálogo para el español, un literal inglés se traduce sin mover el
-código, y uno ya español simplemente no tiene entrada y pasa tal cual.
+Convención de claves:
+- `ui.*` — elementos de interfaz (menús, botones, HUD)
+- `ui.nav.*` — navegación y pistas
+- `ui.hints.*` — ayudas contextuales
+- `ui.vector_lab.*` — laboratorio de vectores
+- `ui.color_theory.*` — teoría del color
+- `ui.pattern_demo.*` — demo de patrones
+- `ui.vision_demo.*` — demo de visión
+- `ui.combo.*` — sistema de combos
+- `ui.quiz.*` — cuestionarios
+- `ui.units.*` — unidades académicas
+- `ui.demo_modes.*` — modos de demo
+- `ui.color_theory_modes.*` — modos de teoría del color
+- `ui.vector_lab.modes.*` — modos del laboratorio de vectores
+- etc.
 """
 from __future__ import annotations
 
 import json
 import logging
+import threading
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-#: Idiomas con catálogo. El primero es el de las claves.
+#: Idiomas con catálogo. El primero es el de las claves (fallback).
 IDIOMAS: tuple[str, ...] = ("es", "en")
 IDIOMA_POR_DEFECTO = "es"
 
@@ -64,6 +74,7 @@ _DIRECTORIO = Path(__file__).resolve().parent.parent.parent.parent / "locale"
 _catalogo: dict[str, str] = {}
 _idioma_actual: str = IDIOMA_POR_DEFECTO
 _faltantes: set[str] = set()
+_candado = threading.RLock()
 
 
 def idioma_actual() -> str:
@@ -87,43 +98,42 @@ def set_idioma(codigo: str) -> str:
             )
         codigo = IDIOMA_POR_DEFECTO
 
-    _idioma_actual = codigo
-    _faltantes.clear()
-
-    ruta = _DIRECTORIO / f"{codigo}.json"
-    try:
-        _catalogo = json.loads(ruta.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        logger.warning("i18n: no existe el catálogo %s; se usa español", ruta)
-        _catalogo = {}
-    except json.JSONDecodeError as e:
-        logger.warning("i18n: catálogo %s mal formado (%s); se usa español", ruta, e)
-        _catalogo = {}
+    with _candado:
+        _idioma_actual = codigo
+        _faltantes.clear()
+        ruta = _DIRECTORIO / f"{codigo}.json"
+        try:
+            _catalogo = json.loads(ruta.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            logger.warning("i18n: no existe el catálogo %s; se usa español", ruta)
+            _catalogo = {}
+        except json.JSONDecodeError as e:
+            logger.warning("i18n: catálogo %s mal formado (%s); se usa español", ruta, e)
+            _catalogo = {}
     return codigo
 
 
-def _(texto: str) -> str:
-    """Traduce una cadena al idioma actual.
+def _(clave: str) -> str:
+    """Traduce una clave canónica al idioma actual.
 
-    Si no hay traducción se devuelve el original. Es deliberado y es la razón
-    de que las claves sean el texto en español: una cadena sin traducir se ve
-    en español, que es correcto para este curso, en lugar de mostrar un
-    identificador o un hueco.
+    Si no hay traducción se devuelve la clave. Es deliberado: una clave
+    sin traducir se ve como `ui.cancel` en lugar de un hueco, y el
+    `scripts/check_translations.py` la listará como faltante.
 
-    Las cadenas sin traducir se anotan para que
-    `scripts/check_translations.py` pueda listarlas.
+    La clave **debe ser canónica** (p.ej. `ui.cancel`), no el texto visible.
     """
-    if not _catalogo:
-        return texto
-    traducido = _catalogo.get(texto)
-    if traducido is None:
-        _faltantes.add(texto)
-        return texto
-    return traducido
+    with _candado:
+        if not _catalogo:
+            return clave
+        traducido = _catalogo.get(clave)
+        if traducido is None:
+            _faltantes.add(clave)
+            return clave
+        return traducido
 
 
 def faltantes() -> set[str]:
-    """Cadenas que se han pedido y no estaban en el catálogo."""
+    """Claves que se han pedido y no estaban en el catálogo."""
     return set(_faltantes)
 
 
@@ -137,3 +147,22 @@ def cargar_del_disco(codigo: str) -> dict[str, str]:
         return json.loads(ruta.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
+
+def aplanar_catalogo(catalogo: dict) -> dict[str, str]:
+    """Aplana un catálogo anidado a claves planas con notación de punto.
+
+    Ejemplo: {"ui": {"cancel": "Cancelar"}} → {"ui.cancel": "Cancelar"}
+    """
+    resultado: dict[str, str] = {}
+
+    def _aplanar(obj: dict, prefijo: str = "") -> None:
+        for k, v in obj.items():
+            clave = f"{prefijo}{k}"
+            if isinstance(v, dict):
+                _aplanar(v, f"{clave}.")
+            else:
+                resultado[clave] = v
+
+    _aplanar(catalogo)
+    return resultado

@@ -38,6 +38,7 @@ from itertools import pairwise
 import pygame
 
 from src.engine.core import settings
+from src.framework.stage.pendientes import Pendiente
 
 
 @dataclass(frozen=True)
@@ -252,7 +253,7 @@ def _ground_spans(collision_rects: list[pygame.Rect]) -> list[pygame.Rect]:
     return sorted(collision_rects, key=lambda r: (r.top, r.left))
 
 
-def _extremos_de_pendiente(pendiente: object) -> tuple[float, float, float, float]:
+def _extremos_de_pendiente(pendiente: Pendiente) -> tuple[float, float, float, float]:
     """`(x_bajo, y_bajo, x_alto, y_alto)` de un `Pendiente` (AUD-297).
 
     `y` crece hacia abajo, así que "bajo" es el `y` mayor. `sube_a_la_derecha`
@@ -267,7 +268,7 @@ def _extremos_de_pendiente(pendiente: object) -> tuple[float, float, float, floa
 
 
 def _pendiente_conecta(
-    pendientes: list[object] | None,
+    pendientes: list[Pendiente] | None,
     rect_alto: pygame.Rect,
     rect_bajo: pygame.Rect,
     tolerancia: float = 6.0,
@@ -298,7 +299,7 @@ def _pendiente_conecta(
 
 
 def _pendiente_edges(
-    pendientes: list[object] | None,
+    pendientes: list[Pendiente] | None,
     collision_rects: list[pygame.Rect],
     tolerancia: float = 6.0,
 ) -> set[tuple[int, int]]:
@@ -404,7 +405,7 @@ def _plataforma_en(
 def analyse_geometry(
     collision_rects: list[pygame.Rect],
     envelope: JumpEnvelope | None = None,
-    pendientes: list[object] | None = None,
+    pendientes: list[Pendiente] | None = None,
 ) -> LevelReport:
     """Busca huecos y repechos que la física del jugador no puede superar."""
     env = envelope or JumpEnvelope.from_settings()
@@ -460,7 +461,7 @@ def analyse_checkpoints(
     checkpoints: list[object],
     spawn: pygame.Vector2,
     exit_rect: pygame.Rect | None,
-    max_retry_distance: float = 1200.0,
+    _max_retry_distance: float = 1200.0,
 ) -> list[float]:
     """Distancias entre puntos de reaparición consecutivos.
 
@@ -488,7 +489,7 @@ def reachable_platforms(
     collision_rects: list[pygame.Rect],
     spawn: pygame.Vector2,
     envelope: JumpEnvelope | None = None,
-    pendientes: list[object] | None = None,
+    pendientes: list[Pendiente] | None = None,
 ) -> set[int]:
     """Índices de plataformas alcanzables desde el spawn, por búsqueda en grafo.
 
@@ -532,9 +533,9 @@ def reachable_platforms(
     def connected(a: pygame.Rect, b: pygame.Rect) -> bool:
         # Separación horizontal entre bordes (0 si se solapan).
         if b.left > a.right:
-            dx = b.left - a.right
+            dx: float = float(b.left - a.right)
         elif a.left > b.right:
-            dx = a.left - b.right
+            dx = float(a.left - b.right)
         else:
             dx = 0.0
         if dx > span:
@@ -584,7 +585,7 @@ def exit_is_reachable(
     spawn: pygame.Vector2,
     exit_rect: pygame.Rect | None,
     envelope: JumpEnvelope | None = None,
-    pendientes: list[object] | None = None,
+    pendientes: list[Pendiente] | None = None,
 ) -> bool:
     """¿Existe una cadena de saltos (o de rampas) del spawn a la salida?"""
     if exit_rect is None:

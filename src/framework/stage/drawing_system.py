@@ -184,6 +184,11 @@ class DrawingSystem(GizmosDeDepuracion):
         if ctx.interactables is not None:
             self._draw_interactables(surface, ctx.interactables, offset)
 
+        # Lianas — Vine de trepar (verde) y VineSwing de salto (cuerda marrón con asa)
+        # Distintas visualmente a propósito: una se trepa, la otra se balancea.
+        if ctx.mundo is not None:
+            self._draw_lianas(surface, ctx.mundo, offset)
+
         self._draw_entities(surface, stage, player, checkpoints, offset)
 
         # AUD-135 — la inundación, DESPUÉS de las entidades y por delante de
@@ -253,32 +258,25 @@ class DrawingSystem(GizmosDeDepuracion):
                     (visible.left, r.top), (visible.right, r.top), 2,
                 )
 
-    #: Rojo de aviso para las zonas de daño fijas. Deliberadamente distinto del
-    #: turquesa de la inundación: son dos cosas distintas y el jugador tiene que
-    #: poder separarlas de un vistazo.
-    _COLOR_PELIGRO = (215, 70, 55, 255)
-    _COLOR_BORDE_PELIGRO = (255, 160, 120)
+    #: PSX 2D Tributo — peligro con textura, no cuadro rojo plano.
+    #: Se mantiene distinción con turquesa de inundación, pero con dithering
+    #: y patrón de pinchos sutil para que parezca elemento del mundo, no debug.
+    _COLOR_PELIGRO = (165, 45, 35, 210)
+    _COLOR_BORDE_PELIGRO = (220, 130, 90)
+    _COLOR_PELIGRO_DITHER = (195, 75, 50, 180)
 
     def _draw_zonas_de_dano(
         self, surface: pygame.Surface, stage: StageData,
         offset: pygame.Vector2,
     ) -> None:
-        """Pinta las zonas de daño **fijas** (AUD-228).
+        """Pinta las zonas de daño **fijas** con arte PSX, no cuadro rojo plano.
 
-        Hasta ahora el motor sólo dibujaba las que suben. El contrato implícito
-        para las fijas era que el diseñador pintara pinchos o lava en las
-        baldosas y que el rectángulo sólo marcara dónde duele — pero ese
-        contrato no estaba escrito en ninguna parte y no se cumplía. Los dos
-        únicos mapas del proyecto con una `HazardZone` fija son `stage0`, que es
-        el que los estudiantes copian, y `stage3_3_el_patio`, y **ninguno de los
-        dos** tenía arte debajo: se perdía salud desde un rectángulo invisible.
-
-        El comentario de `_draw_inundaciones` ya decía la regla —«una zona de
-        daño que no se ve es una trampa»— y sólo se la aplicaba al agua.
-
-        Late en vez de estar fija porque un tinte quieto se lee como parte del
-        decorado, y lo que hay que comunicar es que eso está **activo**. Un mapa
-        que sí trae su propio arte apaga esto con `visible=false` en el TMX.
+        AUD-228 original pintaba rectángulo rojo pulsante porque ningún mapa
+        tenía arte de pinchos. Ahora los tilesets incluyen variantes de
+        pinchos/lava con dithering PSX, así que el rectángulo es solo
+        refuerzo sutil cuando `avisar=True`. Con `visible=false` en TMX el
+        diseñador lo apaga porque su arte ya comunica el peligro.
+        Se mantiene distinción con turquesa de inundación, pero con textura.
         """
         zonas = [
             hz for hz in getattr(stage, "hazard_zones", ())
@@ -289,21 +287,37 @@ class DrawingSystem(GizmosDeDepuracion):
         if not zonas:
             return
 
+        # Genera textura PSX dithered con patrón de pinchos diagonal sutil
         ancho, alto = surface.get_size()
-        tinte = self._peligro_cache
-        if tinte is None or tinte.get_size() != (ancho, alto):
-            # Una sola superficie, cacheada al tamaño de la pantalla y recortada
-            # con `area=`. Repintar un rectángulo con alfa cada fotograma es la
-            # asignación por fotograma que AUD-023 vino a quitar.
+        cache_key = (ancho, alto, self._COLOR_PELIGRO, self._COLOR_PELIGRO_DITHER)
+        # Reusa cache si tamaño y colores coinciden
+        if getattr(self, "_peligro_cache_key", None) != cache_key or self._peligro_cache is None or self._peligro_cache.get_size() != (ancho, alto):  # noqa: E501
             tinte = pygame.Surface((ancho, alto), pygame.SRCALPHA)
-            tinte.fill(self._COLOR_PELIGRO)
+            # Base con dithering Bayer 2x2 para evitar banding PSX
+            bayer = [[0, 8], [12, 4]]
+            for y in range(0, alto, 2):
+                for x in range(0, ancho, 2):
+                    for dy in range(2):
+                        for dx in range(2):
+                            if y+dy < alto and x+dx < ancho:
+                                use_dither = bayer[dy][dx] < 8
+                                col = self._COLOR_PELIGRO_DITHER if use_dither else self._COLOR_PELIGRO
+                                tinte.set_at((x+dx, y+dy), col)
+            # Patrón diagonal de pinchos cada 8px (PSX)
+            for y in range(0, alto, 8):
+                for x in range(0, ancho, 8):
+                    # Pequeña línea diagonal 3px
+                    if (x + y) % 16 == 0:
+                        pygame.draw.line(tinte, (255, 180, 130, 90), (x, y), (x+3, y+3), 1)
             self._peligro_cache = tinte
+            self._peligro_cache_key = cache_key
+        else:
+            tinte = self._peligro_cache
 
-        # El pulso viene del reloj de SDL y no de un `dt` acumulado: este método
-        # no recibe delta, y pedirlo obligaría a tocar la firma de `draw` y las
-        # 26 escenas que la usan.
-        fase = (pygame.time.get_ticks() % 1400) / 1400.0
-        tinte.set_alpha(int(48 + 42 * (1.0 - abs(fase * 2.0 - 1.0))))
+        # Pulso más sutil que antes (PSX no late fuerte)
+        fase = (pygame.time.get_ticks() % 2000) / 2000.0
+        alpha_base = int(28 + 18 * (1.0 - abs(fase * 2.0 - 1.0)))
+        tinte.set_alpha(alpha_base)
 
         pantalla = surface.get_rect()
         for hz in zonas:
@@ -315,13 +329,15 @@ class DrawingSystem(GizmosDeDepuracion):
                 tinte, visible.topleft,
                 pygame.Rect(0, 0, visible.width, visible.height),
             )
-            # El borde superior, opaco: es el que dice exactamente dónde empieza
-            # a doler, y es la única decisión que el jugador toma aquí.
+            # Borde superior con dithering sutil, no rojo neón
             if pantalla.top <= r.top <= pantalla.bottom:
                 pygame.draw.line(
                     surface, self._COLOR_BORDE_PELIGRO,
                     (visible.left, r.top), (visible.right, r.top), 1,
                 )
+                # Segunda línea punteada 1px abajo para efecto PSX
+                for x in range(visible.left, visible.right, 4):
+                    surface.set_at((x, r.top + 1), self._COLOR_BORDE_PELIGRO)
 
     #: Colores de los objetos interactivos. Se dibujan con formas planas y no
     #: con sprites porque el motor no puede suponer qué arte tiene cada
@@ -332,6 +348,8 @@ class DrawingSystem(GizmosDeDepuracion):
     _COLOR_JAULA = (120, 120, 135)
     _COLOR_COFRE = (185, 140, 70)
     _COLOR_ABIERTO = (90, 90, 100)
+    _COLOR_PLACA = (90, 170, 120)
+    _COLOR_PLACA_ACTIVA = (130, 220, 160)
 
     def _draw_interactables(
         self, surface: pygame.Surface, sistema: Any, offset: pygame.Vector2,
@@ -393,6 +411,62 @@ class DrawingSystem(GizmosDeDepuracion):
                     surface, (60, 40, 20),
                     (r.left + 2, r.centery), (r.right - 2, r.centery), 2,
                 )
+
+        for placa in getattr(sistema, "placas", ()):
+            r = placa.rect.move(-offset.x, -offset.y)
+            activa = bool(getattr(placa, "activa", False))
+            color = self._COLOR_PLACA_ACTIVA if activa else self._COLOR_PLACA
+            pygame.draw.rect(surface, color, r, border_radius=4)
+            pygame.draw.rect(surface, (30, 60, 40), r, 2, border_radius=4)
+            # Marca interior: hundida cuando activa.
+            if activa:
+                pygame.draw.rect(surface, (40, 90, 60), r.inflate(-6, -6), border_radius=2)
+            else:
+                pygame.draw.rect(surface, (110, 190, 140), r.inflate(-6, -4), border_radius=2)
+
+    def _draw_lianas(self, surface: pygame.Surface, mundo: Any, offset: pygame.Vector2) -> None:
+        """Dibuja lianas — Vine verde de trepar y VineSwing cuerda marrón de salto.
+
+        Distintas a propósito: una se trepa vertical (verde con hojas), la otra
+        se balancea y se salta (marrón con asa). Sin dibujo, el jugador no ve
+        dónde agarrarse y la mecánica es invisible.
+        """
+        try:
+            from src.framework.ecs.components import Liana, LianaSalto
+        except Exception:
+            return
+        # Vine clásica — verde enredadera
+        for _, liana in mundo.cada(Liana):
+            r = liana.rect.move(-int(offset.x), -int(offset.y))
+            # Tronco verde con dithering PSX
+            pygame.draw.rect(surface, (45, 110, 55), r, border_radius=2)
+            pygame.draw.rect(surface, (30, 80, 40), r, 1, border_radius=2)
+            # Hojas cada 12px de alto
+            for y in range(r.top + 4, r.bottom - 4, 12):
+                pygame.draw.circle(surface, (70, 160, 80), (r.centerx - 4, y), 3)
+                pygame.draw.circle(surface, (60, 140, 70), (r.centerx + 4, y + 6), 3)
+            # Indica si es móvil con pequeña flecha
+            if getattr(liana, "amplitud", 0) > 0:
+                pygame.draw.polygon(surface, (180, 255, 180),
+                    [(r.centerx - 4, r.centery), (r.centerx + 4, r.centery), (r.centerx, r.centery + 6)])
+        # VineSwing — cuerda colgante para salto
+        for _, ls in mundo.cada(LianaSalto):
+            r = ls.rect.move(-int(offset.x), -int(offset.y))
+            # Cuerda marrón con asa circular abajo
+            cuerda_color = (120, 85, 45)
+            asa_color = (160, 110, 60)
+            # Línea vertical desde anclaje hasta rect.bottom (largo)
+            anclaje_x = r.centerx
+            anclaje_y = r.top
+            asa_y = r.bottom
+            pygame.draw.line(surface, cuerda_color, (anclaje_x, anclaje_y), (anclaje_x, asa_y), 3)
+            # Asa circular
+            pygame.draw.circle(surface, asa_color, (anclaje_x, asa_y), 7, 2)
+            pygame.draw.circle(surface, (200, 160, 110), (anclaje_x, asa_y), 4)
+            # Sombra sutil
+            pygame.draw.circle(surface, (40, 30, 20, 80), (anclaje_x + 2, asa_y + 2), 5, 1)
+            # Indica radio de agarre con círculo punteado muy sutil (solo en debug)
+            # No se dibuja en juego normal para no saturar.
 
     def draw_ui(self, ctx: DrawContext) -> None:
         """Interfaz en espacio de pantalla. Se dibuja DESPUÉS de la luz.
@@ -667,6 +741,8 @@ class DrawingSystem(GizmosDeDepuracion):
 
         drawables.sort(key=lambda pair: pair[1])
 
+        escala = self._escala_de_profundidad(stage)
+
         # AUD-273 — las sombras van **todas antes** que las entidades, no cada
         # una justo antes de la suya. Intercaladas, la sombra de un enemigo
         # cercano se pintaría encima de otro que está detrás y más abajo, y se
@@ -680,10 +756,14 @@ class DrawingSystem(GizmosDeDepuracion):
             for drawable, _depth in drawables:
                 rect = getattr(drawable, "rect", None)
                 if rect is not None and getattr(drawable, "proyecta_sombra", True):
-                    self._sombra.dibujar(surface, rect, solidos, offset, lote)
+                    # AUD-624 — profundidad 2.5D para la sombra
+                    escala_sombra = 1.0
+                    if escala.activa:
+                        escala_sombra = escala.escala_en(rect.bottom)
+                    self._sombra.dibujar(surface, rect, solidos, offset, lote,
+                                         escala=escala_sombra)
             lote.volcar(surface)
 
-        escala = self._escala_de_profundidad(stage)
         for drawable, _depth in drawables:
             # AUD-289 — el `draw` de una entidad de estudiante también puede
             # lanzar, y aquí el daño sería peor que en el `update`: media escena
@@ -719,6 +799,7 @@ class DrawingSystem(GizmosDeDepuracion):
                 mapa_alto=alto,
                 minimo=float(getattr(stage, "profundidad_min", 1.0)),
                 maximo=float(getattr(stage, "profundidad_max", 1.0)),
+                curva=float(getattr(stage, "profundidad_curva", 1.0)),
             )
         return self._prof
 

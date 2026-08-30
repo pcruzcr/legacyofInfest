@@ -348,7 +348,7 @@ misma.
 ## 8. Estados
 
 El jugador se gobierna por una máquina de estados finitos: sólo uno activo a la
-vez. El enumerado `PlayerState` declara **27**.
+vez. El enumerado `PlayerState` declara **28**.
 
 > **Corregido el 2026-08-11 (AUD-432).** Este documento decía **19**, dos
 > veces, y su tabla listaba diecinueve. Los siete que faltaban —`CLIMBING`,
@@ -367,6 +367,8 @@ vez. El enumerado `PlayerState` declara **27**.
 > **Recontado el 2026-08-19 (AUD-575):** son **27** — `SWIM_ATTACK`
 > (GAP-069/AUD-557, el ataque acuático) se añadió a `PlayerState` y a esta
 > tabla en la misma fila que ocupa en el código.
+>
+> **Recontado 2026-08-30:** son **28** — `GROUND_POUND` `player.py:116` (AUD-619) faltaba en la tabla.
 
 ### 8.1 La tabla
 
@@ -398,6 +400,7 @@ vez. El enumerado `PlayerState` declara **27**.
 | `ULTIMATE` | Medidor lleno y activación | Fin de la animación | Ninguna |
 | `AERIAL_ATTACK` | Atacar en el aire | Fin de la animación | Ninguna |
 | `AERIAL_SLAM` | Ataque hacia abajo en el aire | Al tocar suelo | Ninguna |
+| `GROUND_POUND` | Pisotón aéreo (AUD-619) | Al tocar suelo | Ninguna |
 | `AIR_CHASE` | Persecución aérea tras un impacto | Fin del temporizador | Mover |
 
 La implementación está repartida por familias en

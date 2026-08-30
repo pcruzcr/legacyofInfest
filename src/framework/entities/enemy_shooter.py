@@ -398,13 +398,23 @@ class EnemyShooter(EnemyBase):
         camera_offset: pygame.Vector2,
     ) -> None:
         """Draw shooter using sprite, then overlay projectiles."""
-        if not self.is_visible or not self.is_alive:
+        # AUD-667 — respeta la visibilidad de DYING igual que la base.
+        if not self.is_visible:
+            return
+        if not self.is_alive and self.state != EnemyState.DYING:
+            return
+        if not self.is_alive and self.state == EnemyState.DYING and self._death_timer <= 0:
             return
 
         screen_x = int(self.position.x - camera_offset.x)
         screen_y = int(self.position.y - camera_offset.y)
 
+        self._draw_health_bar(surface, screen_x, screen_y)
+
         # Sprite or fallback
+        # AUD-667 — anclaje abajo-centro con tamaño real del frame (ver
+        # `enemy_base:draw`), no con `_sprite_fw/_sprite_fh` fijo, para que
+        # HURT/DYING con altura distinta no desplace el cuerpo.
         frames = self._sprite_frames.get(self._get_animation_state())
         if frames:
             frame_idx = min(self._animation_frame, len(frames) - 1)
@@ -413,9 +423,15 @@ class EnemyShooter(EnemyBase):
                 frame = flipped_frames[frame_idx]
             else:
                 frame = frames[frame_idx]
-            ox = (self.rect.width - self._sprite_fw) // 2
-            oy = self.rect.height - self._sprite_fh
-            surface.blit(frame, (screen_x + ox, screen_y + oy))
+            ox = (self.rect.width - frame.get_width()) // 2
+            oy = self.rect.height - frame.get_height()
+            destino = (screen_x + ox, screen_y + oy)
+            from src.engine.core import user_settings
+            from src.framework.vfx.contorno import COLOR_ENEMIGO, dibujar_con_contorno
+            if user_settings.preferencia("contorno_de_enemigos", False):
+                dibujar_con_contorno(surface, frame, destino, COLOR_ENEMIGO)
+            else:
+                surface.blit(frame, destino)
         else:
             pygame.draw.rect(surface, (150, 0, 200),
                              (screen_x, screen_y, self.rect.width, self.rect.height))

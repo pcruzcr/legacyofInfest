@@ -72,6 +72,11 @@ class MessageBox:
         self._event_bus.subscribe(Events.SHOW_MESSAGE, self._on_show_message)
         self._event_bus.subscribe(Events.HIDE_MESSAGE, self._on_hide_message)
 
+    @property
+    def accessible_name(self) -> str:
+        """AUD-630 — lo que un lector de pantalla anuncia del cuadro."""
+        return self._full_text or ""
+
     def destroy(self) -> None:
         if self._destroyed:
             return

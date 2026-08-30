@@ -15,12 +15,13 @@ que recortan en vez de rechazar (`_parse_unit_prop`).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 
 from src.engine.core import settings
 from src.framework import FrameworkUsageError
+from src.framework.entities.enemy_buddies import BuddyEnguarde, BuddyExpresso, BuddyRino
 from src.framework.stage.bloques import (
     BloqueDestructible,
     BloqueEmpujable,
@@ -30,8 +31,11 @@ from src.framework.stage.interactables import (
     Cofre,
     Disparador,
     Recogible,
+    SecretExit,
+    SecretRoom,
     ZonaDeWarp,
 )
+from src.framework.stage.object_handler_registry import register
 from src.framework.stage.pendientes import Pendiente
 from src.framework.stage.stage_data import (
     _BOOL_PROPS,
@@ -58,6 +62,16 @@ from src.framework.stage.tmx_diagnostics import (
 logger = logging.getLogger(__name__)
 
 class ObjetosDeTiled:
+    # Para mypy: el mixin espera que StageLoader provea estos miembros
+    _entity_registry: dict[str, Any] = {}  # type: ignore[assignment]
+    _registro_historico: dict[str, Any] = {}  # type: ignore[assignment]
+    if TYPE_CHECKING:
+        @classmethod
+        def _safe_float(cls, value: Any, name: str) -> float: ...  # type: ignore[no-redef]
+
+        @classmethod
+        def _safe_int(cls, value: Any, name: str) -> int: ...  # type: ignore[no-redef]
+
     @classmethod
     def _process_objects(
         cls,
@@ -66,36 +80,65 @@ class ObjetosDeTiled:
         waypoints_by_owner: dict[str, list[tuple[float, float]]],
         report: TmxReport,
     ) -> bool:
+        # Registry dispatch — OCP: nuevo tipo = @register sin tocar este método
+        from src.framework.stage.object_handler_registry import get_handler
+
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
             obj_name = getattr(obj, "name", "") or ""
             props = dict(obj.properties) if obj.properties else {}
 
-            if obj_type == "PlayerSpawn":
-                if player_spawn_found:
-                    raise FrameworkUsageError("More than one PlayerSpawn object found")
-                cls._handle_player_spawn(stage, obj)
-                player_spawn_found = True
+            # 1. Registry para tipos simples (24 handlers)
+            # AUD-729: el registro guarda la función sin envolver (antes de
+            # @classmethod), así que hay que pasar `cls` explícitamente. La
+            # firma más común es (cls, stage, obj, props); algunas como
+            # PlayerSpawn son (cls, stage, obj) y otras como Door/Buddy
+            # llevan `obj_type` extra. Se intenta en orden y el valor de
+            # retorno (TmxObjectProblem) de BossSpawn se recoge.
+            handler = get_handler(obj_type)
+            if handler is not None:
+                # AUD-729: la firma varía (3, 4 o 5 args con `cls`). Se
+                # intenta en orden de más común a menos común y se acepta
+                # la primera que no lance TypeError. Cualquier éxito se
+                # considera manejado y no cae al fallback.
+                resultado: Any = None
+                manejado = False
+                # B023 — los lambdas en bucle capturarian la variable del ciclo;
+                # se evita con intentos directos sin closure.
+                try:
+                    resultado = handler(cls, stage, obj, props)
+                    manejado = True
+                except TypeError:
+                    try:
+                        resultado = handler(cls, stage, obj, props, obj_type)
+                        manejado = True
+                    except TypeError:
+                        try:
+                            resultado = handler(cls, stage, obj)  # type: ignore[call-arg]
+                            manejado = True
+                        except TypeError:
+                            manejado = False
+                if manejado:
+                    if obj_type == "PlayerSpawn":
+                        if player_spawn_found:
+                            raise FrameworkUsageError("More than one PlayerSpawn object found")
+                        player_spawn_found = True
+                    if resultado is not None and hasattr(resultado, "reason"):
+                        report.add(resultado)
+                    continue
 
-            elif obj_type == "MessageTrigger":
-                cls._handle_message_trigger(stage, obj, props)
-
-            elif obj_type == "MessageTrigger_Once":
-                cls._handle_message_trigger(stage, obj, props)
-
-            elif obj_type in cls._entity_registry:
+            # 2. Fallback para tipos no registrados o que necesitan contexto extra
+            if obj_type in cls._entity_registry:
                 cls._handle_entity_spawn(stage, obj, obj_name, props, waypoints_by_owner)
-
-            elif obj_type == "Checkpoint":
-                cls._handle_checkpoint(stage, obj, props)
 
             elif obj_type == "NextTrigger":
                 if obj.width > 0 and obj.height > 0:
                     stage.next_trigger = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
 
-            elif obj_type == "HazardZone":
-                cls._handle_hazard_zone(stage, obj, props)
+            elif obj_type == "DeathPit":
+                if obj.width > 0 and obj.height > 0:
+                    stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
 
             elif obj_type == "PushBlock":
                 cls._handle_bloque(stage, obj, props, empujable=True)
@@ -103,65 +146,6 @@ class ObjetosDeTiled:
             elif obj_type == "BreakableBlock":
                 cls._handle_bloque(stage, obj, props, empujable=False)
 
-            elif obj_type == "Cutscene":
-                cls._handle_cutscene(stage, obj, props)
-
-            elif obj_type == "Objective":
-                cls._handle_objetivo(stage, obj, props, obj_name)
-
-            elif obj_type == "DeathPit":
-                if obj.width > 0 and obj.height > 0:
-                    stage.death_pits.append(DeathPit(rect=pygame.Rect(obj.x, obj.y, obj.width, obj.height)))
-
-            elif obj_type == "CameraLock":
-                cls._handle_camera_lock(stage, obj, props)
-
-            elif obj_type == "Light":
-                cls._handle_light(stage, obj, props)
-
-            elif obj_type == "AmbientLightZone":
-                cls._handle_zona_luz_ambiente(stage, obj, props)
-
-            elif obj_type == "MusicZone":
-                cls._handle_zona_musica(stage, obj, props)
-
-            elif obj_type == "CameraZoomZone":
-                cls._handle_zona_zoom(stage, obj, props)
-
-            # AUD-605 — la arena del jefe, dibujada en Tiled.
-            elif obj_type == "ArenaZone":
-                cls._handle_zona_arena(stage, obj)
-
-            # F4.1 — objetos con los que el jugador interactúa. Pedidos por los
-            # estudiantes tras jugar la fase 1: llaves, puertas, jaulas, cofres
-            # y disparadores de evento.
-            elif obj_type in ("Pickup", "Key"):
-                cls._handle_recogible(stage, obj, props)
-
-            elif obj_type in ("Door", "Cage", "LockedDoor"):
-                cls._handle_cerradura(stage, obj, props, obj_type)
-
-            elif obj_type == "Chest":
-                cls._handle_cofre(stage, obj, props)
-
-            elif obj_type == "EventTrigger":
-                cls._handle_disparador(stage, obj, props)
-
-            elif obj_type == "BossSpawn":
-                problema = cls._handle_boss_spawn(stage, obj)
-                if problema is not None:
-                    report.add(problema)
-
-            elif obj_type == "ScrollZone":
-                cls._handle_scroll_forzado(stage, obj, props)
-
-            elif obj_type == "WarpZone":
-                cls._handle_warp(stage, obj, props)
-
-            elif obj_type == "Slope":
-                cls._handle_pendiente(stage, obj, props)
-
-            # F5.3–F5.6 — mecánicas del Top 200 declaradas desde Tiled.
             elif obj_type in _TIPOS_DE_COMPONENTE:
                 cls._handle_componente(stage, obj, props, obj_type)
 
@@ -191,10 +175,12 @@ class ObjetosDeTiled:
         )
 
     @classmethod
+    @register("PlayerSpawn")
     def _handle_player_spawn(cls, stage: StageData, obj: Any) -> None:
         stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)
 
     @classmethod
+    @register("MessageTrigger","MessageTrigger_Once")
     def _handle_message_trigger(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         rect = pygame.Rect(obj.x, obj.y, obj.width or 32, obj.height or 32)
         text = props.get("text", "")
@@ -206,8 +192,11 @@ class ObjetosDeTiled:
         # ninguno de los dos, que es lo que ocurriría si uno tuviera prioridad
         # sobre el otro en silencio.
         arbol = str(props.get("dialogue", "") or props.get("dialogue_tree", ""))
+        dur = cls._safe_float(props.get("duration", 8.0), "MessageTrigger.duration")
+        if dur <= 0:
+            dur = 8.0
         stage.message_triggers.append(
-            MessageTrigger(rect=rect, text=text, dialogue_tree_id=arbol),
+            MessageTrigger(rect=rect, text=text, dialogue_tree_id=arbol, duration=dur),
         )
 
     @classmethod
@@ -236,6 +225,7 @@ class ObjetosDeTiled:
         stage.entity_list.append(entity)
 
     @classmethod
+    @register("BossSpawn")
     def _handle_boss_spawn(cls, stage: StageData, obj: Any) -> TmxObjectProblem | None:
         """`BossSpawn` — dónde entra el jefe que el mapa nombra (AUD-259).
 
@@ -300,6 +290,7 @@ class ObjetosDeTiled:
         return cleaned
 
     @classmethod
+    @register("Checkpoint")
     def _handle_checkpoint(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if "checkpoint_id" not in props:
             raise FrameworkUsageError("Checkpoint missing required property: checkpoint_id")
@@ -327,6 +318,7 @@ class ObjetosDeTiled:
     }
 
     @classmethod
+    @register("Light")
     def _handle_light(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """Convierte un objeto `Light` de Tiled en un `LightSpec`.
 
@@ -370,6 +362,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("AmbientLightZone")
     def _handle_zona_luz_ambiente(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -413,6 +406,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("MusicZone")
     def _handle_zona_musica(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -444,6 +438,7 @@ class ObjetosDeTiled:
             rect=rect, track=track, fundido_ms=fundido_ms))
 
     @classmethod
+    @register("CameraZoomZone")
     def _handle_zona_zoom(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -482,6 +477,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("ArenaZone")
     def _handle_zona_arena(cls, stage: StageData, obj: Any) -> None:
         """Convierte un objeto `ArenaZone` de Tiled en el rect de arena
         del jefe (AUD-605).
@@ -594,6 +590,7 @@ class ObjetosDeTiled:
         return cls.LIGHT_COLORS["warm"]
 
     @classmethod
+    @register("Pickup","Key")
     def _handle_recogible(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`Pickup` / `Key` — algo que el jugador coge del suelo.
 
@@ -615,6 +612,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Door","Cage","LockedDoor")
     def _handle_cerradura(
         cls, stage: StageData, obj: Any, props: dict[str, Any], obj_type: str,
     ) -> None:
@@ -638,6 +636,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Chest")
     def _handle_cofre(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`Chest` — se abre con el botón y entrega su contenido una vez."""
         stage.cofres.append(Cofre(
@@ -649,6 +648,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("EventTrigger")
     def _handle_disparador(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`EventTrigger` — emite un evento del bus; el escenario decide qué hace."""
         evento = str(props.get("evento") or obj.name or "")
@@ -667,6 +667,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Slope")
     def _handle_pendiente(cls, stage: StageData, obj: Any,
                           props: dict[str, Any]) -> None:
         """`Slope` — suelo inclinado (AUD-297).
@@ -680,10 +681,20 @@ class ObjetosDeTiled:
         propiedad sin el código delante.
         """
         sube = str(props.get("sube", "derecha")).strip().lower()
+        # AUD-590 — colina suave 6×24 que usa `_altura_colina` de
+        # `generate_stage0_tmx.py:99` / `trazado.py:54`. Se expone como prop
+        # `sube="suave"` para demo en stage0 y stage_mecanicas.
+        if sube == "suave":
+            stage.pendientes.append(Pendiente(
+                rect=cls._rect_de(obj),
+                sube_a_la_derecha=True,
+                suave=True,
+            ))
+            return
         if sube not in ("derecha", "izquierda"):
             logger.warning(
-                "Slope en (%s, %s): `sube` es %r y sólo vale 'derecha' o "
-                "'izquierda'. Se toma 'derecha'.", obj.x, obj.y, sube)
+                "Slope en (%s, %s): `sube` es %r y sólo vale 'derecha', "
+                "'izquierda' o 'suave'. Se toma 'derecha'.", obj.x, obj.y, sube)
             sube = "derecha"
         stage.pendientes.append(Pendiente(
             rect=cls._rect_de(obj),
@@ -691,6 +702,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("WarpZone")
     def _handle_warp(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`WarpZone` — teletransporta dentro del mismo mapa (AUD-287).
 
@@ -702,6 +714,7 @@ class ObjetosDeTiled:
           dejarlo medio hundido.
         * `automatico` — al tocar (por defecto) o pulsando usar.
         * `una_vez`, `key_id`, `enfriamiento`, `mensaje`.
+        * `requires_skill` — **opcional**, skill_id requerido para usar el warp.
 
         Sin destino no se carga y se avisa. Un warp sin destino no es un warp a
         medio configurar: es un rectángulo que teletransporta al origen del
@@ -714,6 +727,7 @@ class ObjetosDeTiled:
                 "mapa y parecería un fallo del motor.", obj.x, obj.y,
             )
             return
+        requires_skill = str(props.get("requires_skill", "") or "").strip()
         stage.warps.append(ZonaDeWarp(
             rect=cls._rect_de(obj),
             destino=pygame.Vector2(float(props["destino_x"]),
@@ -723,9 +737,11 @@ class ObjetosDeTiled:
             key_id=str(props.get("key_id", "")),
             enfriamiento=float(props.get("enfriamiento", 0.5)),
             mensaje=str(props.get("mensaje", "")),
+            requires_skill=requires_skill,
         ))
 
     @classmethod
+    @register("ScrollZone")
     def _handle_scroll_forzado(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -802,6 +818,7 @@ class ObjetosDeTiled:
             BloqueRitmico,
             ConoDeVision,
             Liana,
+            LianaSalto,
             PlataformaHundible,
             PlataformaMovil,
             Resorte,
@@ -964,6 +981,17 @@ class ObjetosDeTiled:
                 rect=rect,
                 ancho_de_agarre=int(f("ancho_de_agarre", 10.0)),
                 velocidad=f("velocidad", 70.0),
+                amplitud=f("amplitud", 0.0),
+                periodo=f("periodo", 0.0),
+            )]
+
+        elif obj_type in ("VineSwing", "LianaSalto", "RopeSwing"):
+            grupo = [LianaSalto(
+                rect=rect,
+                largo=int(f("largo", 48.0)),
+                amplitud=f("amplitud", 32.0),
+                periodo=f("periodo", 1.8),
+                radio_agarre=int(f("radio_agarre", 18.0)),
             )]
 
         elif obj_type == "Zipline":
@@ -988,6 +1016,7 @@ class ObjetosDeTiled:
         stage.componentes.append(grupo)
 
     @classmethod
+    @register("HazardZone")
     def _handle_hazard_zone(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if obj.width == 0 or obj.height == 0:
             return
@@ -1048,6 +1077,7 @@ class ObjetosDeTiled:
             ))
 
     @classmethod
+    @register("Objective")
     def _handle_objetivo(cls, stage: StageData, obj: Any, props: dict[str, Any],
                          nombre: str = "") -> None:
         """AUD-400 — `Objective` en Tiled. Cierra GAP-047.
@@ -1069,6 +1099,7 @@ class ObjetosDeTiled:
             stage.objetivos.append(objetivo)
 
     @classmethod
+    @register("Cutscene")
     def _handle_cutscene(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """AUD-136 — `Cutscene` en Tiled.
 
@@ -1094,6 +1125,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("CameraLock")
     def _handle_camera_lock(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if obj.width == 0 or obj.height == 0:
             return
@@ -1101,3 +1133,143 @@ class ObjetosDeTiled:
         lock_x = props.get("lock_x", False) in (True, "true", "True", 1, "1")
         lock_y = props.get("lock_y", False) in (True, "true", "True", 1, "1")
         stage.camera_locks.append(CameraLock(rect=rect, lock_x=lock_x, lock_y=lock_y))
+
+    @classmethod
+    @register("BuddyRino","BuddyExpresso","BuddyEnguarde")
+    def _handle_buddy(cls, stage: StageData, obj: Any, props: dict[str, Any], buddy_type: str) -> None:
+        """Maneja la colocación de buddies (compañeros montables) en el mapa."""
+        if obj.width <= 0 or obj.height <= 0:
+            logger.warning(
+                "buddy sin tamaño en (%s, %s): se ignora",
+                obj.x, obj.y,
+            )
+            return
+        rect = pygame.Rect(int(obj.x), int(obj.y), int(obj.width), int(obj.height))
+        
+        buddy_class_map = {
+            "BuddyRino": BuddyRino,
+            "BuddyExpresso": BuddyExpresso,
+            "BuddyEnguarde": BuddyEnguarde,
+        }
+        
+        buddy_class = buddy_class_map.get(buddy_type)
+        if buddy_class is None:
+            logger.warning("Tipo de buddy desconocido: %s", buddy_type)
+            return
+            
+        buddy = buddy_class(pygame.Vector2(rect.x, rect.y), zone=cls._safe_int(props.get("zone", 0), "zone"))
+        stage.entity_list.append(buddy)
+
+    @classmethod
+    @register("SecretExit")
+    def _handle_secret_exit(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """AUD-625 — `SecretExit`: salida oculta que revela un nodo en el mapa del mundo.
+
+        Propiedades:
+        * `secret_id` — **obligatorio**, ID único del secreto.
+        * `automatico` — `true` (default): se revela al tocar; `false`: al pulsar usar.
+        * `una_vez` — `true` (default): solo se descubre una vez.
+        * `key_id` — item/llave requerida para revelarlo (opcional).
+        """
+        secret_id = str(props.get("secret_id", "") or "").strip()
+        if not secret_id:
+            logger.warning(
+                "SecretExit en (%s, %s) sin 'secret_id': se ignora.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        automatico = cls._bool_de(props.get("automatico"), por_defecto=True)
+        una_vez = cls._bool_de(props.get("una_vez"), por_defecto=True)
+        key_id = str(props.get("key_id", "") or "").strip()
+        stage.secret_exits.append(SecretExit(
+            rect=cls._rect_de(obj),
+            secret_id=secret_id,
+            automatico=automatico,
+            una_vez=una_vez,
+            key_id=key_id,
+        ))
+
+    @classmethod
+    @register("SecretRoom")
+    def _handle_secret_room(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """AUD-625 — `SecretRoom`: sala oculta con tell visual sutil.
+
+        Propiedades:
+        * `secret_id` — **obligatorio**, ID único del secreto.
+        * `recompensa` — item_id opcional que se otorga al descubrirla.
+        * `tell` — tipo de tell visual: "sparkle" (default), "particles", "sound", "none".
+        """
+        secret_id = str(props.get("secret_id", "") or "").strip()
+        if not secret_id:
+            logger.warning(
+                "SecretRoom en (%s, %s) sin 'secret_id': se ignora.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        recompensa = str(props.get("recompensa", "") or "").strip()
+        tell = str(props.get("tell", "sparkle") or "sparkle").strip().lower()
+        stage.secret_rooms.append(SecretRoom(
+            rect=cls._rect_de(obj),
+            secret_id=secret_id,
+            recompensa=recompensa,
+            tell=tell,
+        ))
+
+    @classmethod
+    @register("PressurePlate","PlacaDePresion","PlacaPresion","Boton")
+    def _handle_placa(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """PressurePlate / PlacaDePresion — boton que abre puertas con peso.
+
+        Propiedades:
+        * ``evento`` — **obligatoria**, evento que abre ``Door.abre_con``.
+          Alias: ``evento_al_activar`` / ``abre_con``.
+        * ``requiere`` — ``"bloque"`` (defecto), ``"jugador"``, ``"ambos"``
+          o ``"cualquiera"``.
+        * ``mantener`` — ``true`` (defecto): al quitar el peso la puerta se
+          cierra; ``false`` la deja enclavada.
+        * ``una_vez`` — ``true``: solo se activa una vez.
+        * ``mensaje`` — texto al activarse (opcional).
+        """
+        from src.framework.stage.interactables import PlacaDePresion
+
+        evento = str(
+            props.get("evento")
+            or props.get("evento_al_activar")
+            or props.get("abre_con")
+            or getattr(obj, "name", "")
+            or ""
+        ).strip()
+        if not evento:
+            logger.warning(
+                "PressurePlate en (%s, %s) sin 'evento': se ignora. "
+                "Pon 'evento' = nombre que la puerta escucha en 'abre_con'.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"),
+            )
+            return
+        requiere = str(props.get("requiere", "bloque") or "bloque").strip().lower()
+        if requiere not in ("bloque", "jugador", "ambos", "cualquiera", "player", "block"):
+            logger.warning(
+                "PressurePlate en (%s, %s): 'requiere' es %r y solo vale "
+                "'bloque'/'jugador'/'ambos'/'cualquiera'. Se toma 'bloque'.",
+                getattr(obj, "x", "?"), getattr(obj, "y", "?"), requiere,
+            )
+            requiere = "bloque"
+        # Normaliza alias ingles
+        if requiere in ("player",):
+            requiere = "jugador"
+        elif requiere in ("block",):
+            requiere = "bloque"
+        mantener_raw = props.get("mantener")
+        if mantener_raw is None:
+            mantener_raw = props.get("mantener_abierta", props.get("reversible", True))
+        mantener = cls._bool_de(mantener_raw, por_defecto=True)
+        una_vez = cls._bool_de(props.get("una_vez"), por_defecto=False)
+        mensaje = str(props.get("mensaje", "") or "")
+        stage.placas.append(PlacaDePresion(
+            rect=cls._rect_de(obj),
+            evento=evento,
+            requiere=requiere,
+            mantener=mantener,
+            una_vez=una_vez,
+            mensaje=mensaje,
+        ))

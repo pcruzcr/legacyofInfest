@@ -26,92 +26,302 @@ entorno virtual ya está activado (`.\.venv\Scripts\Activate.ps1`).
 
 ---
 
-## 1. Stage Concept (3–5 sentences)
+## 1. Descripción
 
-El Hall es la segunda etapa de la Zona 3 (Sede Heredia): un vestíbulo universitario enorme, de techos altos y piso amplio, con un balcón perimetral accesible por dos escaleras. La luz natural entra por tres tragaluces (visibles justo sobre el techo) y proyecta charcos de luz sobre el piso. El Gavilán Camionero Mascarero ha convertido el hall en su terreno de caza, así que aves patrullan tanto el piso como el aire entre el techo y el balcón. Mide 1088×608px — la etapa más ancha del juego — y la salida hacia el siguiente escenario no está al final del piso: hay dos caminos de plataformas, uno que sube desde el balcón (izquierda) y otro que sale del pedestal cerca del checkpoint (derecha), y ambos convergen en una sola repisa compartida cerca de la mitad horizontal del hall, donde está la puerta — accesible desde cualquiera de los dos lados.
+**Nombre:** 3-2 — El Hall (Zona 3, Sede Heredia).
 
-## 2. Tileset Requirements
+**Objetivo:** cruzar el vestíbulo colapsado e inundado de la Sede Heredia,
+desde la entrada hasta la salida al fondo del edificio, usando solo
+movimiento aéreo — el piso original ya no es una ruta segura.
 
-Tileset: `tileset_gavilan_ciudad` (60 tiles, 16×16px, `assets/tilesets/tileset_gavilan_ciudad.png`). Arte propio generado por código (`tools/generate_tileset_gavilan_ciudad.py`, paleta fija de 16 colores, mismo enfoque procedural que ya usa el proyecto en `tools/pixel_asset_generator.py` para `tileset_stage0.png`) — no es un placeholder de color plano, cada uno de los 60 tiles tiene su propio dibujo (piedra, marcos de ventana, vegetación de skyline, etc.).
+**Concepto:** el Gavilán Camionero Mascarero ha reclamado el Hall como
+territorio de caza. Su dominio sobre el edificio ha ido más allá de las
+aves que lo patrullan: el peso de la infestación y los picados constantes
+contra el piso de piedra agrietaron el mosaico original, que colapsó hacia
+el sótano de servicio en varios tramos, y las tuberías rotas por el mismo
+colapso inundaron el corredor que sigue. La puerta principal del fondo del
+vestíbulo (visible como la reja sellada, tile `42`) quedó bloqueada por los
+escombros — la ruta real ahora sigue por lo que queda del piso, no por
+donde el hall fue diseñado originalmente para salir. No contradice el canon
+de la Zona 3: `65_EL_LORE_EXTENSO.md` ya describe la Sede Heredia como "el
+edificio donde el aire es de los que vuelan" y "no hay refugio: el cielo es
+el techo y el techo observa".
 
-| Tile ID | Description | Collision? |
+**Mecánica principal:** parkour aéreo de riesgo — todos los enemigos son
+aéreos, caer es letal (`DeathPit`), y el avance depende de leer el patrón de
+vuelo de los halcones, cronometrar mecanismos del entorno (resortes,
+bloques rítmicos, plataformas móviles, viento) y, en un tramo, nadar.
+
+**Tamaño:** 2432×608px (152×38 tiles) — de los 1088px originales a esto, en
+varias iteraciones (ver §4, Testing).
+
+---
+
+## 2. Estructura del recorrido
+
+Verificado directamente contra el `.tmx` (no reconstruido de memoria) —
+lista completa de objetos ordenada por X:
+
+| Tramo | X | Qué exige |
 |---|---|---|
-| 0 (suelo_sup) | Piso de planta baja | Sí |
-| 5 (zocalo) | Relleno/zócalo bajo el piso | Sí |
-| 6 (techo) | Techo indestructible | Sí |
-| 8-10 (plat_izq/med/der) | Balcón y peldaños de escalera/plataformas | Sí (one-way) |
-| 2 (muro) | Muros laterales | Sí |
-| 7 (columna) | Columnas decorativas | No (visual, Terrain_Detail) |
-| 12 (reja) | Barandal del balcón | No (visual) |
-| 43-46 (marco_izq/der/sup, alfeizar) | Marcos de tragaluz y de la puerta | No (visual, FG_Overlay) |
-| 54-55 (cortina_izq/der) | Cortinas de tragaluz | No (visual) |
-| 15 (luz_suelo) | Charco de luz bajo cada tragaluz | No (visual) |
-| 16-39 (lej_*/med_*/cer_*) | Skyline de Heredia en parallax (3 profundidades) | No (fondo) |
-| 48-51 (grieta_1/2, mancha) | Desgaste | No (visual) |
-| 57-58 (cuadro, caja) | Props decorativos / obstáculos sólidos | No / Sí (caja cuando es obstáculo) |
-| 42 (cruce) | Reja/tranca de la puerta sellada | No (visual) |
+| Entrada | 0–416 | Piso original, enemigos aéreos establecidos (`FlyingHalcon`, `ShooterBuitre`, `WalkerPalom`) |
+| Corredor de Resortes | 416–624 | Salto normal → `Spring_hall_01` (impulso −520 px/s) → vacío que solo el resorte cruza |
+| Piso largo + resorte bonus | 624–1120 | Piso continuo de 496px con 2 `WalkerPalom` y un desvío opcional: `Spring_hall_03` (x=1030) sube a `Platform_ResorteBonus` (y=390) con una moneda — no bloquea el paso, es recompensa por explorar |
+| El Aljibe (agua) | 1120–1424 | Nadar (`WaterZone_hall` + `WaterZone_hall_2`, `SwimmingState`) — dos piscinas contiguas, 304px |
+| Salida del agua | 1424–1600 | Dos vacíos de salto normal (`DeathPit_hall_C`, `_D`) con una plataforma-coleccionable entre ambos |
+| Gauntlet de resortes | 1600–1984 | Dos resortes más (`Spring_hall_02` x=1648, otro en x=1728) sobre dos vacíos (`DeathPit_hall_E`, `_F`), más un tercer vacío (`_G`) — el tramo más denso en resortes del nivel |
+| El Vestíbulo Roto | 1984–2432 | `RhythmBlock` en cascada (x3) → `MovingPlatform` oscilante → `ZonaDeViento` (empuja la mitad del tiempo; la solución es esperar la calma) → salida (`NextTrigger_04`, x=2384) |
 
-## 3. Enemy / Entity Placements
+**Checkpoints: 5** (verificados, x=448, 670, 1060, 1596, 2000), siempre antes
+del tramo difícil que protegen, no antes del tramo fácil (tabla completa,
+con qué protege cada uno, en §7).
 
-| X | Y | Type | Properties |
-|---|---|---|---|
-| 96,256,480,704,832 | piso | WalkerPalom | (valores por defecto de la especie) |
-| 224, 544 | balcón | ShooterBuitre | (valores por defecto de la especie) |
-| 6 posiciones a lo ancho | banda de vuelo | FlyingHalcon | `flight_mode=bezier` + 4 `Waypoint` propios (`owner_id`) |
-| 420, 700 | y=96 (techo) | SwingingLamp | *no es objeto TMX* — instanciada en `Hall.on_stage_start()` (ver §5) |
+---
 
-## 4. Checkpoints
+## 3. Computación Gráfica I — dónde y cómo se aplicó cada concepto
 
-| ID | Ubicación |
-|---|---|
-| 0 | piso, justo antes de los dos caminos de plataformas hacia la salida |
+### 3.1 Curvas y modelado (Unidad III)
 
-## 5. Custom Logic Notes
-
-### 5.1 Requisito de curvas (`CurveTools`)
-
-Los 6 `FlyingHalcon` usan `flight_mode="bezier"` en vez del `sine` por defecto de la especie. Cada uno trae 4 objetos `Waypoint` en el TMX (`owner_id` = nombre del enemigo, ver `tools/generate_hall_tmx.py:_halcon_waypoints`), que el motor recorre en bucle con `CurveTools.build_bezier_path(waypoints, t)` (`src/framework/entities/flight_strategies.py:BezierFlight`, el mismo mecanismo que ya usa el juego para vuelo Bézier en otros enemigos).
-
-**Fórmula exacta** (`src/framework/processing/curve_tools.py:_eval_catmull`, Catmull-Rom entre 4 puntos de control P0..P3, con `t ∈ [0,1]` el parámetro local del segmento):
+Los `FlyingHalcon` (10 en total, verificado por conteo directo del `.tmx` —
+5 originales tras la corrección de densidad de §4 + 5 agregados en las
+extensiones) recorren un lazo cerrado construido a partir
+de 4 `Waypoint` propios por halcón (`owner_id`), evaluado con
+`CurveTools.build_bezier_path` — Catmull-Rom real, no una aproximación:
 
 ```
 P(t) = 0.5 · [ 2·P1 + (−P0+P2)·t + (2·P0−5·P1+4·P2−P3)·t² + (−P0+3·P1−3·P2+P3)·t³ ]
 ```
 
-`build_bezier_path` selecciona qué 4 waypoints consecutivos usar como P0..P3 según el segmento en que cae `t` (interpolado globalmente sobre los 4 waypoints del halcón, en bucle), y pasa el `t` local de ese segmento a la fórmula de arriba. El resultado es una curva suave que pasa exactamente por los 4 waypoints declarados en el TMX, no solo por sus extremos.
+La curva pasa exactamente por los 4 puntos declarados en el TMX, no solo
+por sus extremos — es la misma mecánica que el motor ya usa para vuelo
+Bézier en otros enemigos del juego, aplicada aquí con trayectorias propias
+por sección (ver §3.2 más abajo) para que ningún tramo repita el patrón del
+anterior.
 
-### 5.2 Requisito de vectores (`math_utils.py`)
+"Modelado" en este proyecto es geometría de colisión + tiles, no mallas 3D:
+la organización de plataformas, fosos y paredes (§2) es el modelado del
+nivel, y su proporción/escala está verificada contra la física real de
+salto del jugador (§3.2 de las notas técnicas, más abajo) — no a ojo.
 
-`SwingingLamp` (`src/stages/hall/decor_lamp.py`) es una entidad decorativa (una lámpara colgante) que `Hall.on_stage_start()` instancia directamente en Python y agrega a `self._stage_data.entity_list` — no es un objeto TMX (ver nota técnica al final de esta sección).
+### 3.2 Representación de escenas (Unidad IV)
 
-**Fórmulas exactas usadas cada frame** (`src/engine/utils/math_utils.py`):
+8 capas obligatorias (`BG_Far`, `BG_Mid`, `BG_Near`, `Terrain`,
+`Terrain_Detail`, `Objects`, `Collision`, `FG_Overlay`), extendidas de 68 a
+152 columnas manteniendo la consistencia tile a tile en las tres
+extensiones. La profundidad viene del piso original (balcón a dos alturas,
+techo indestructible) más la progresión horizontal de las cuatro zonas de
+§2 — cada una introduce **una** mecánica nueva antes de dejar la anterior
+atrás, así que la jerarquía visual (qué mirar primero) cambia con la
+mecánica: el resorte se lee solo, el agua ocupa toda la franja vertical
+media, los bloques rítmicos/plataforma móvil están alineados con el piso.
 
-- Interpolación lineal entre los dos extremos del balanceo (ancla izquierda `L` y derecha `R`), con `t` suavizado por una curva de easing, no lineal en el tiempo:
-  ```
-  lerp(a, b, t) = a + (b − a) · t                    (t clamped a [0,1])
-  ease_in_out_quad(t) = 2t²                 si t < 0.5
-                       = −1 + (4 − 2t)·t     si t ≥ 0.5
-  bob = ( lerp(Lx, Rx, ease_in_out_quad(t)), lerp(Ly, Ry, ease_in_out_quad(t)) )
-  ```
-- Vector de desplazamiento respecto al ancla fija, usado para el largo/dirección de la cuerda dibujada:
-  ```
-  offset = bob − anchor
-  vec2_length(v)    = √(vx² + vy²)                       → longitud de la cuerda
-  vec2_normalize(v) = (vx/‖v‖, vy/‖v‖)  si ‖v‖ > 1e−10,  → dirección de la cuerda
-                       si no, (0, 0)
-  ```
+### 3.3 Color y transparencia (Unidad V)
 
-### 5.3 Otras notas de diseño
+`LightPoolShimmer` (`light_shimmer.py`, nuevo) — tres charcos de luz sobre
+la zona inundada (x=1170/1240/1310), uno de los cuales sigue narrativamente
+del propio "charco de luz" que ya proyectan los tragaluces de la ficha
+oficial de Hall (tile `15`, `luz_suelo`), ahora reflejado en el agua.
 
-- **Hueco central en el balcón (3 tiles, x=304-352):** el balcón corrido se parte en dos tramos con un vacío en el medio — el jugador puede saltarlo (48px, salto cómodo) o dejarse caer de vuelta al piso. Lee como daño causado por El Gavilán. Bordes marcados con `grieta_1`/`grieta_2`.
-- Columnas y barandal del balcón son solo visuales (capa `Terrain_Detail`), sin colisión — el diseño oficial de la Zona 3 los describe como referencia visual, no como obstáculos.
-- **Envolvente de salto real:** el analizador propio del proyecto (`level_metrics.py`) estima el alcance horizontal de un salto con la velocidad de suelo completa (~85px), pero el controlador real del jugador (`src/framework/entities/states/airborne.py`) aplica la mitad de esa velocidad en el aire — el alcance real de un salto sencillo es **~43px**. Toda la geometría de este mapa (saltos ≤32px, subidas ≤64px) está verificada contra ese número real, no contra la estimación del analizador.
-- **Separación del techo:** ninguna plataforma de las rutas hacia la salida está a menos de 112px del techo sólido. El salto es un arco balístico fijo (~90px) que el juego no acorta a propósito; si el techo cae dentro de ese arco, el jugador se golpea la cabeza y pierde tanto la altura restante como el tiempo de aire que necesitaba para el salto horizontal.
-- **Ancho de plataforma junto a peligros:** el jugador tiene un hitbox de 20px de ancho. El pozo (`DeathPit`) bajo el hueco del balcón mide 1 tile (16px, cols 25) — un salto directo desde la caja de impulso (col 24) hasta el piso (col 26), con margen real de sobra (~27px) respecto al hitbox del jugador.
-- **Caja obstáculo cerca del spawn (col 6):** sólida, entre las dos primeras plataformas de la escalera, para que el piso no sea una línea recta caminable de punta a punta.
-- **Salida accesible por ambos lados:** camino oeste (balcón → 3 escalones → repisa compartida) y camino este (pedestal cerca del checkpoint → 4 escalones → misma repisa), convergiendo en la puerta sellada. Todo salto horizontal ≤32px, cada subida ≤64px.
-- **Nota técnica — por qué `SwingingLamp` no es un objeto TMX:** `scripts/grade_stage.py` (el grader que corre en CI, `.github/workflows/ci.yml`) analiza el TMX sin importar el módulo Python del stage, así que nunca puede conocer un tipo de entidad registrado solo por el propio stage — un objeto de tipo desconocido en la capa `Objects` dispara `FrameworkUsageError` en su análisis y pone en cero varias categorías de la rúbrica automática para todo el archivo. `Hall.on_stage_start()` la instancia directamente en Python y la agrega a `self._stage_data.entity_list`, el mismo patrón que usa el propio motor para los esbirros que invoca un jefe (`stage_scene.py`, manejo de `BossBase.take_summons()`).
+- **HSL, no RGB directo:** el matiz interpola entre 45° (ámbar cálido, la
+  luz directa del tragaluz) y 200° (azul-verde frío, el agua profunda) con
+  `ColorTools.hsl_to_rgb` — la misma función que ya usa `stage3_1` para su
+  sombra de nube. Verificado en código (no a ojo): en ciclo=0.0 da
+  `(203,172,77)` ámbar, en ciclo=0.5 da `(77,203,82)` verde, en ciclo=1.0 da
+  `(77,161,203)` azul — el punto medio cae en verde porque la banda verde
+  (90°-150°) está en el camino corto entre 45° y 200° en la rueda de color;
+  no es un error, es exactamente cómo se ve luz cálida disolviéndose en
+  agua fría.
+- **Transparencia real:** cada charco se dibuja en una `Surface` con
+  `pygame.SRCALPHA` propia (no un `blend_mode` global ni un color sólido
+  que aparenta transparencia), con alfa oscilando entre 28 y 90 de 255 en
+  una onda triangular — "respira" en vez de parpadear.
 
-## 6. Reflection (2–3 sentences)
+### 3.4 Texturas (Unidad VI/VII)
 
-La parte más difícil fue calibrar la geometría contra la física real del salto del jugador: el analizador de diseño del propio proyecto estima el alcance horizontal con la velocidad de suelo completa, pero el controlador real del jugador usa la mitad de esa velocidad en el aire, así que una primera versión de la escalada final resultó literalmente imposible de cruzar hasta corregir ese número. Con más tiempo, abriría el resultado en Tiled para pulir a mano la composición visual del skyline y el encaje exacto de los tragaluces, ya que todo el mapa se generó por código (`tools/generate_hall_tmx.py`) al no tener disponible una herramienta visual en este entorno.
+Un solo tileset, `tileset_gavilan_ciudad` (60 tiles, 16×16px, paleta fija de
+16 colores, `assets/tilesets/tileset_gavilan_ciudad.png` + `.tsx`). El script
+que lo generó (`tools/generate_tileset_gavilan_ciudad.py`) **no está en esta
+copia del proyecto** — solo existe en la carpeta antigua no extraída del
+`.rar` (verificado con `ls`, no asumido); el `.png`/`.tsx` sí están y son
+los que carga `hall.tmx`, así que el tileset en sí funciona igual, pero no
+se puede regenerar ni editar el script desde aquí. Las tres extensiones
+reutilizan exactamente los mismos IDs de
+tile del piso original (`1`=suelo, `6`=zócalo, `3`=muro) para que el piso
+nuevo sea visualmente indistinguible del original — ninguna textura nueva,
+coherencia total del material. Tabla completa de tiles en §5.
+
+### 3.5 Animación (Unidad VI)
+
+| Animación | Dónde | Cómo |
+|---|---|---|
+| Vuelo Bézier | 10 `FlyingHalcon` | Curva evaluada cada frame (§3.1) |
+| Péndulo | `SwingingLamp` ×2 | `lerp` + `ease_in_out_quad` entre dos anclas (`decor_lamp.py`) |
+| Charco de luz | `LightPoolShimmer` ×3 | Color HSL + alfa oscilando en onda triangular (§3.3) |
+| Bloques rítmicos | `RhythmBlock` ×3 | Aparecen/desaparecen en cascada (offsets 0/0.6/1.2s) |
+| Plataforma móvil | `MovingPlatform` ×1 | Oscila 64px entre dos puntos |
+| Resorte | `Spring` ×4 | Anima el rebote al pisarlo (motor) — 1 en el corredor inicial, 1 en el desvío opcional del piso largo, 2 en el gauntlet de resortes (§2) |
+| Sprites de jugador/enemigos | Todo el nivel | Animación de fotogramas del framework (`EnemyBase`/`EnemyFlying`/`Player`), automática |
+
+Conteo verificado por búsqueda directa en el `.tmx` (`grep -c`), no de
+memoria — es el mismo método que destapó el error de la tabla de §6.
+
+Ninguna es puramente decorativa sin razón de ser: el péndulo y el charco de
+luz están narrativamente anclados a los tragaluces reales del hall; el
+resto son la mecánica de juego en sí, no un adorno aparte.
+
+---
+
+## 4. Testing — versión, prueba, problema, corrección
+
+Historial real de iteración de esta entrega (no reconstruido después):
+
+| # | Versión | Prueba | Problema encontrado | Corrección | Resultado |
+|---|---|---|---|---|---|
+| 1 | Corredor de resortes (416–1072) | Playtest del estudiante | Morían cerca del borde de los fosos, no solo al caer | `DeathPit` con margen horizontal de 8px respecto a cada plataforma sólida | Corregido, verificado con `StageLoader.load` |
+| 2 | Igual | Playtest | Seguían muriendo al primer roce con la parte de arriba del vacío, no al llegar al fondo | `DeathPit` reducido a los 32px inferiores (`y=576`) en vez de los 80px completos desde el piso | Corregido en los 3 fosos del corredor |
+| 3 | Igual | Playtest | El mismo problema en el foso *original* del mapa (preexistente, no creado en esta entrega) | Mismo ajuste aplicado por consistencia | Corregido |
+| 4 | Extensión 1 (agua) | Carga con `main.py --stage hall` | El jugador abrió el archivo equivocado (carpeta antigua del proyecto, no la extraída del `.rar`) y vio una versión vieja | No era un bug del nivel — se verificó cuál `hall.tmx` cargaba cada copia y se confirmó la ruta correcta | Confirmado con `Get-Location` |
+| 5 | Extensión 2 (vestíbulo roto) | `grade_stage.py` | El calificador no podía analizar el diseño (`ModuleNotFoundError`) | Faltaba `pydantic` en el entorno — instalado | El calificador corrió de verdad por primera vez, y de paso reveló un bug **preexistente** (repecho de 416px en (496,96)) ajeno a esta entrega, documentado y no corregido (fuera de alcance) |
+| 6 | Todas | `grade_stage.py` | Aviso de ritmo: 642px sin checkpoint entre x=448 y x=1090 (máximo recomendado 500) | Checkpoint intermedio nuevo en x=650, justo tras cruzar el resorte | Peor tramo bajó a 530px (el agua completa sigue siendo un solo tramo largo, aceptado a propósito) |
+| 7 | Todas | Playtest del estudiante | 3 de los 5 checkpoints estaban a solo 12-14px del borde de su plataforma — visualmente colgando sobre el vacío | Reubicados con margen real (mínimo 32px a cada lado, verificado calculando el tramo de piso fusionado bajo cada uno) | Los 5 checkpoints con margen ≥32px, confirmado por script |
+| 8 | Todas | Playtest del estudiante | El tramo 1360-1424 (justo al salir del agua principal) era piso seco sin ningún desafío, entre dos huecos que sí matan | Convertido a una segunda `WaterZone` — nadas de nuevo antes de los huecos letales, en vez de caminar | Verificado: ya no aparece en la lista de pisos sólidos, la piscina principal y la nueva quedaron separadas por el aterrizaje de 1424-1456... 1456-1520 sigue seco (la plataforma del coleccionable) |
+| 9 | Todas | `validate_tmx.py` + `grade_stage.py --json` + carga headless (`StageLoader.load`) tras cada cambio | Al mover el piso de seguridad del segundo tramo de agua a la capa `Objects` en vez de `Collision`, el validador lo rechazó (`type='Solid' no existe` — ese tipo solo es válido en `Collision`) | Movido a la capa correcta | `validate_tmx.py` en verde otra vez |
+| 10 | Todas | Playtest del estudiante | Al bucear cerca del borde de la piscina (agachado, buceo), el jugador moría "en el aire sin haber caído" — el `DeathPit` de Gap1 estaba a solo 8px del borde del agua, y `SwimmingState` no se siente como "caer" | Margen del lado del agua duplicado (8→16px); además, nuevo `DeathPit` en el fondo de la piscina principal (x=1200-1232, el centro real del mapa) — bucear a fondo ahí mata, nadar normal no | Verificado con `StageLoader.load`: 12 fosos en total, ninguno a menos de 16px de una `WaterZone` |
+| 11 | Todas | Playtest del estudiante | Los enemigos de la entrada (13 en 704px, ~54px de separación promedio) se sentían amontonados | Primera pasada: -2 enemigos. No bastó (seguía en ~54px). Segunda pasada: cada `FlyingHalcon` Bézier se movió junto con sus 4 `Waypoint` (mismo delta, para no romper el lazo de la curva) y los `WalkerPalom` se redistribuyeron en todo el tramo | Separación real ahora entre 40 y 280px (antes ~54px fijo); 16 enemigos totales, mismas 5 curvas Bézier intactas |
+| 12 | Todas | Playtest del estudiante | La grieta de la Prueba 10 (fondo de la piscina) seguía matando sin que el jugador buceara a propósito | Causa real: en `SwimmingState` la gravedad reducida sigue empujando hacia abajo todo el tiempo — sin pulsar salto de nado repetidamente, **cualquiera** se hunde al fondo tarde o temprano, no solo quien bucea a propósito. La premisa de la Prueba 10 era incorrecta | `DeathPit_hall_Grieta` retirado por completo; el fondo de la piscina vuelve a ser un solo `Solid` continuo, sin trampa a mitad del agua |
+| 13 | Todas | Playtest del estudiante | Pidió un resorte para subir a "la siguiente plataforma" cerca del checkpoint del agua | Coloqué `Spring_hall_03` + `Platform_ResorteBonus` + una moneda en x=980, cerca de un peldaño de la escalera original — pero el jugador nunca para ahí; siempre está junto al checkpoint (x≈1060) | El estudiante confirmó por captura de pantalla que estaba mal ubicado |
+| 14 | Todas | Playtest del estudiante (con captura) | Resorte en el lugar equivocado (x=980, Prueba 13) | Reubicado el resorte + plataforma + moneda a x=1030-1060, junto al checkpoint real. De paso, se descubrió que el nombre `Spring_hall_03` ya lo usaba **otro** resorte existente en x=1728 (parte del gauntlet de resortes, §2) — renombrado para no confundirlos, sin tocar el que ya estaba | Verificado con `StageLoader.load`: plataforma bonus en (1030, 390, 48×16), sin colisión con la escalera original |
+| 15 | Todas | Auditoría de documentación a pedido del estudiante | La tabla de checkpoints (§7) y de enemigos (§6) del README tenían **datos obsoletos** — 4 de los 5 checkpoints se habían movido en la Prueba 7 sin actualizar la tabla; `WalkerPalom` mostraba 5 posiciones viejas en vez de las 4 actuales; `ShooterBuitre` tenía un `352` que nunca existió; el conteo de `Spring` decía 1 cuando hay 4 (2 de ellos en un tramo —el "gauntlet de resortes"— que nunca se había documentado en §2) | Reconteo completo por `grep`/carga real del `.tmx` (no de memoria) y reescritura de §2, §3.5, §6 y §7 con los números verificados | Cada número de este documento ahora sale de una consulta ejecutada contra el archivo actual, no de lo que se recordaba haber hecho |
+| 16 | Todas | Misma auditoría de documentación | §3.4 y §5 atribuían el tileset a `tools/generate_tileset_gavilan_ciudad.py` — pre-existente desde la Práctica I, no introducido en esta entrega | Verificado con `ls`: ese script no existe en esta copia del proyecto (solo en la carpeta antigua sin extraer del `.rar`); el `.png`/`.tsx` sí están y funcionan | §3.4 y §5 corregidas para no afirmar la existencia de un archivo que no está |
+| 17 | Todas | `validate_tmx.py` + `grade_stage.py --json` + carga headless (`StageLoader.load`) tras cada cambio | — | — | Todas en verde en la versión actual (ver salida real abajo) |
+
+**Resultado de las pruebas automatizadas en la versión actual:**
+
+```
+$ python scripts/validate_tmx.py assets/maps/hall/hall.tmx
+  [OK] assets\maps\hall\hall.tmx
+  1/1 passed
+
+$ python scripts/grade_stage.py assets/maps/hall/hall.tmx --json
+  score: 87.7% (ver desglose completo por categoría en el historial de
+  la conversación de desarrollo; design_completable en 12/12 porque el
+  nivel usa mecánicas de movilidad — resortes, agua, plataforma móvil —
+  que el analizador de rutas no modela y no penaliza)
+```
+
+**Números actuales, verificados por consulta directa al `.tmx` (27 de agosto,
+tras la Prueba 15):** tamaño 2432×608px · 5 checkpoints · 11 `DeathPit` · 4
+`Spring` · 2 `WaterZone` · 3 `RhythmBlock` · 1 `MovingPlatform` · 1
+`WindZone` · 4 `Pickup` · 16 enemigos (4 `WalkerPalom`, 2 `ShooterBuitre`, 10
+`FlyingHalcon`) · 2 `SwingingLamp` · 3 `LightPoolShimmer`.
+
+**Lo que falta probar y no puede verificarse sin pantalla real** (ver §6):
+el estudiante debe jugar el recorrido completo, intentar romperlo a
+propósito (§6) y grabar la evidencia — ninguna herramienta automatizada
+puede confirmar que el nivel "se siente" bien, solo que es físicamente
+posible.
+
+---
+
+## 5. Tileset Requirements
+
+Tileset: `tileset_gavilan_ciudad` (60 tiles, 16×16px,
+`assets/tilesets/tileset_gavilan_ciudad.png` + `.tsx`). Arte propio con
+paleta fija de 16 colores. El script generador
+(`tools/generate_tileset_gavilan_ciudad.py`) no está presente en esta copia
+del proyecto — ver nota en §3.4 — pero el tileset resultante sí, y es el que
+carga el `.tmx` sin problema.
+
+| Tile ID | Description | Collision? |
+|---|---|---|
+| 1 (suelo_sup) | Piso — reutilizado en las 3 extensiones | Sí |
+| 6 (zocalo) | Relleno/zócalo bajo el piso — reutilizado en las 3 extensiones | Sí |
+| techo (objeto `Solid`, no tile) | Techo indestructible, extendido a 2432px de ancho | Sí |
+| 8-10 (plat_izq/med/der) | Balcón y peldaños de escalera/plataformas | Sí (one-way) |
+| 3 (muro) | Muros laterales — el muro derecho se movió 3 veces, siempre reutilizando el mismo tile | Sí |
+| 7 (columna) | Columnas decorativas | No (visual, Terrain_Detail) |
+| 12 (reja) | Barandal del balcón | No (visual) |
+| 43-46 (marco_izq/der/sup, alfeizar) | Marcos de tragaluz y de la puerta | No (visual, FG_Overlay) |
+| 54-55 (cortina_izq/der) | Cortinas de tragaluz | No (visual) |
+| 15 (luz_suelo) | Charco de luz bajo cada tragaluz — origen narrativo de `LightPoolShimmer` (§3.3) | No (visual) |
+| 16-39 (lej_*/med_*/cer_*) | Skyline de Heredia en parallax (3 profundidades) | No (fondo) |
+| 48-51 (grieta_1/2, mancha) | Desgaste | No (visual) |
+| 57-58 (cuadro, caja) | Props decorativos / obstáculos sólidos | No / Sí (caja cuando es obstáculo) |
+| 42 (cruce) | Reja/tranca de la puerta sellada — ahora decorativa (§1), la salida real está más adelante | No (visual) |
+
+## 6. Enemy / Entity Placements
+
+Tabla verificada por conteo directo del `.tmx` en la versión actual — la
+versión anterior de esta tabla tenía datos obsoletos (contaba 5 `WalkerPalom`
+donde hoy hay 4, y un `352` en `ShooterBuitre` que nunca existió; ver §4,
+Prueba 14).
+
+| X | Y | Type | Properties |
+|---|---|---|---|
+| 176, 420, 660, 900 | piso | `WalkerPalom` (4) | Roster oficial del escenario (ficha `10_STAGE_3_2.md`); redistribuidos en la Prueba 11 de §4 |
+| 224, 544 | balcón | `ShooterBuitre` (2) | Valores por defecto de la especie, sin cambios desde el original |
+| 10 posiciones (160 a 2190) | banda de vuelo | `FlyingHalcon` (10) | `flight_mode` variado por tramo — `bezier` (original y gauntlet de resortes), `sine`, `dive`, `chase`, `patrol` (extensiones) |
+| 420, 700 | y=96 (techo) | `SwingingLamp` (2) | No es objeto TMX — `Hall.on_stage_start()` |
+| 1170, 1240, 1310 | y≈500-520 (sobre el agua) | `LightPoolShimmer` (3) | No es objeto TMX — `Hall.on_stage_start()` |
+
+Total de enemigos: 16 (4 + 2 + 10).
+
+## 7. Checkpoints
+
+Posiciones verificadas contra el `.tmx` actual (se movieron 4 de los 5 en la
+Prueba 7 de §4 — esta tabla ya refleja esa corrección, no la posición
+original):
+
+| ID | X | Protege |
+|---|---|---|
+| 0 | 448 | El corredor de resortes |
+| 4 | 670 | Justo tras cruzar el resorte inicial (agregado en la Prueba 6 de §4 — cerraba un tramo de 642px sin checkpoint; reubicado en la Prueba 7 por margen de borde) |
+| 1 | 1060 | El desvío del resorte bonus y el tramo de agua |
+| 2 | 1596 | El gauntlet de resortes tras el agua |
+| 3 | 2000 | El vestíbulo roto (bloques, plataforma móvil, viento) |
+
+---
+
+## 8. Notas técnicas heredadas (geometría original, sin cambios)
+
+- **Hueco central en el balcón (3 tiles, x=304-352):** el balcón corrido se
+  parte en dos tramos con un vacío en el medio — el jugador puede saltarlo
+  (48px, salto cómodo) o dejarse caer de vuelta al piso. Lee como daño
+  causado por El Gavilán. Bordes marcados con `grieta_1`/`grieta_2`.
+- Columnas y barandal del balcón son solo visuales (capa `Terrain_Detail`),
+  sin colisión.
+- **Envolvente de salto real (verificada con el mismo integrador físico del
+  juego, no estimada):** gravedad 800px/s², impulso de salto −380px/s →
+  alcance natural (sujetando dirección) **42.75px**, alcance experto
+  (soltando dirección al despegar) **85.5px**. Con el `Spring`
+  (impulso −520px/s): alcance natural **58.5px**, experto **117px**. Toda
+  la geometría de fosos de esta entrega está calibrada contra estos números
+  reales, no contra la estimación por defecto del analizador.
+- **Caja obstáculo cerca del spawn (col 6):** sólida, entre las dos
+  primeras plataformas de la escalera.
+- **Nota técnica — por qué `SwingingLamp` y `LightPoolShimmer` no son
+  objetos TMX:** `scripts/grade_stage.py` analiza el TMX sin importar el
+  módulo Python del stage, así que nunca puede conocer un tipo de entidad
+  registrado solo por el propio stage — un objeto de tipo desconocido en la
+  capa `Objects` dispara `FrameworkUsageError` en su análisis y pone en
+  cero varias categorías de la rúbrica automática para todo el archivo.
+  `Hall.on_stage_start()` las instancia directamente en Python, el mismo
+  patrón que usa el propio motor para los esbirros que invoca un jefe.
+
+## 9. Reflection
+
+Lo más difícil de esta entrega no fue el arte ni la geometría: fue calibrar
+mecánicas nuevas (resorte, viento, agua) contra la física **real** y
+verificada del jugador en vez de contra la intuición — el viento, por
+ejemplo, se calculó leyendo directamente `sistema_viento` en
+`src/framework/ecs/systems.py` para confirmar que la fuerza es aceleración
+periódica (sopla la mitad del tiempo) y no velocidad fija, antes de decidir
+el ancho del vacío que cruza. El entorno de desarrollo también dio su
+propia lección: el `.venv` que traía el `.rar` apuntaba a un Python de otra
+máquina y no funcionaba aquí, y `grade_stage.py` llevaba fallando en
+silencio por falta de `pydantic` — ambos se arreglaron antes de poder
+confiar en cualquier resultado de prueba. Con más tiempo, grabaría el
+video de evidencia con varias corridas fallidas incluidas a propósito (caer
+en cada foso, perder el resorte, cruzar el viento en el momento
+equivocado), porque son esas fallas — no solo el recorrido exitoso — las
+que demuestran que la dificultad es intencional y no accidental.

@@ -51,6 +51,18 @@ class FilterTools:
     @classmethod
     def histogram_equalize(cls, surface: pygame.Surface) -> pygame.Surface:
         cls._validate_surface(surface)
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr = pygame.surfarray.array3d(surface)
         result = np.zeros_like(arr)
         for c in range(3):
@@ -66,19 +78,57 @@ class FilterTools:
                 cdf_masked = (cdf_masked - cdf_min) * 255 / (cdf_max - cdf_min)
                 cdf = np.ma.filled(cdf_masked, 0).astype(np.uint8)
                 result[:, :, c] = cdf[channel]
-        return pygame.surfarray.make_surface(result)
+        rgb_uint8 = result.astype(np.uint8) if result.dtype != np.uint8 else result
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
+        out = pygame.surfarray.make_surface(rgb_uint8)
+        if surface.get_alpha() is not None:
+            out.set_alpha(surface.get_alpha())
+        if surface.get_colorkey() is not None:
+            out.set_colorkey(surface.get_colorkey())
+        return out
 
     @classmethod
     def adjust_brightness(cls, surface: pygame.Surface, factor: float) -> pygame.Surface:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_brightness: factor must be in [0.0, 4.0], got {factor}")
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = (arr * factor).clip(0, 255).astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(arr, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
         result = pygame.surfarray.make_surface(arr)
         src_alpha = surface.get_alpha()
         if src_alpha is not None:
             result.set_alpha(src_alpha)
+        if surface.get_colorkey() is not None:
+            result.set_colorkey(surface.get_colorkey())
         return result
 
     @classmethod
@@ -86,17 +136,52 @@ class FilterTools:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_contrast: factor must be in [0.0, 4.0], got {factor}")
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = ((arr - 128.0) * factor + 128.0).clip(0, 255).astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(arr, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
         result = pygame.surfarray.make_surface(arr)
         src_alpha = surface.get_alpha()
         if src_alpha is not None:
             result.set_alpha(src_alpha)
+        if surface.get_colorkey() is not None:
+            result.set_colorkey(surface.get_colorkey())
         return result
 
     @classmethod
     def stretch_contrast(cls, surface: pygame.Surface) -> pygame.Surface:
         cls._validate_surface(surface)
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         result = np.zeros_like(arr)
         for c in range(3):
@@ -107,7 +192,22 @@ class FilterTools:
                 result[:, :, c] = ch
             else:
                 result[:, :, c] = ((ch - mn) / (mx - mn) * 255.0).clip(0, 255)
-        return pygame.surfarray.make_surface(result.astype(np.uint8))
+        rgb_uint8 = result.astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
+        out = pygame.surfarray.make_surface(rgb_uint8)
+        if surface.get_alpha() is not None:
+            out.set_alpha(surface.get_alpha())
+        if surface.get_colorkey() is not None:
+            out.set_colorkey(surface.get_colorkey())
+        return out
 
     @classmethod
     def apply_kernel(cls, surface: pygame.Surface, kernel: np.ndarray) -> pygame.Surface:
@@ -149,17 +249,70 @@ class FilterTools:
 
     @classmethod
     def sobel_edge(cls, surface: pygame.Surface) -> pygame.Surface:
+        """Sobel con soporte SRCALPHA (fix B-048).
+
+        Antes creaba la imagen sin canal alfa → rectángulo opaco negro que tapaba
+        al jefe y, al recalcularse 1 de cada 5 frames, parpadeaba ~12 Hz.
+        Ahora: si la superficie tiene transparencia, el fondo queda transparente
+        y el contorno se compone con blending; si es opaca (foto de laboratorio)
+        se conserva el fondo negro para no romper el uso académico.
+        """
         import cv2
         cls._validate_surface(surface)
-        arr = pygame.surfarray.array3d(surface)
+        w, h = surface.get_size()
+        arr = pygame.surfarray.array3d(surface)  # (w,h,3)
+        # Detectar si hay transparencia útil (SRCALPHA o colorkey)
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr = None
+        # Intentar leer alpha aunque no tenga flag SRCALPHA (colorkey o surface sin flag pero con alpha)
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)  # (w,h)
+            if np.all(alpha_arr == 255):
+                # Todo opaco → foto opaca, no sprite
+                has_alpha = False
+                alpha_arr = None
+            else:
+                has_alpha = True
+        except Exception:
+            # Sin canal alfa legible
+            alpha_arr = None
+            # Mantener has_alpha basado en flag/colorkey
+            if not has_alpha:
+                alpha_arr = None
+            else:
+                # Flag decía que hay alpha pero no se pudo leer → asumir sprite
+                pass
+
         gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(np.uint8)
-        gray = gray.T
+        gray = gray.T  # (h,w) para cv2
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = cv2.magnitude(gx, gy)
         mag = cv2.convertScaleAbs(mag)
-        mag = np.clip(mag, 0, 255).astype(np.uint8)
-        rgb = np.stack([mag, mag, mag], axis=-1)
+        mag = np.clip(mag, 0, 255).astype(np.uint8)  # (h,w)
+
+        if has_alpha:
+            # Sprite con transparencia → fondo transparente, contorno blanco con alpha
+            rgba: np.ndarray = np.zeros((h, w, 4), dtype=np.uint8)
+            # Umbral para evitar ruido: mag>30 es borde
+            mask = mag > 30
+            rgba[mask, 0] = 255
+            rgba[mask, 1] = 255
+            rgba[mask, 2] = 255
+            # Alpha del borde: usar mag como intensidad (más fuerte = más opaco)
+            rgba[mask, 3] = np.clip(mag[mask], 80, 255)
+            # Crear surf con alpha y devolver solo el contorno (no el fondo negro)
+            # El caller (BossBase) compondrá este contorno encima del sprite original
+            # y cacheará el resultado. Para no romper tests que esperan superficie
+            # con fondo, devolvemos el contorno transparente aquí.
+            try:
+                edge_surf = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                edge_surf = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return edge_surf
+
+        # Foto opaca / laboratorio → comportamiento clásico (fondo negro, borde blanco)
+        rgb = np.stack([mag, mag, mag], axis=-1)  # (h,w,3)
         return pygame.surfarray.make_surface(rgb.transpose(1, 0, 2))
 
     @classmethod

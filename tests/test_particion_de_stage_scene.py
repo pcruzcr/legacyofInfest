@@ -49,6 +49,12 @@ PARTES = {
         "SenalesDeEscenario",
         ("_subscribe_event_handlers", "_unsubscribe_all_handlers"),
     ),
+    # AUD-733: la persistencia (banderas/diálogo/guardado) sale de `senales`
+    # para devolverla a <400 líneas; es estado que sobrevive, no efecto.
+    "persistencia": (
+        "PersistenciaDeEscenario",
+        ("_suscribir_persistencia",),
+    ),
     # AUD-595 — la economía (el botín que deja cada enemigo) sale de
     # `senales`: vivía ahí por historia, no por concepto, y el fichero había
     # vuelto a rozar su presupuesto.

@@ -157,6 +157,14 @@ class UserSettings:
     #: `framework/vfx/contorno.py`.
     contorno_de_enemigos: bool = False
 
+    # ── Assist mode (AUD-648) ─────────────────────────────────
+    #: El jugador no recibe daño de enemigos ni zonas letales.
+    assist_invulnerable: bool = False
+    #: El jugador puede saltar infinitas veces sin tocar el suelo.
+    assist_infinite_jumps: bool = False
+    #: Multiplicador global de velocidad (0.5 = cámara lenta, 1.0 = normal).
+    assist_slow_mo: float = 1.0
+
     # Not persisted: resolved at load time so callers need not handle None.
     _path: Path | None = field(default=None, repr=False, compare=False)
 

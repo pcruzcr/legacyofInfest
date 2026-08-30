@@ -281,7 +281,17 @@ class SceneManager:
 
         Se busca en toda la pila: que alguien haya empujado algo encima no
         cambia que el escenario siga vivo debajo y sepa reaparecer.
+
+        Fix reporte Guillermo 1 — deduplicación: PLAYER_DIED se emite desde
+        Player.apply_damage y desde _kill_player/HazardSystem en el mismo
+        frame; sin guardia el log aparecía dos veces por muerte.
         """
+        import time
+        now = time.monotonic()
+        last = getattr(self, "_last_died_log", 0.0)
+        if now - last < 0.5:
+            return
+        self._last_died_log = now
         if any(isinstance(scene, _SceneWithRespawn) for scene in self._stack):
             logger.info("SceneManager: player died — scene handles respawn")
             return

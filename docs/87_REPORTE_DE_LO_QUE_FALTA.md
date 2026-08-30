@@ -318,7 +318,7 @@ Medido ejecutando el motor, no leyendo documentación.
 
 ### 9.1 Jugador — completo
 
-**26 estados en el enum, 26 con clase instanciable.** Ninguno huérfano.
+**28 estados en el enum, 28 con clase instanciable.** Ninguno huérfano.
 
 > **Corrección de método.** La primera pasada de esta auditoría dio tres
 > estados «sin clase» —`CHARGE_ATTACK`, `CLIMBING`, `ZIPLINE`— y era **falso**:
@@ -2032,7 +2032,7 @@ abrirlas exige volver a medir, no volver a opinar.
   concreta, esto es refactor por refactor. De paso, la cifra: son **27 clases**
   en `entities/states/`, y `AirborneState` es base de `JumpingState` y
   `FallingState` en vez de un estado en el que se pueda estar — de ahí los
-  **26 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
+  **28 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
   son correctos y cuentan cosas distintas; la lista del dueño dice 29, que no
   sale de ninguna de las dos cuentas.
 * **«Definir arquitectura definitiva, límites entre módulos»** — definir

@@ -341,3 +341,8 @@ disallow_untyped_defs = false
 disallow_any_unimported = false
 warn_return_any = false
 warn_unused_ignores = false
+
+# AUD-642 — pytest-benchmark: configuración via línea de comandos
+# para evitar conflicto entre [tool.pytest.ini_options] y [tool.pytest].
+# Los benchmarks usan --benchmark-autosave y comparan contra baseline manualmente.
+# fail_if_p95_greater = 1.05  # activar cuando baseline esté estable

@@ -12,8 +12,8 @@ de que sus cifras envejecieran sin que nadie se enterara.
 
 Se guarda lo que se puede medir aquí sin ejecutar la suite entera:
 
-* los **tipos de objeto** que acepta el cargador (78 en runtime, con el
-  desglose 39 + 37 + `Solid`/`Platform`, y los 69 del registro base que
+* los **tipos de objeto** que acepta el cargador (104 en runtime, con el
+  desglose 50 + 54 + `Solid`/`Platform`, y los 97 del registro base que
   genera la referencia de estudiantes);
 * las **propiedades de mapa** que reconoce el validador (18).
 
@@ -50,13 +50,13 @@ def _motor():
     esta fixture mide el estado que dejan los demás y restaura el ajeno al
     terminar, pero **no** vacía el registro: los módulos de los escenarios ya
     importados no re-ejecutan su `register_entity` de nivel de módulo, y un
-    `clear()` mediría 30 tipos donde el juego ve 37.
+    `clear()` mediría 47 tipos donde el juego ve 54.
 
-    El registro base de 69 tipos (el que genera la referencia de estudiantes)
+    El registro base de 97 tipos (el que genera la referencia de estudiantes)
     sólo existe en un intérprete limpio: ahí el registro contiene únicamente
-    los 30 integrados. En la suite caliente ya se importaron los escenarios,
-    así que esa cuenta sale de un subproceso, igual que la mide
-    `generate_tmx_reference.py` en CI."""
+    los 47 de `ensure_registered()` + 50 builtins. En la suite caliente ya se
+    importaron los escenarios, así que esa cuenta sale de un subproceso, igual
+    que la mide `generate_tmx_reference.py` en CI."""
     import os
     import subprocess
     import sys
@@ -121,8 +121,8 @@ def _motor():
         # `discover_stages()` de unas líneas más arriba, y eso no se puede
         # deshacer: los módulos de escenario ya importados **no** vuelven a
         # ejecutar su `register_entity` de nivel de módulo (AUD-144), así que
-        # el registro se quedaba con los 30 integrados para siempre. La
-        # siguiente prueba que contara tipos medía 71 donde el juego ve 78 —
+        # el registro se quedaba con los 47 integrados para siempre. La
+        # siguiente prueba que contara tipos medía 97 donde el juego ve 104 —
         # exactamente los 7 tipos de las entregas—, y `test_guia_del_motor`
         # fallaba o no según qué otras pruebas hubieran cargado un mapa antes
         # de ella. Un guardián de cifras cuyo resultado depende del orden no
@@ -131,6 +131,7 @@ def _motor():
         # `update` sin `clear` conserva lo descubierto y devuelve por encima lo
         # que otras pruebas hubieran dejado puesto a mano, que es lo que el
         # docstring de esta fixture dice que hace.
+        # Actualizado 2026-08-30: 97 base (50+47) / 104 runtime (50+54) reflejan 50 builtins + 47/54 entidades.
         StageLoader._entity_registry.update(anterior)
         entity_factory._registered = registered_previo
 
@@ -143,12 +144,12 @@ def _cifra(texto: str, patron: str) -> int:
 
 class TestLosTiposDeObjeto:
     def test_el_inventario_dice_lo_que_mide_el_cargador(self, inventario, _motor) -> None:
-        """La frase «80 tipos de objeto en runtime» y su desglose tienen que
+        """La frase «104 tipos de objeto en runtime» y su desglose tienen que
         coincidir con el cargador; si el desglose cambia, el documento y esta
         prueba se actualizan juntos. Las cuatro cuentas conviven a propósito:
-        73 = capa `Objects` con el registro base (lo que genera la referencia
-        de estudiantes, en intérprete limpio), 75 = + `Solid`/`Platform`,
-        80 = `Objects` con los escenarios descubiertos, 80 = todo."""
+        97 = capa `Objects` con el registro base (lo que genera la referencia
+        de estudiantes, en intérprete limpio), 99 = + `Solid`/`Platform`,
+        104 = `Objects` con los escenarios descubiertos, 104 = todo."""
         integrados = _motor["integrados_fresco"]
         base = _motor["registro_base"]
         colision = _motor["colision_fresco"]
@@ -156,20 +157,20 @@ class TestLosTiposDeObjeto:
 
         # AUD-598/600/601 — los tipos de zona nuevos subieron el catálogo
         # (AmbientLightZone, MusicZone, CameraZoomZone); AUD-605 añade
-        # ArenaZone para la arena real del jefe.
-        assert objects_runtime == 80, (
+        # ArenaZone; nuevas especies Cangrejo/Medusa/PezAbismal etc. suben el registro.
+        assert objects_runtime == 104, (
             f"el cargador acepta {objects_runtime} tipos en `Objects` con "
-            "escenarios descubiertos, no 80: ¿cambió el registro o la prueba?"
+            "escenarios descubiertos, no 104: ¿cambió el registro o la prueba?"
         )
-        assert integrados == 43, f"integrados: {integrados}, no 43"
-        assert base == 30, f"registro base limpio: {base}, no 30"
-        assert base + integrados == 73, f"{base}+{integrados}, no 73"
-        assert base + integrados + colision == 75
+        assert integrados == 50, f"integrados: {integrados}, no 50"
+        assert base == 47, f"registro base limpio: {base}, no 47"
+        assert base + integrados == 97, f"{base}+{integrados}, no 97"
+        assert base + integrados + colision == 99
 
-        assert "80 tipos de objeto en runtime" in inventario
+        assert "104 tipos de objeto en runtime" in inventario
         assert f"{integrados} integrados" in inventario
         assert f"{_motor['registro_runtime']} del" in inventario
-        assert "73" in inventario and "75" in inventario
+        assert "97" in inventario and "99" in inventario
 
 
 class TestLasPropiedadesDeMapa:

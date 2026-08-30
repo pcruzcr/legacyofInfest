@@ -37,6 +37,51 @@ date_processed: "2026-08-12"
 
 ---
 
+## 0. Diagrama de dependencias entre paquetes
+
+```mermaid
+graph TD
+    main[main.py] --> App[src.engine.core.app]
+    App --> Core[src.engine.core]
+    App --> SceneMgr[src.engine.scene]
+    App --> Scenes[src.engine.scenes]
+    App --> Framework[src.framework]
+
+    subgraph "src/engine (motor)"
+        Core[core: settings, clock, events, i18n, inventory...]
+        SceneMgr[scene: SceneManager, BaseScene]
+        Scenes[scenes: 42+ escenas]
+        Input[input: InputManager, ActionMap]
+        AudioE[audio: AudioManager, SoundBank, MixerBuses]
+        Render[render: GLRenderer, SpriteBatchGPU]
+        UIEngine[ui: HUD, MessageBox, Theme, Widgets]
+        Utils[utils: AssetLoader, SurfacePool]
+    end
+
+    subgraph "src/framework (juego)"
+        Entities[entities: Player, EnemyBase, BossBase...]
+        ECS[ecs: World, Components, Systems]
+        Stage[stage: StageLoader, Camera, CollisionSystem...]
+        VFX[vfx: ParticleSystem, WeatherSystem, Lighting...]
+        Processing[processing: ColorTools, FilterTools, VisionTools...]
+        Combate[combate: daño y efectos]
+        PhysicsF[physics: Perfiles, Capas, Resolución]
+        Academic[academic: Curriculum, ProgresoAcademico]
+    end
+
+    Scenes --> UIEngine
+    Scenes --> DemoCommon[demo_common / demo_layout]
+    Framework --> Core
+    Framework --> Input
+    Framework --> AudioE
+```
+
+> **AUD-641:** `engine/core`, `ui`, `input`, `audio` y `utils` NO importan
+> `framework`. Verificado por `lint-imports` (4 contracts) y
+> `tests/test_arquitectura_fronteras.py`.
+
+---
+
 ## 1. Estructura completa de carpetas
 
 Todas las rutas de abajo son relativas a la raíz real del repositorio.
@@ -188,7 +233,10 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── audio_pipeline.py          # Tubería de procesamiento de audio
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
-│   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
+│   │   │   ├── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
+│   │   │   ├── music_stems.py           # MusicStemManager: stems dinámicos con crossfade
+│   │   │   ├── reverb_zones.py          # ReverbZoneManager: reverb por zona pre-bakeado
+│   │   │   └── audio_bus.py             # AudioBus: bus de audio del motor (AUD-387)
 │   │   ├── render/
 │   │   │   ├── __init__.py
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: tubería de ModernGL
@@ -200,14 +248,15 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   └── gpu_present.py            # PresentadorGPU: presentar por SDL2 (AUD-148, opcional)
 │   │   │
 │   │   ├── ui/
-│   │   │   ├── __init__.py
-│   │   │   ├── hud.py                     # HUD: corazones, temporizador, retrato, puntaje
-│   │   │   ├── message_box.py             # MessageBox: texto con desplazamiento, mensajes de tutorial
-│   │   │   ├── screen_banner.py           # ScreenBanner: animación del título de escenario
-│   │   │   ├── minimap.py                 # Minimap: mapa de exploración con niebla de guerra
-│   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: subtítulos de diálogo
-│   │   │   ├── theme.py                   # Theme: paleta de color y estilo de la interfaz
-│   │   │   └── widgets.py                 # Widgets de interfaz reutilizables
+ │   │   │   ├── __init__.py
+ │   │   │   ├── hud.py                     # HUD: corazones, temporizador, retrato, puntaje
+ │   │   │   ├── message_box.py             # MessageBox: texto con desplazamiento, mensajes de tutorial
+ │   │   │   ├── screen_banner.py           # ScreenBanner: animación del título de escenario
+ │   │   │   ├── minimap.py                 # Minimap: mapa de exploración con niebla de guerra
+ │   │   │   ├── subtitle_overlay.py        # SubtitleOverlay: subtítulos de diálogo
+ │   │   │   ├── text_panel.py              # TextPanel: paneles de texto con scroll, chips y ficha de nombre
+ │   │   │   ├── theme.py                   # Theme: paleta de color y estilo de la interfaz
+ │   │   │   └── widgets.py                 # Widgets de interfaz reutilizables
 │   │   │
 │   │   └── utils/
 │   │       ├── __init__.py
@@ -230,6 +279,15 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── enemy_flying.py            # EnemyFlying: vuelo en senoide o por waypoints
 │   │   │   ├── enemy_shooter.py           # EnemyShooter: emisión de proyectiles, disparador de rango
 │   │   │   ├── boss_base.py               # BossBase: gestor de fases, evento de barra de vida del jefe
+│   │   │   ├── enemy_buddies.py           # Buddy system: Rino, Expresso, Enguarde
+│   │   │   ├── enemy_climber.py           # Climber: trepa lianas (AUD-630)
+│   │   │   ├── enemy_flying_bomber.py     # FlyingBomber: bombardero aéreo
+│   │   │   ├── enemy_ice_skater.py        # IceSkater: desliza en hielo
+│   │   │   ├── enemy_parry_teacher.py     # ParryTeacher: enseña parry
+│   │   │   ├── enemy_shielded.py          # Shielded: escudo frontal (AUD-630)
+│   │   │   ├── enemy_summoner.py          # Summoner: invoca súbditos
+│   │   │   ├── enemy_swimmer.py           # Swimmer: nada bajo el agua
+│   │   │   ├── enemy_terrain_shaper.py    # TerrainShaper: modela terreno
 │   │   │   ├── boss_kit.py                # BossKit: componentes reutilizables de jefe
 │   │   │   ├── enemy_charger.py           # EnemyCharger: preparación + ataque de embestida
 │   │   │   ├── enemy_archer.py            # EnemyArcher: a distancia, disparo en arco
@@ -276,6 +334,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
+│   │   │   ├── object_handler_registry.py # Registry Factory para objetos Tiled (AUD-724)
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
 │   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
@@ -301,7 +360,9 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
 │   │   │   ├── speedrun_mode.py           # SpeedrunTimer: cronómetro global + datos del fantasma
 │   │   │   ├── boss_rush_mode.py          # BossRushMode: enfrentamiento consecutivo de jefes
-│   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+  │   │   │   ├── combat_manager.py          # CombatManager: reglas de daño, hitstop y efectos de combate
+  │   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+  │   │   │   ├── prefab_loader.py           # PrefabLoader: carga prefabs declarados en TMX
 │   │   │   ├── level_metrics.py           # LevelMetrics: métricas de análisis de escenario
 │   │   │   ├── seasons.py                 # Seasons: efectos visuales estacionales
 │   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: utilidades de validación de TMX
@@ -313,9 +374,10 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   └── learning_overlay.py        # LearningOverlay: superposición de contexto académico
 │   │   │
 │   │   ├── audio/
-│   │   │   ├── __init__.py
-│   │   │   ├── dynamic_music.py           # DynamicMusic: crossfade calma <-> combate
-│   │   │   └── menu_sfx.py                # AUD-345: los menús también suenan
+ │   │   │   ├── __init__.py
+ │   │   │   ├── dynamic_music.py           # DynamicMusic: crossfade calma <-> combate
+ │   │   │   ├── menu_sfx.py                # AUD-345: los menús también suenan
+ │   │   │   └── audio_layer_mixer.py       # AudioLayerMixer: mezcla por capas (ambiente, música, sfx, voz)
 │   │   │
 │   │   ├── academic/
 │   │   │   ├── __init__.py
@@ -326,6 +388,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_scene.py             # StageScene: la escena principal jugable
+│   │   │   ├── stage_builder.py           # StageBuilder: Builder creacional para StageScene (AUD-724)
+│   │   │   ├── stage_facade.py            # StageFacade: Fachada/Mediator para StageScene (AUD-724)
 │   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta y partículas: la precedencia del TMX
@@ -908,17 +972,21 @@ rojo antes de que la infracción llegue a nadie.
 | **L1** | El núcleo del motor —`engine/` **excepto** `engine/scenes/` y `engine/core/app.py`— no importa nada de `framework`. | Es lo que permite que el motor se pueda leer y reutilizar sin arrastrar el juego. Hoy se cumple con **cero** excepciones. |
 | **L2** | `framework/processing/` no importa nada de `engine`. | Son las funciones que se explican en clase: convolución, Sobel, Otsu, HOG. Tienen que poder ejecutarse desde un cuaderno sin arrancar pygame. Hoy se cumple con **cero** excepciones. |
 | **L3** | Un escenario no importa otro escenario. | Cada `stages/stageN` es entregable por separado. Hoy se cumple con **cero** excepciones. |
-| **L4** | Ni `engine/` ni `framework/` importan de `stages/`, salvo el jefe de referencia. | `stages/` es contenido —y en su mayor parte, entregas de estudiantes—. Si el motor depende de una entrega, un paquete que falta o que no importa deja de romper un nivel y pasa a romper el juego entero. Hoy se cumple con **una** excepción nombrada. |
+| **L4** | Ni `engine/` ni `framework/` importan de `stages/`, salvo contenido de referencia. | `stages/` es contenido —y en su mayor parte, entregas de estudiantes—. Si el motor depende de una entrega, un paquete que falta o que no importa deja de romper un nivel y pasa a romper el juego entero. Hoy se cumple con **dos** excepciones nombradas. |
 
-**La excepción de L4, nombrada y acotada:**
+**Las excepciones de L4, nombradas y acotadas:**
 
-`framework/entities/entity_factory.py` importa `stages.boss_venado.boss_venado`
-dentro de `ensure_registered()` para darlo de alta en el registro de entidades.
-Se tolera porque el Venado es el **jefe de referencia** que mantiene el equipo
-docente y del que copian los estudiantes, no una entrega. Se declara aquí y en
-`tests/test_layering.py::EXCEPCION_L4` para que sea una decisión y no un
-descuido: cualquier *otra* dependencia de `framework` hacia `stages` pone la
-suite en rojo (AUD-172).
+1. `framework/entities/entity_factory.py` importa `stages.boss_venado.boss_venado`
+   dentro de `ensure_registered()` para darlo de alta en el registro de entidades.
+   Se tolera porque el Venado es el **jefe de referencia** que mantiene el equipo
+   docente y del que copian los estudiantes, no una entrega.
+2. `src/engine/scenes/title_scene.py` y `tutorial_scene.py` importan
+   `stages.tutorial_hub.tutorial_hub` de forma diferida dentro de la función
+   (AUD-721) para empujar el hub de tutorial jugable. Vive en `stages/` por ser
+   contenido de referencia, no entrega. Se declara aquí y en
+   `tests/test_layering.py::EXCEPCION_L4` para que sea una decisión y no un
+   descuido: cualquier *otra* dependencia de `framework`/`engine` hacia `stages`
+   pone la suite en rojo (AUD-172).
 
 **Las dos excepciones, nombradas y acotadas:**
 

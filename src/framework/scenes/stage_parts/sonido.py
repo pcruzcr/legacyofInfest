@@ -86,6 +86,9 @@ class SonidoDeEscenario:
             Events.SFX_PLAYER_PARRY: "sfx_parry",
             Events.SFX_PLAYER_CROUCH: "sfx_player_crouch",
             Events.SFX_PLAYER_HEAL: "sfx_ui_heart_restore",
+            Events.SFX_PLAYER_WALL_SLIDE: "sfx_player_wall_slide",
+            Events.SFX_PLAYER_CLIMB: "sfx_player_climb",
+            Events.SFX_PLAYER_ZIPLINE: "sfx_player_zipline",
             Events.SFX_BOSS_HIT: "sfx_boss_hit",
             Events.SFX_UI_GAME_OVER: "sfx_ui_game_over",
             # AUD-256 — el logro se veía y no se oía: `ACHIEVEMENT_UNLOCKED`
@@ -107,6 +110,7 @@ class SonidoDeEscenario:
             Events.SFX_BOSSES_VENADO_CHARGE: "sfx_bosses_venado_charge",
             Events.SFX_BOSSES_VENADO_STOMP: "sfx_bosses_venado_stomp",
             Events.SFX_BOSSES_VENADO_VINE: "sfx_bosses_venado_vine",
+            Events.SFX_POISON_TICK: "sfx_player_poison_tick",
             Events.SFX_TIMER_ALERT_PULSE: "sfx_ui_timer_alert_pulse",
         }
         for evt, sname in sfx_map.items():

@@ -434,53 +434,41 @@ class StageLoader(ObjetosDeTiled):
 
     @classmethod
     def _build_stage_data(cls, tmx_data: Any) -> StageData:
+        # AUD-725 — Builder: delega la construcción por pasos a StageDataBuilder
+        # para que StageLoader sea Director, no Constructor. Mantiene la misma
+        # lógica pero ahora testeable por dominio y sin 134 líneas en un método.
+        from src.framework.stage.stage_loader_builder import StageDataBuilder
+
+        builder = StageDataBuilder()
+        # El Builder encapsula toda la lógica de parsing/properties;
+        # aquí sólo se orquesta el orden y el clamp de cámara/vista.
         props = tmx_data.properties
+        # Reutiliza los parsers existentes del Loader para no duplicar lógica
+        # de validación (DRY) — el Builder los expone como pasos.
         stage_id = props.get("stage_id", "")
         stage_name = props.get("stage_name", "")
         time_limit = cls._safe_int(props.get("time_limit", 0), "time_limit")
         bgm_track = props.get("bgm_track", "")
         gravity_multiplier = cls._safe_float(props.get("gravity_multiplier", 1.0), "gravity_multiplier")
-        # AUD-137 — el compás. Sin `bpm` no hay reloj musical y el escenario se
-        # comporta como siempre.
         bpm = max(0.0, cls._safe_float(props.get("bpm", 0.0), "bpm"))
         compas = max(1, cls._safe_int(props.get("compas", 4), "compas"))
-        desfase_audio = cls._safe_float(
-            props.get("desfase_audio", 0.0), "desfase_audio")
+        desfase_audio = cls._safe_float(props.get("desfase_audio", 0.0), "desfase_audio")
         estamina = max(0.0, cls._safe_float(props.get("estamina", 0.0), "estamina"))
-        tiempo_bala = max(
-            0.0, cls._safe_float(props.get("tiempo_bala", 0.0), "tiempo_bala"))
-        profundidad_min = max(0.05, cls._safe_float(
-            props.get("profundidad_min", 1.0), "profundidad_min"))
-        profundidad_max = max(0.05, cls._safe_float(
-            props.get("profundidad_max", 1.0), "profundidad_max"))
-        # AUD-339 — la curva comparte el suelo de 0.05 con los extremos: una
-        # curva negativa invertiría el degradado y una de 0.0 lo congelaría.
-        profundidad_curva = max(0.05, cls._safe_float(
-            props.get("profundidad_curva", 1.0), "profundidad_curva"))
-        orden_por_y = cls._bool_de(
-            props.get("orden_por_y"), por_defecto=False)
-        sombras_proyectadas = cls._bool_de(
-            props.get("sombras_proyectadas"), por_defecto=False)
-        habilidades_libres = cls._bool_de(
-            props.get("habilidades_libres"), por_defecto=False)
+        tiempo_bala = max(0.0, cls._safe_float(props.get("tiempo_bala", 0.0), "tiempo_bala"))
+        profundidad_min = max(0.05, cls._safe_float(props.get("profundidad_min", 1.0), "profundidad_min"))
+        profundidad_max = max(0.05, cls._safe_float(props.get("profundidad_max", 1.0), "profundidad_max"))
+        profundidad_curva = max(0.05, cls._safe_float(props.get("profundidad_curva", 1.0), "profundidad_curva"))
+        orden_por_y = cls._bool_de(props.get("orden_por_y"), por_defecto=False)
+        sombras_proyectadas = cls._bool_de(props.get("sombras_proyectadas"), por_defecto=False)
+        habilidades_libres = cls._bool_de(props.get("habilidades_libres"), por_defecto=False)
         camara = str(props.get("camara") or props.get("camera") or "seguir").strip().lower()
         if camara not in MODOS_DE_CAMARA:
-            logger.warning(
-                "StageLoader: camara %r desconocida — se usa 'seguir'. "
-                "Valores válidos: %s", camara, ", ".join(sorted(MODOS_DE_CAMARA)),
-            )
+            logger.warning("StageLoader: camara %r desconocida — se usa 'seguir'. Valores válidos: %s", camara, ", ".join(sorted(MODOS_DE_CAMARA)))  # noqa: E501
             camara = "seguir"
         climate = props.get("climate", "")
-        # AUD-129 — una vista desconocida cae a lateral con aviso, no rompe.
-        # `view` en inglés se acepta igual: el proyecto es bilingüe en las
-        # propiedades desde F3.1 y obligar a recordar cuál lleva cada una es
-        # la clase de fricción que produce mapas que no cargan.
         vista = str(props.get("vista") or props.get("view") or "lateral").strip().lower()
         if vista not in VISTAS_VALIDAS:
-            logger.warning(
-                "StageLoader: vista %r desconocida — se usa 'lateral'. "
-                "Valores válidos: %s", vista, ", ".join(sorted(VISTAS_VALIDAS)),
-            )
+            logger.warning("StageLoader: vista %r desconocida — se usa 'lateral'. Valores válidos: %s", vista, ", ".join(sorted(VISTAS_VALIDAS)))  # noqa: E501
             vista = "lateral"
         zone = cls._safe_int(props.get("zone", 0), "zone")
         ambient_light = cls._parse_ambient_light(props)
@@ -490,83 +478,39 @@ class StageLoader(ObjetosDeTiled):
         ambient_fx_rate = cls._parse_unit_prop(props, "ambient_fx_rate", 0.0, 120.0)
         start_hour, day_length = cls._parse_day_night(props)
         season = cls._parse_season(props)
-        # AUD-111 — VFX opcionales. Apagados salvo que el mapa los pida.
         fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
         water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
-        # AUD-426 — cielo procedural. Apagado salvo que el mapa lo pida.
         cielo = cls._bool_de(props.get("cielo"), por_defecto=False)
-        # AUD-240 — los mandos del agua. Los rangos no son decorativos: una
-        # amplitud de 40 px convierte la lámina en ruido y un alfa de 255 tapa
-        # el escenario. Se acotan aquí y no en el efecto para que un mapa mal
-        # escrito se vea raro pero jugable, que es la regla del resto del
-        # cargador.
-        # `_parse_unit_prop` devuelve `None` cuando el mapa no dice nada, y su
-        # tercer argumento es el MÍNIMO del rango, no el valor por defecto: los
-        # defectos se aplican aquí, y son los de `WaterEffect`, para que un mapa
-        # que no declare nada se vea exactamente igual que antes de AUD-240.
         water_speed = cls._parse_unit_prop(props, "water_speed", 0.0, 8.0)
         water_amplitude = cls._parse_unit_prop(props, "water_amplitude", 0.0, 16.0)
         water_frequency = cls._parse_unit_prop(props, "water_frequency", 0.0, 1.0)
         water_alpha = cls._parse_unit_prop(props, "water_alpha", 0.0, 255.0)
-        water_tint = (cls._parse_light_color(props["water_tint"])
-                      if props.get("water_tint") is not None else (40, 80, 160))
+        water_tint = (cls._parse_light_color(props["water_tint"]) if props.get("water_tint") is not None else (40, 80, 160))  # noqa: E501
         god_rays = cls._safe_float(props.get("god_rays", 0.0), "god_rays")
 
         map_data = pyscroll.data.TiledMapData(tmx_data)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             renderer = pyscroll.BufferedRenderer(
-                map_data,
-                (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-                clamp_camera=True,
-                alpha=True,
-            )
+                map_data, (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                clamp_camera=True, alpha=True)
         group = pyscroll.PyscrollGroup(map_layer=renderer, default_layer=4)
-
         map_w = tmx_data.width * tmx_data.tilewidth
         map_h = tmx_data.height * tmx_data.tileheight
 
-        return StageData(
-            map_layer=group,
-            map_pixel_size=(map_w, map_h),
-            stage_id=stage_id,
-            stage_name=stage_name,
-            time_limit=time_limit,
-            bgm_track=bgm_track,
-            gravity_multiplier=gravity_multiplier,
-            vista=vista,
-            bpm=bpm,
-            compas=compas,
-            desfase_audio=desfase_audio,
-            estamina=estamina,
-            tiempo_bala=tiempo_bala,
-            profundidad_min=profundidad_min,
-            profundidad_max=profundidad_max,
-            profundidad_curva=profundidad_curva,
-            orden_por_y=orden_por_y,
-            sombras_proyectadas=sombras_proyectadas,
-            habilidades_libres=habilidades_libres,
-            camara=camara,
-            climate=climate,
-            zone=zone,
-            ambient_light=ambient_light,
-            bloom=bloom,
-            vignette=vignette,
-            ambient_fx=ambient_fx,
-            ambient_fx_rate=ambient_fx_rate,
-            start_hour=start_hour,
-            day_length=day_length,
-            season=season,
-            fog_of_war=fog_of_war,
-            water_effect=water_effect,
-            cielo=cielo,
-            water_speed=1.5 if water_speed is None else water_speed,
+        return builder.with_map(group, (map_w, map_h)).with_physics(
+            stage_id=stage_id, stage_name=stage_name, time_limit=time_limit, bgm_track=bgm_track,
+            gravity_multiplier=gravity_multiplier, vista=vista, bpm=bpm, compas=compas, desfase_audio=desfase_audio,
+            estamina=estamina, tiempo_bala=tiempo_bala, profundidad_min=profundidad_min, profundidad_max=profundidad_max,  # noqa: E501
+            profundidad_curva=profundidad_curva, orden_por_y=orden_por_y, sombras_proyectadas=sombras_proyectadas,
+            habilidades_libres=habilidades_libres, camara=camara, climate=climate, zone=zone,
+            ambient_light=ambient_light, bloom=bloom, vignette=vignette, ambient_fx=ambient_fx, ambient_fx_rate=ambient_fx_rate,  # noqa: E501
+            start_hour=start_hour, day_length=day_length, season=season, fog_of_war=fog_of_war, water_effect=water_effect,  # noqa: E501
+            cielo=cielo, water_speed=1.5 if water_speed is None else water_speed,
             water_amplitude=4 if water_amplitude is None else int(water_amplitude),
             water_frequency=0.04 if water_frequency is None else water_frequency,
-            water_alpha=100 if water_alpha is None else int(water_alpha),
-            water_tint=water_tint,
-            god_rays=god_rays,
-        )
+            water_alpha=100 if water_alpha is None else int(water_alpha), water_tint=water_tint, god_rays=god_rays,
+        ).build()
 
     @classmethod
     def _parse_season(cls, props: dict[str, Any]) -> str:
@@ -726,13 +670,18 @@ class StageLoader(ObjetosDeTiled):
     @classmethod
     def _build_waypoints(cls, tmx_data: Any) -> dict[str, list[tuple[float, float]]]:
         waypoints_by_owner: dict[str, list[tuple[float, float]]] = {}
+        tmp: dict[str, list[tuple[int, float, float]]] = {}
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
             if obj_type == "Waypoint":
                 props = dict(obj.properties) if obj.properties else {}
                 owner_id = props.get("owner_id", "")
                 if owner_id:
-                    waypoints_by_owner.setdefault(owner_id, []).append((float(obj.x), float(obj.y)))
+                    idx = int(props.get("waypoint_index", 0)) if str(props.get("waypoint_index", "")).isdigit() else 0
+                    tmp.setdefault(owner_id, []).append((idx, float(obj.x), float(obj.y)))
+        for owner, lst in tmp.items():
+            lst.sort(key=lambda t: t[0])
+            waypoints_by_owner[owner] = [(x, y) for _, x, y in lst]
         return waypoints_by_owner
 
     @classmethod

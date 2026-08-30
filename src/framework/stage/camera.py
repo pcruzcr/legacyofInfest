@@ -136,6 +136,9 @@ class Camera:
         #: dos booleanos y el rectángulo no se leía nunca.
         self._locks: list[Any] = []
 
+        self._cinematica_path: list[pygame.Vector2] | None = None
+        self._cinematica_t: float = 0.0
+
         self._parallax_factors: dict[str, float] = {
             "BG_Far": 0.15,
             "BG_Mid": 0.40,
@@ -346,6 +349,19 @@ class Camera:
         target_x = self._target.rect.centerx
         target_y = self._target.rect.centery
 
+        if self.modo == "fija":
+            # Cámara fija pura — no sigue al jugador, solo sacudida
+            self._aplicar_sacudida(dt)
+            return
+
+        if self.modo == "cinematica":
+            # Cinemática con spline — sigue path definido en EscenaGuionizada
+            # Si no hay path, cae a seguir
+            if hasattr(self, "_cinematica_path") and self._cinematica_path:
+                self._seguir_spline(dt)
+                self._aplicar_sacudida(dt)
+                return
+
         if self.modo == "sala":
             self._encuadrar_sala(target_x, target_y)
             self._aplicar_sacudida(dt)
@@ -415,6 +431,30 @@ class Camera:
         if abs(error) <= medio_ancho:
             return 0.0
         return error - medio_ancho if error > 0 else error + medio_ancho
+
+    def set_cinematica_path(self, puntos: list[pygame.Vector2]) -> None:
+        """Define path para modo `cinematica` — spline CatmullRom."""
+        self._cinematica_path = list(puntos) if puntos else None
+        self._cinematica_t = 0.0
+
+    def _seguir_spline(self, dt: float) -> None:
+        """Avanza `t` en spline y coloca `offset` centrado en el punto."""
+        if not self._cinematica_path or len(self._cinematica_path) < 2:
+            return
+        self._cinematica_t = (self._cinematica_t + dt * 0.2) % 1.0
+        # Lerp simple entre puntos para stub — real usaría CurveTools.catmull_rom
+        n = len(self._cinematica_path)
+        f = self._cinematica_t * (n - 1)
+        i = int(f)
+        t = f - i
+        a = self._cinematica_path[max(0, i)]
+        b = self._cinematica_path[min(n - 1, i + 1)]
+        p = a.lerp(b, t)
+        self.offset.update(
+            p.x - 400,  # INTERNAL_WIDTH/2
+            p.y - 300,
+        )
+        self._clamp_a_los_bordes()
 
     def _encuadrar_sala(self, target_x: float, target_y: float) -> None:
         """Modo `sala`: la cámara salta de pantalla en pantalla, sin suavizar.

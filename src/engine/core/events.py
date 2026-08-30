@@ -44,6 +44,10 @@ class Events:
     STAGE_COMPLETE: str = "STAGE_COMPLETE"
     """Emitted by StageScene (next trigger) or BossVenado.on_defeated(). Payload: stage_id."""
 
+    # ── Secrets ───────────────────────────────────────────────────
+    SECRET_FOUND: str = "SECRET_FOUND"
+    """Emitted when a secret is discovered. Payload: secret_id, secret_type (exit/room)."""
+
     # ── SFX events (emitted by entities, played by StageScene) ────
     SFX_PLAYER_JUMP: str = "SFX_PLAYER_JUMP"
     SFX_PLAYER_LAND: str = "SFX_PLAYER_LAND"
@@ -79,6 +83,13 @@ class Events:
     """Emitted on slam attack. Payload: pos."""
     VFX_ULTIMATE: str = "VFX_ULTIMATE"
     """Emitted on ultimate attack. Payload: pos."""
+    #: AUD-636 — polvo de aterrizaje. Payload: pos, fuerza (0-1, proporcional
+    #: a la velocidad de caída). El jugador emite; `senales.py` pinta.
+    VFX_LAND_DUST: str = "VFX_LAND_DUST"
+    #: AUD-636 — polvo de despegue al saltar. Payload: pos.
+    VFX_JUMP_DUST: str = "VFX_JUMP_DUST"
+    #: AUD-636 — destello blanco de muerte enemiga. Payload: pos.
+    VFX_KILL_FLASH: str = "VFX_KILL_FLASH"
     VFX_BUBBLE: str = "VFX_BUBBLE"
     """Emitted by SwimmingState. Payload: pos."""
     VFX_MUSGO_STEP: str = "VFX_MUSGO_STEP"
@@ -97,6 +108,10 @@ class Events:
     SFX_STAGE_BANNER: str = "SFX_STAGE_BANNER"
     SFX_STAGE_COMPLETE: str = "SFX_STAGE_COMPLETE"
     SFX_HAZARD_ZONE: str = "SFX_HAZARD_ZONE"
+    SFX_POISON_TICK: str = "SFX_POISON_TICK"
+    """Tick de daño por veneno — `efectos.py:148` `dano_por_segundo`."""
+    VFX_POISON: str = "VFX_POISON"
+    """Nube verde al recibir tick de veneno."""
     #: AUD-443 — la risa de Paburu al confirmar el personaje.
     #:
     #: Es un evento y no una llamada directa al audio por lo mismo que el
@@ -107,6 +122,10 @@ class Events:
     SFX_PLAYER_PARRY: str = "SFX_PLAYER_PARRY"
     SFX_PLAYER_CROUCH: str = "SFX_PLAYER_CROUCH"
     SFX_PLAYER_HEAL: str = "SFX_PLAYER_HEAL"
+    #: AUD-722 — arte propio para pared/liana/tirolesa
+    SFX_PLAYER_WALL_SLIDE: str = "SFX_PLAYER_WALL_SLIDE"
+    SFX_PLAYER_CLIMB: str = "SFX_PLAYER_CLIMB"
+    SFX_PLAYER_ZIPLINE: str = "SFX_PLAYER_ZIPLINE"
     SFX_BOSS_HIT: str = "SFX_BOSS_HIT"
     SFX_UI_GAME_OVER: str = "SFX_UI_GAME_OVER"
     SFX_ENVIRONMENT_SCREEN_SHAKE: str = "SFX_ENVIRONMENT_SCREEN_SHAKE"

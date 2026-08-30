@@ -8,6 +8,7 @@ import numpy as np
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.i18n import _
 from src.engine.input.action_map import Action
 from src.engine.scene.base_scene import BaseScene
 from src.engine.scenes.demo_common import (
@@ -56,7 +57,12 @@ if TYPE_CHECKING:
 
 
 MODE_NAMES = [
-    "INFERENCE", "FEATURE_COMPARE", "CLASS_GRID", "CONFUSION", "PIPELINE", "TREE_VIEW",
+    _("ui.pattern_demo.modes.inference"),
+    _("ui.pattern_demo.modes.feature_compare"),
+    _("ui.pattern_demo.modes.class_grid"),
+    _("ui.pattern_demo.modes.confusion"),
+    _("ui.pattern_demo.modes.pipeline"),
+    _("ui.pattern_demo.modes.tree_view"),
 ]
 
 FEATURE_METHODS: list[Literal["hog", "lbp", "color_hist", "combined"]] = ["hog", "lbp", "color_hist", "combined"]
@@ -536,13 +542,13 @@ class PatternDemoScene(BaseScene):
         surf.fill((5, 5, 15))
         y = 10
 
-        src_label = self._font_small.render("Source Feature Vector:", True, COLOR_ACCENT)
+        src_label = self._font_small.render(_("ui.pattern_demo.labels.source_feature_vector"), True, COLOR_ACCENT)
         surf.blit(src_label, (10, y))
         y += 10
         self._draw_feature_bars(surf, features, 10, y, 140, 25, _method_color(method))
 
         y += 30
-        nrst_label = self._font_small.render("Nearest Training Sample:", True, COLOR_ACCENT)
+        nrst_label = self._font_small.render(_("ui.pattern_demo.labels.nearest_training_sample"), True, COLOR_ACCENT)
         surf.blit(nrst_label, (10, y))
         y += 10
         self._draw_feature_bars(surf, nearest_feat, 10, y, 140, 25,
@@ -857,7 +863,7 @@ class PatternDemoScene(BaseScene):
         surf = pygame.Surface(PANEL_SIZE)
         surf.fill((5, 5, 15))
         if not self._tree_structure:
-            msg = self._font_small.render("No tree structure available for this model", True, COLOR_TEXT)
+            msg = self._font_small.render(_("ui.pattern_demo.labels.no_tree_structure"), True, COLOR_TEXT)
             surf.blit(msg, (10, 30))
             return surf
         self._draw_tree_nodes(surf, self._tree_structure, 0, 0, PANEL_SIZE[0] - 10, 0)

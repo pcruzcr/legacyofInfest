@@ -14,12 +14,12 @@ date_processed: "2026-07-14"
 > [`60_GUIA_COMPLETA_DEL_MOTOR.md`](60_GUIA_COMPLETA_DEL_MOTOR.md).**
 >
 > Lo que hay aquí abajo sigue siendo cierto, pero es **parcial**: la tabla de
-> enemigos lista 8 de los 30 tipos registrados, y no aparecen ninguno de los
+> enemigos lista 8 de los 54 tipos registrados, y no aparecen ninguno de los
 > objetos de las fases 4 y 5 —`Pickup`, `Key`, `LockedDoor`, `Chest`, `Vine`,
 > `Zipline`, `RhythmBlock`, `MovingPlatform`, `SinkingPlatform`, `WindZone`,
 > `WaterZone`, `FrictionZone`, `Conveyor`, `LaserZone`, `Guard`, `Stalker`,
 > `EventTrigger`—. Si buscas algo y no está aquí, está en la guía completa
-> antes que en ningún sitio.
+> antes que en ningún sitio. Actualizado 2026-08-30: 54 tipos (ver `docs/62`).
 
 ## 1. Requisitos del mapa TMX
 
@@ -346,9 +346,16 @@ Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
 | `WarpZone` | Rectángulo (el disparador) | `destino_x` / `destino_y` (**obligatorias**: adónde van los **pies** del jugador, en píxeles de mundo) · `automatico` (al tocar, true) · `una_vez` (false) · `key_id` · `enfriamiento` (s antes de poder repetirlo, 0.5) · `mensaje`. Teletransporta **dentro del mismo mapa**, que es lo que `NextTrigger` no hace: Zelda, Metroid, Hollow Knight. Sin destino no se carga y el cargador avisa |
 | `Slope` | Rectángulo (el **triángulo entero**, no la línea) | `sube` (`derecha` por defecto, o `izquierda`: dónde está el lado alto). Suelo inclinado de verdad — la hipotenusa va de esquina a esquina. **No se apila con bloques escalonados**: eso es una escalera que frena al jugador en cada peldaño. Sonic, DKC, Celeste (AUD-297) |
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
+| `VineSwing` | Rectángulo (pareja de lianas para saltar) | `largo` (px, 48) · `amplitud` (px, 28) · `periodo` (s, 1.6) · `radio_agarre` (px, 20) |
+| `LianaSalto` | Rectángulo | Alias de `VineSwing`, mismas propiedades |
+| `RopeSwing` | Rectángulo | Alias de `VineSwing`, mismas propiedades |
 | `Zipline` | Rectángulo (la esquina es el enganche) | `destino_dx` (px, 96), `destino_dy` (px, 64) **relativos** · `velocidad` (px/s, 190) · `radio_de_enganche` (px, 14) · `solo_de_bajada` (bool, sí) |
 | `BossSpawn` | Punto (dónde entra el jefe) | `boss` (**obligatoria**: el nombre registrado del jefe, p. ej. `BossVenado`). Produce la misma entidad que escribir ese nombre como `type`; sin `boss`, o con uno que no esté registrado, el cargador avisa. Lo pide `17_BOSS_SPEC.md` §8.2 en todo mapa de jefe |
 | `ArenaZone` | Rectángulo | — (sin propiedades: la geometría ES la arena). Declara el cuadrilátero real del combate de jefe; sin ninguna, el motor usa el mapa entero. Gana la primera que contenga al jefe (AUD-605) |
+| `PressurePlate` | Rectángulo (el **botón** del suelo) | `evento` (**obligatoria**: la puerta con `abre_con` igual se abre mientras la placa esté pisada) · `requiere` (`bloque` por defecto, o `jugador`/`ambos`/ `cualquiera`) · `mantener` (bool, true: al quitar el peso la puerta se cierra; false la deja enclavada) · `una_vez` (bool, false) · `mensaje`. Se activa con un `PushBlock` encima y usa la misma lista de sólidos que los bloques (no duplica composición) |
+| `PlacaDePresion` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
+| `PlacaPresion` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
+| `Boton` | Rectángulo | Alias de `PressurePlate`, mismas propiedades |
 
 ### Arquetipos de enemigo (capa `Objects`, objetos punto)
 
@@ -371,12 +378,23 @@ propiedad del objeto en Tiled.
 
 | Type | Nombre | Zona | Vida |
 |---|---|---|---|
+| `ArcherQuetzal` | Arquero quetzal | 3 | 2.5 |
+| `AssassinSombra` | Sombra del cementerio | 4 | 2.0 |
+| `BruteGolemHielo` | Gólem de hielo | 2 | 5.0 |
+| `Cangrejo` | Cangrejo de mina | 4 | 1.0 |
+| `CasterHealer` | Curandero de Heredia | 3 | 2.5 |
+| `ChargerWolf` | Lobo de planicie | 2 | 3.5 |
+| `Climber` | Trepador de lianas | 1 | 2.0 |
 | `FlyingBird` | Ave de selva | 1 | 1.0 |
 | `FlyingBoa` | Boa arborícola | 2 | 2.0 |
+| `FlyingBomber` | Bombardero de datacenter | 2 | 2.0 |
 | `FlyingCucaracha` | Cucaracha voladora | 1 | 1.0 |
 | `FlyingHalcon` | Halcón | 3 | 2.0 |
 | `FlyingNotebook` | Cuaderno poseído | 1 | 0.5 |
 | `FlyingTerciovolador` | Terciovolador | 2 | 1.5 |
+| `Medusa` | Medusa de pozo | 4 | 1.0 |
+| `PezAbismal` | Pez abismal | 4 | 1.0 |
+| `Shielded` | Guardia con escudo | 2 | 3.0 |
 | `ShooterBuitre` | Buitre | 3 | 3.5 |
 | `ShooterCocinero` | Cocinero de cafetería | 1 | 3.0 |
 | `ShooterFrog` | Rana dardo | 1 | 2.0 |
@@ -384,6 +402,9 @@ propiedad del objeto en Tiled.
 | `ShooterSerpienteArbol` | Serpiente de árbol | 2 | 2.0 |
 | `ShooterTiza` | Tiza voladora | 1 | 2.5 |
 | `ShooterVenomoLargo` | Venomo largo | 2 | 3.0 |
+| `Summoner` | Invocador de Heredia | 3 | 4.0 |
+| `Swimmer` | Nadador de esclusa | 2 | 2.0 |
+| `TerrainShaper` | Modelador de terreno | 3 | 3.0 |
 | `WalkerEstudiante` | Estudiante infestado | 1 | 1.5 |
 | `WalkerGarza` | Garza | 3 | 2.0 |
 | `WalkerGuardia` | Guardia infestado | 2 | 3.0 |
@@ -400,6 +421,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **73** tipos.
+Total aceptado en `Objects`: **101** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

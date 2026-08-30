@@ -72,7 +72,7 @@ Sacude la cámara — amplitud y duración configurables.
 Bloquea hasta que se emite un evento concreto, con un tope de 10 segundos para no colgar la cinemática si el evento nunca llega.
 
 ### 2.11 `DialogoArbolAction`
-Muestra un árbol de diálogo completo (ver `40_DIALOGUE_SYSTEM.md`) dentro de la cinemática.
+Muestra un árbol de diálogo completo (ver `40_DIALOGUE_SYSTEM.md`) dentro de la cinemática — con retrato animado, lip-sync y voice si el nodo los declara.
 
 ### 2.12 `AccionParalela`
 Ejecuta varias acciones a la vez en vez de en secuencia — por ejemplo, mover una entidad mientras suena un efecto.

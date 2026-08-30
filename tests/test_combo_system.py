@@ -102,3 +102,28 @@ class TestComboSystem:
         expected_base = 0.5
         idx = min(1, len(settings.COMBO_DAMAGE_MULT) - 1)
         assert dmg == expected_base * settings.COMBO_DAMAGE_MULT[idx]
+
+    def test_combo_resets_on_hit(self) -> None:
+        """AUD-721 — recibir daño rompe el combo (reporte: no se reiniciaba)."""
+        player = Player(pygame.Vector2(0, 0))
+        _start_attack(player, Player.SHORT_ATTACK)
+        self._reset_to_idle(player)
+        _start_attack(player, Player.SHORT_ATTACK)
+        assert player.combo_count == 2
+        assert player.combo_active
+        player.apply_damage(1.0, (0, 0))
+        assert player.combo_count == 0
+        assert player.combo_timer == 0.0
+        assert not player.combo_active
+        assert player.last_attack_type == ""
+
+    def test_combo_resets_on_hit_even_with_invincibility_later(self) -> None:
+        """El primer golpe rompe combo aunque el segundo se ignore por i-frame."""
+        player = Player(pygame.Vector2(0, 0))
+        _start_attack(player, Player.SHORT_ATTACK)
+        assert player.combo_count == 1
+        player.apply_damage(1.0, (0, 0))
+        assert player.combo_count == 0
+        # segundo golpe dentro de invencibilidad no debe revivir combo
+        player.apply_damage(1.0, (0, 0))
+        assert player.combo_count == 0

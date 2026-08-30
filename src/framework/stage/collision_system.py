@@ -50,8 +50,20 @@ if TYPE_CHECKING:
 # Impulse applied to an enemy struck by the player, in px/s.
 KNOCKBACK_IMPULSE_X: float = 200.0
 KNOCKBACK_IMPULSE_Y: float = -100.0
-# Freeze duration on a connected hit, in *real* seconds.
-HITSTOP_DURATION: float = 0.05
+
+# AUD-636 — hit pause VARIABLE por daño. La constante única de antes decía lo
+# mismo con un golpe de 0,25 que con uno de 3: el número de daño flotaba sobre
+# la pantalla y la pantalla no le hacía caso. El escalón es el que ya usa
+# `apply_hit` para clasificar el hitstun (light < 0.8 ≤ heavy < 1.5 ≤ launch),
+# reutilizado y no inventado: una sola tabla de «cuánto pesa un golpe».
+#
+# En segundos REALES — `update_hitstop` los descuenta del reloj sin escalar.
+HITSTOP_LIGHT: float = 0.035
+HITSTOP_HEAVY: float = 0.07
+HITSTOP_LAUNCH: float = 0.11
+#: Compatibilidad: era la constante única. Queda como el valor intermedio,
+#: que es lo que `trigger_hitstop()` a secas da a quien la llamaba.
+HITSTOP_DURATION: float = HITSTOP_HEAVY
 
 #: AUD-305 — impulso que devuelve el *bash* sobre un proyectil, en px/s.
 #:
@@ -238,6 +250,7 @@ class CollisionSystem:
             return
 
         connected = False
+        mayor_dano = 0.0
         for entity in stage.entity_list:
             if not isinstance(entity, EnemyBase) or not entity.is_alive:
                 continue
@@ -246,8 +259,9 @@ class CollisionSystem:
             if not hitbox.colliderect(entity.hurtbox):
                 continue
 
+            dano = self._calculate_damage(player, entity)
             entity.apply_hit(
-                self._calculate_damage(player, entity),
+                dano,
                 (player.position.x, player.position.y),
             )
             self.apply_knockback(
@@ -257,15 +271,33 @@ class CollisionSystem:
             )
             self._hit_this_swing.add(id(entity))
             connected = True
+            # AUD-636 — el golpe MÁS FUERTE del swing manda: golpear a dos
+            # enemigos, uno flojo y uno pesado, congela por el pesado.
+            mayor_dano = max(mayor_dano, dano)
 
         if self._procesar_bash(player, stage, hitbox):
             connected = True
 
         if connected:
-            self.trigger_hitstop(HITSTOP_DURATION)
+            self.trigger_hitstop(self.hitstop_por_dano(mayor_dano))
             # Retire the hitbox so a multi-frame swing cannot re-damage the
             # same enemy on the following frames (AUD-003).
             player.consume_hitbox()
+
+    @staticmethod
+    def hitstop_por_dano(dano: float) -> float:
+        """AUD-636 — la duración de congelación que pide este daño.
+
+        Los umbrales son los mismos que `EnemyBase.apply_hit` usa para
+        clasificar el hitstun (light/heavy/launch): una sola tabla decide
+        cuánto pesa un golpe, y el número flotante y la congelación nunca
+        pueden discrepar porque leen el mismo dato.
+        """
+        if dano >= 1.5:
+            return HITSTOP_LAUNCH
+        if dano >= 0.8:
+            return HITSTOP_HEAVY
+        return HITSTOP_LIGHT
 
     def _procesar_bash(
         self, player: Player, stage: StageData, hitbox: pygame.Rect,

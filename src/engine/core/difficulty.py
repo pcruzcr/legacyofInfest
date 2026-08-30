@@ -42,7 +42,7 @@ DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
         enemy_health_mult=1.0,
         heal_mult=1.0,
         knockback_mult=1.0,
-        parry_window=0.2,
+        parry_window=0.25,
         invincibility_duration=1.5,
         combo_window=0.5,
     ),

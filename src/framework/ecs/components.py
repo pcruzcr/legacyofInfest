@@ -636,6 +636,48 @@ class Liana:
     ancho_de_agarre: int = 10
     #: Velocidad de subida y bajada, px/s.
     velocidad: float = 70.0
+    #: Balanceo horizontal PSX — amplitud en px y periodo en s. 0 = estática.
+    #: Con amplitud>0 la liana oscila como péndulo y arrastra al trepador.
+    amplitud: float = 0.0
+    periodo: float = 0.0
+    _t: float = 0.0
+    _origen_x: float = 0.0
+
+    def __post_init__(self) -> None:
+        # Guarda origen para oscilación estable
+        try:
+            self._origen_x = float(self.rect.x)
+        except Exception:
+            self._origen_x = 0.0
+
+
+@dataclass(slots=True)
+class LianaSalto:
+    """Rope colgante para saltar de una a otra — distinta a la liana de escalar.
+
+    No se trepa verticalmente: te cuelgas, te balanceas (pendulo) y saltas
+    con impulso para alcanzar la siguiente. Es la liana de DKC / Jungle
+    Book, no la enredadera de Zelda. Por eso es otro componente y no un
+    flag en Liana: geometría, agarre y estado son distintos.
+    """
+
+    rect: pygame.Rect
+    #: Largo visual de la cuerda (px) — solo dibujo, la colisión es el rect.
+    largo: int = 48
+    #: Amplitud de balanceo en px (0 = colgante fijo, >0 = pendulo)
+    amplitud: float = 32.0
+    #: Periodo de oscilación en s (2.0 = balanceo natural)
+    periodo: float = 1.8
+    #: Radio de agarre en aire (px) — generoso para no fallar el salto.
+    radio_agarre: int = 18
+    _t: float = 0.0
+    _origen_x: float = 0.0
+
+    def __post_init__(self) -> None:
+        try:
+            self._origen_x = float(self.rect.x)
+        except Exception:
+            self._origen_x = 0.0
 
 
 @dataclass(slots=True)
@@ -788,3 +830,170 @@ class Acosador:
     #: Segundos hasta volver a aparecer.
     reaparicion: float = 6.0
     _fuera: float = 0.0
+
+
+# ════════════════════════════════════════════════════════════════
+# AUD-634 — Componentes de comportamiento reutilizables (Behavior Components)
+# ═══════════════════════════════════════════════════════════════
+#
+# Estos componentes encapsulan comportamientos reutilizables que antes
+# vivían duplicados en cada clase de enemigo. Ahora se adjuntan a la
+# entidad y los sistemas ECS los ejecutan, permitiendo composición.
+
+
+@dataclass(slots=True)
+class RideableComponent:
+    """Componente para montar un buddy — AUD-637.
+    
+    Se adjunta a la entidad del buddy. El sistema de montura lo lee
+    para saber que esta entidad es montable y qué parámetros tiene.
+    """
+    
+    buddy_id: str
+    # Tipo de montura: "ground" (caminar), "flying" (volar), "water" (nadar)
+    mount_type: str = "ground"
+    # Velocidad de movimiento cuando está montado
+    mount_speed: float = 120.0
+    # Velocidad de salto si es ground
+    jump_speed: float = -380.0
+    # Si puede volar (para flying)
+    can_fly: bool = False
+    # Offset visual del jugador sobre el buddy
+    rider_offset: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, -20))
+    # Offset del hitbox del rider cuando está montado
+    rider_hitbox_offset: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, -10))
+#
+
+
+@dataclass(slots=True)
+class PatrolComponent:
+    """Patrulla horizontal con detección de bordes (ledge detection).
+
+    Extraído de EnemyWalker: permite que cualquier entidad patrulle.
+    """
+
+    patrol_length: float = 96.0
+    patrol_speed: float = 45.0
+    alert_speed: float = 75.0
+    _patrol_origin: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
+
+    def __post_init__(self):
+        # Se inicializa en el sistema al adjuntar
+        pass
+
+
+@dataclass(slots=True)
+class ChargeComponent:
+    """Embestida con wind-up y stun — extraído de EnemyCharger.
+
+    Fases: wind_up (telegraph) -> charge -> stun (recuperación).
+    """
+
+    charge_speed: float = 250.0
+    charge_duration: float = 0.7
+    wind_up_duration: float = 0.4
+    stun_duration: float = 1.0
+    charge_damage_mult: float = 3.0  # multiplicador de daño en carga
+    _charge_timer: float = 0.0
+    _wind_up_timer: float = 0.0
+    _stun_timer: float = 0.0
+    _is_charging: bool = False
+    _is_winding_up: bool = False
+    _is_stunned: bool = False
+    _charge_dir: int = 1
+
+
+@dataclass(slots=True)
+class PredictiveAimComponent:
+    """Puntería predictiva para proyectiles — extraído de EnemyArcher.
+
+    Calcula lead basado en velocidad del objetivo.
+    """
+
+    predict_factor: float = 0.3
+    projectile_speed: float = 90.0
+    gravity: float = 400.0  # gravedad del proyectil (arco)
+
+
+@dataclass(slots=True)
+class DistanceManagerComponent:
+    """Gestión de distancia ideal — extraído de EnemyCaster.
+
+    Mantiene distancia ideal acercándose/alejándose.
+    """
+
+    ideal_distance: float = 150.0
+    approach_speed: float = 15.0
+    retreat_speed: float = 15.0
+    distance_margin: float = 20.0
+
+
+@dataclass(slots=True)
+class ShieldComponent:
+    """Escudo frontal con HP — extraído de EnemyShielded.
+
+    Bloquea daño frontal, vulnerable por detrás/parry.
+    """
+
+    shield_health: float = 3.0
+    shield_max_health: float = 3.0
+    regen_delay: float = 5.0
+    _regen_timer: float = 0.0
+    _broken: bool = False
+
+
+@dataclass(slots=True)
+class SummonComponent:
+    """Invocación de esbirros — extraído de EnemySummoner / BossBase.
+
+    Spawnea entidades periódicamente, límite de concurrentes.
+    """
+
+    summon_type: str = "WalkerInsect"  # species_id
+    summon_interval: float = 8.0
+    max_minions: int = 3
+    _cooldown: float = 0.0
+    _active_count: int = 0
+
+
+@dataclass(slots=True)
+class BombDropComponent:
+    """Lanzamiento de bombas/área desde el aire — extraído de EnemyFlyingBomber.
+
+    Deja proyectiles de área desde el aire.
+    """
+
+    drop_interval: float = 2.5
+    bomb_damage: float = 1.0
+    bomb_radius: float = 48.0
+    _cooldown: float = 0.0
+
+
+@dataclass(slots=True)
+class TerrainActionComponent:
+    """Modificación de terreno — crea/rompe bloques, coloca hazards.
+
+    Extraído de EnemyTerrainShaper.
+    """
+
+    action_interval: float = 4.0
+    _cooldown: float = 0.0
+    _action_index: int = 0  # 0=create block, 1=break, 2=hazard
+    _action_types: tuple[str, ...] = ("create_block", "break_block", "place_hazard")
+
+
+@dataclass(slots=True)
+class GroundPoundComponent:
+    """Pisotón aéreo — cancelar momentum, caer recto, onda al aterrizar.
+
+    Extraído de GroundPoundState.
+    """
+
+    dive_speed: float = 420.0
+    wave_width: float = 72.0
+    wave_height: float = 16.0
+    wave_duration: float = 0.12
+    damage_mult: float = 1.5
+    _state: str = "dive"  # "dive" | "wave" | "done"
+    _wave_timer: float = 0.0
+

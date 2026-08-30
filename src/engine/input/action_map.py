@@ -60,17 +60,24 @@ class Action(Enum):
 
 
 # Default keyboard bindings: Action -> list of pygame key constants
+# AUD-720 — teclado accesible: cada acción tiene alternativa flechas/WASD
+# y el ratón (InputManager._mouse_map) y el mando (_CONTROLLER_BUTTON_MAP)
+# cubren las mismas acciones, así que ninguna mecánica exige una mano sola.
 DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
+    # Movimiento: flechas + WASD (izq=A/LEFT, der=D/RIGHT, arriba=W/UP, abajo=S/DOWN)
     Action.MOVE_LEFT: [pygame.K_LEFT, pygame.K_a],
     Action.MOVE_RIGHT: [pygame.K_RIGHT, pygame.K_d],
     Action.MOVE_UP: [pygame.K_UP, pygame.K_w],
     Action.MOVE_DOWN: [pygame.K_DOWN, pygame.K_s],
+    # Salto: SPACE primario, W/UP alternativas (en cenital W es sólo mover)
     Action.JUMP: [pygame.K_SPACE, pygame.K_UP, pygame.K_w],
     Action.CROUCH: [pygame.K_DOWN, pygame.K_s],
+    # AUD-720: DASH en LSHIFT/RALT + botón central ratón (ver InputManager)
     Action.DASH: [pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT],
     Action.GRAB: [pygame.K_g, pygame.K_c],
     # F: cerca de las teclas de movimiento con la mano izquierda, y libre.
     Action.RANGED_ATTACK: [pygame.K_f, pygame.K_v],
+    # Ataques: Z/J y X/K — mano izq y der; ratón izq/der es la 3ª alternativa
     Action.SHORT_ATTACK: [pygame.K_z, pygame.K_j],
     Action.LONG_ATTACK: [pygame.K_x, pygame.K_k],
     Action.CONFIRM: [pygame.K_RETURN, pygame.K_SPACE, pygame.K_z],
@@ -102,6 +109,12 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
 CONTROLLER_DEADZONE: float = 0.25
 CONTROLLER_AXIS_LEFT_X: int = 0
 CONTROLLER_AXIS_LEFT_Y: int = 1
+CONTROLLER_AXIS_RIGHT_X: int = 2
+CONTROLLER_AXIS_RIGHT_Y: int = 3
+CONTROLLER_AXIS_TRIGGER_LEFT: int = 4
+CONTROLLER_AXIS_TRIGGER_RIGHT: int = 5
+# AUD-720 — mapeo ampliado: antes 8 acciones, ahora 12; LT/RT y stick-click
+# usan lo que queda libre sin pisar lo existente.
 _CONTROLLER_BUTTON_MAP: dict[int, Action] = {
     0: Action.JUMP,           # A
     1: Action.SHORT_ATTACK,   # B
@@ -109,6 +122,10 @@ _CONTROLLER_BUTTON_MAP: dict[int, Action] = {
     3: Action.CROUCH,         # Y
     4: Action.GRAB,           # LB
     5: Action.RANGED_ATTACK,  # RB
-    7: Action.PAUSE,          # START
     6: Action.CANCEL,         # SELECT/BACK
+    7: Action.PAUSE,          # START
+    8: Action.DASH,           # L-STICK
+    9: Action.BULLET_TIME,    # R-STICK
+    10: Action.TAB_PREV,      # extra (si existe)
+    11: Action.TAB_NEXT,
 }

@@ -160,7 +160,7 @@ class SunsetLight:
         # 3. Conversión de vuelta a RGB (`ColorTools.hsv_to_rgb`) para poder 
         #    usar el color como Tinte en Pygame.
         k = clamp(k, 0.0, 1.0)
-        clave = int(round(k / self.PASO_CUANTIZACION))
+        clave = round(k / self.PASO_CUANTIZACION)
         en_cache = self._cache_ambar.get(clave)
         if en_cache is not None:
             return en_cache
@@ -217,7 +217,7 @@ class SunsetLight:
         alpha = k * self.ALPHA_MAX
         ambar = self.amber_for(k)
         return tuple(  # type: ignore[return-value]
-            int(round(255.0 + (canal - 255.0) * alpha)) for canal in ambar
+            round(255.0 + (canal - 255.0) * alpha) for canal in ambar
         )
 
     def _overlay(self, color: tuple[int, int, int],

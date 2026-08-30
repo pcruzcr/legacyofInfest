@@ -3,14 +3,20 @@ assignment_type: stage
 assignment_name: "La Entrada"
 assignment_id: "stage1_1"
 zone: 1
-student_name: "Fabrizio E"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+student_name: "Fabrizio Espinoza Arce"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Escenario 1-1 — La Entrada
 
 Zona 1, Universidad Invenio. El primer escenario jugable del juego.
+
+> **Para la Evaluación Práctica II, empezar por
+> [`DOCUMENTACION_ENTREGA_2.md`](DOCUMENTACION_ENTREGA_2.md).** Ese documento
+> sigue el orden que pide el enunciado —descripción, computación gráfica,
+> testing, iteración— y es breve. Este README es el detalle técnico largo,
+> organizado por unidad académica, y sirve de respaldo.
 
 ---
 
@@ -56,7 +62,6 @@ queda entre `stage0` y el jefe.
 | `SHIFT` | dash |
 | `Z` | ataque corto |
 | `X` | ataque largo |
-| `CTRL` o `Q` | guardia (solo estando quieto en el suelo) |
 | **`F1`** | **overlay de depuración — dibuja las curvas y los vectores** |
 | `TAB` | bestiario |
 | `ESC` | pausa |
@@ -76,12 +81,14 @@ src/stages/stage1_1/
 │   ├── jungle_frog.py          JungleFrog + FrogProjectile    (Unidad II)
 │   └── canopy_bird.py          CanopyBird                     (Unidad III)
 ├── processing/
-│   └── sunset_light.py         SunsetLight                    (Unidad V)
+│   ├── sunset_light.py         SunsetLight                    (Unidad V)
+│   ├── adaptacion_visual.py    AdaptacionVisual              (Unidad VII)
+│   └── enfoque_bordes.py       EnfoqueBordes                 (Unidad VII)
+├── animation/
+│   └── sol_poniente.py         SolPoniente                    (Unidad VI)
 ├── overlays/
 │   └── debug_overlay.py        DebugOverlay — la tecla F1
-├── combat/
-│   └── guard_system.py         GuardSystem — postura de defensa
-├── tests/                      128 pruebas
+├── tests/                      172 pruebas
 └── capturas/                   las imágenes de este documento
 
 assets/maps/stage1_1/
@@ -95,7 +102,7 @@ tiene ahí mismo su clase de proyectil.
 
 ---
 
-## 4. Las cuatro unidades académicas
+## 4. Las unidades académicas
 
 ### 4.1 Unidad II — Sistemas de coordenadas y vectores
 
@@ -414,6 +421,240 @@ Redondeado: **(125, 110, 86)**. Coincide.
 
 ---
 
+### 4.5 Unidad VI — Animación con easing e interacción por `EventBus`
+
+**Dónde:** `animation/sol_poniente.py`
+
+El sol baja hacia el horizonte conforme se sube el sendero. Su altura **no es
+lineal** en el avance del jugador: pasa por `ease_in_out_quad`, y esa curva es
+la que le da el ritmo.
+
+#### Por qué esa curva y no otra
+
+Comparadas las nueve que ofrece `src/engine/utils/math_utils.py` — no se
+escribe ninguna aquí, ésa es la regla:
+
+| Curva | Cómo se ve |
+|---|---|
+| ninguna (lineal) | el sol baja como un ascensor |
+| `ease_in_quad` | parece que se cae |
+| `ease_out_quad` | parece que frena solo |
+| **`ease_in_out_quad`** | **arranca despacio, corre por el medio y se posa** |
+
+`ease_in_out_quad` es una parábola partida por la mitad:
+
+```
+u(t) = 2t²                para t < 0,5
+u(t) = -1 + (4 - 2t)·t    para t ≥ 0,5
+```
+
+Su derivada es `4t` en la primera mitad y `4 - 4t` en la segunda: **nula en
+los dos extremos y máxima en el centro**. Eso *es* el arranque y el frenado
+suaves. Y coincide con lo que se ve de verdad: cerca del horizonte la
+refracción atmosférica aplasta el disco y su descenso aparente se ralentiza.
+
+Los extremos se respetan — `u(0) = 0` y `u(1) = 1` — así que cambiar de curva
+cambia el ritmo pero nunca dónde sale ni dónde se pone el sol.
+
+#### Dónde se dibuja, y por qué ahí
+
+En el gancho `StageScene.dibujar_fondo()` (AUD-162), que el motor llama
+**después del parallax y antes del mapa de baldosas**. Así las colinas de
+`BG_Far` tapan el disco y el sol *se pone tras el paisaje*. Desde `draw()` se
+pintaría encima de todo y flotaría delante de las montañas.
+
+El halo se mezcla con `BLEND_RGB_ADD` para que **sume luz** en vez de tapar el
+cielo: un disco opaco recortado sobre el degradado se ve pegado encima, no
+dentro.
+
+#### La interacción: un evento propio
+
+Al cruzar el horizonte, el escenario emite un evento **suyo**, no uno del
+motor:
+
+```python
+EVENTO_SOL_EN_EL_HORIZONTE = "stage1_1:sol_en_el_horizonte"
+```
+
+El prefijo con el id del escenario evita chocar con los nombres del motor,
+que son cadenas planas en mayúsculas sin espacio de nombres. Y la escena **se
+suscribe a su propio evento** en `on_stage_start()` y se da de baja en
+`on_exit()`: emitir un evento que nadie escucha no es una interacción, es un
+`print`.
+
+Dos cosas del `EventBus` que estas pruebas descubrieron y conviene saber:
+
+1. **`emit()` sólo encola.** El reparto ocurre en `dispatch()`, una vez por
+   fotograma. Un `emit` sin `dispatch` no le llega a nadie.
+2. **El bus guarda referencias débiles.** Un `lambda` que no esté guardado en
+   ningún sitio se recolecta y la suscripción se cae sola. Por eso la escena
+   se suscribe con un **método enlazado**, que el propio objeto mantiene vivo.
+
+El aviso se emite **una sola vez**, con una bandera. Un evento de «ya
+ocurrió» que se re-emite cada fotograma es el defecto que el profesor apuntó
+en AUD-602 con el cierre de nivel: sesenta avisos por segundo mientras el
+jugador siga ahí parado.
+
+---
+
+### 4.6 Unidad VII — Histograma, convolución y detección de bordes
+
+Dos módulos, y los dos comparten un problema y una solución.
+
+#### El problema: ninguna operación cabe en un fotograma
+
+Medido en esta máquina. Un fotograma a 60 fps son **16,7 ms**:
+
+| Operación sobre 800×600 | Coste |
+|---|---:|
+| `compute_histogram` | **59,3 ms** |
+| `apply_kernel` (3×3) | **32,9 ms** |
+| `gaussian_blur(σ=2)` | **34,5 ms** |
+| `sobel_edge` | **18,4 ms** |
+| `adjust_brightness` | **14,5 ms** |
+
+**La más barata cuesta más que un fotograma entero.** La solución es la misma
+que ya usa `sunset_light.py` en la Unidad V: **medir sobre una copia reducida
+y aplicar barato al cuadro grande**.
+
+| Operación sobre 200×150 | Coste |
+|---|---:|
+| reducir 800×600 → 200×150 | 0,04 ms |
+| `compute_histogram` | 1,4 ms |
+| `sobel_edge` | 0,47 ms |
+| `gaussian_blur(σ=1,2)` | 1,40 ms |
+| ampliar de vuelta | 0,80 ms |
+
+Reducir es legítimo aquí, y por dos razones distintas. Para el **histograma**,
+porque la media de luminancia es un promedio y promediar una muestra
+representativa da lo mismo *(hay una prueba que lo comprueba con un
+degradado)*. Para el **gradiente**, porque derivar sobre píxeles vecinos
+amplifica el ruido, y bajar de resolución actúa como filtro paso bajo previo
+— que es exactamente lo que hace Canny antes de derivar.
+
+---
+
+#### 4.6.1 El histograma dirige la exposición — `processing/adaptacion_visual.py`
+
+La rúbrica pide que `compute_histogram()` **dirija la lógica**. Aquí el
+histograma no se dibuja: se mide, y de la medida sale una decisión.
+
+**La cadena:**
+
+1. Se reduce el fotograma y se le pide el histograma.
+2. De los 256 cajones de luminancia sale la media:
+
+   ```
+   media = Σ (i · cuenta[i]) / total_pixeles        i = 0..255
+   ```
+
+3. Esa media se compara con el objetivo y da el factor necesario:
+
+   ```
+   objetivo = 118 / max(media, 1)      acotado a [0,82 · 1,45]
+   ```
+
+4. El factor **no salta**: recorre un 18 % del camino en cada medición, así
+   que adaptarse cuesta ~0,8 s. Un ojo no se adapta de golpe, y una
+   exposición que cambia de un fotograma al siguiente se ve como un parpadeo.
+
+Medido sobre el túnel oscurecido:
+
+| | Luminancia media |
+|---|---:|
+| antes | 33,4 |
+| después *(factor 1,45)* | 49,3 |
+
+![antes/después de la exposición](capturas/unidad_vii_exposicion_comparativa.png)
+
+**Un fallo real que se corrigió aquí.** La primera versión aclaraba con un
+`BLEND_ADD` de `(f-1)·255`, o sea **sumando una constante**. Medido: la media
+pasaba de 33 a **148** cuando el objetivo eran 118. Sumar 115 a un píxel de
+33 no es multiplicarlo por 1,45 — es lavar las sombras. La versión buena
+descompone el producto:
+
+```
+s · f  =  s + s·(f - 1)
+```
+
+Una copia atenuada con `BLEND_MULT` y sumada con `BLEND_ADD`. Dos mezclas,
+~0,14 ms, y el resultado **es** la multiplicación. Hay una prueba
+parametrizada que lo comprueba contra `adjust_brightness` en 16 combinaciones
+de gris y factor.
+
+---
+
+#### 4.6.2 Convolución y bordes — `processing/enfoque_bordes.py`
+
+Mantener **`E`** revela los contornos. No es adorno: la rana y el ave son
+verdes sobre una pared de vegetación verde, y con el tinte ámbar encima
+cuesta distinguirlas. Entrecerrar los ojos —que es lo que hace un gradiente—
+saca las siluetas.
+
+**La convolución.** Una ventana de 3×3 recorre la imagen y en cada píxel
+multiplica los nueve vecinos por los nueve pesos y los suma:
+
+```
+salida(x,y) = Σ_{i,j}  kernel[i,j] · entrada(x+i, y+j)
+```
+
+**Las matrices**, tomadas de `get_standard_kernel()` — no se escriben a mano:
+
+```
+sobel_x = [[-1,  0,  1],        sobel_y = [[-1, -2, -1],
+           [-2,  0,  2],                   [ 0,  0,  0],
+           [-1,  0,  1]]                   [ 1,  2,  1]]
+```
+
+Cada uno **suma cero**: sobre una zona de color plano la respuesta es nula.
+Ésa es la propiedad que lo hace un detector de *bordes* y no un filtro de
+brillo. El 2 del centro pesa más que los 1 de las esquinas porque el vecino
+de la misma fila es más informativo que el diagonal; ese suavizado
+transversal es lo que separa a Sobel de un gradiente crudo. Y `sobel_y` es
+`sobel_x` transpuesto.
+
+La magnitud combina las dos: `|G| = √(Gx² + Gy²)`.
+
+![antes/después de los bordes](capturas/unidad_vii_bordes_comparativa.png)
+
+**Dos cosas de `apply_kernel` que se descubrieron escribiendo esto:**
+
+1. **Recorta a [0, 255].** Su última línea es `result.clip(0, 255)`, así que
+   **la mitad negativa del gradiente se pierde**. Medido sobre un borde de
+   oscuro a claro: la convolución cruda da `min = -940, max = 0`, y tras el
+   recorte queda **todo a cero**. Un operador con signo no sobrevive entero a
+   una función que devuelve una imagen sin signo — por eso el framework trae
+   `sobel_edge` aparte.
+
+   La vuelta es aplicar el kernel **y su negado**: donde uno recorta a cero,
+   el otro conserva el valor.
+
+   ```
+   |G| = apply_kernel(k) + apply_kernel(-k)
+   ```
+
+   No es una aproximación: hay una prueba que comprueba que el resultado
+   coincide **píxel a píxel** con `FilterTools.sobel_edge`.
+
+2. **Los ejes están transpuestos.** `pygame.surfarray.array3d` entrega la
+   imagen como `[x][y]`, pero un kernel se escribe `[fila][columna]` = `[y][x]`.
+   Por eso aquí `sobel_x` responde a los bordes *horizontales*. Da igual para
+   el resultado —la magnitud combina los dos— pero explica media hora de
+   desconcierto.
+
+**El desenfoque** (`gaussian_blur`, σ = 1,2) se aplica **al mapa de bordes**,
+no a la escena. Un Sobel crudo da líneas de un píxel que, al ampliarse,
+parpadean y se leen como ruido; difuminarlas las convierte en un halo.
+
+**La mezcla** es `BLEND_ADD` porque un borde es **luz que se suma**: en las
+zonas planas el mapa vale cero y no cambia nada. Con una mezcla normal se
+taparía el juego con una imagen en blanco y negro.
+
+**Coste:** 4,46 ms con la tecla pulsada (27 % del fotograma), **0,0002 ms con
+la tecla suelta** — ni mide ni dibuja.
+
+---
+
 ## 5. Tilesets
 
 Seis tilesets propios, todos de 128 × 128 px = 8 × 8 tiles de 16 px, con paleta
@@ -505,22 +746,21 @@ rehacer casi un tercio del nivel.
 
 ## 8. Lógica propia
 
-### 8.1 Postura de defensa — `combat/guard_system.py`
+> **Se retiró la postura de defensa (2026-08-26).** Este escenario llevaba un
+> `combat/guard_system.py` que envolvía `apply_damage` para que `CTRL`/`Q`
+> anularan el daño. Se quitó por dos razones. La primera es de diseño: 1-1 es
+> el primer nivel del juego y funciona como tutorial de lo básico, así que
+> añadirle un control que el resto del juego no tiene enseña algo que después
+> no sirve. La segunda es de arquitectura: el motor ya trae un catálogo de
+> mecánicas que se **declaran** en el TMX —`Spring`, `Vine`, `Zipline`,
+> `MovingPlatform`, `Guard`, `WaterZone` y diez más—, y `stage_mecanicas`
+> demuestra once de ellas con 77 líneas de Python. Programar una mecánica a
+> mano teniendo ese catálogo es trabajar de más.
+>
+> (Ojo con el nombre: el componente `Guard` del motor **no** es esto — es un
+> vigilante con cono de visión, no una postura defensiva del jugador.)
 
-Con `CTRL` o `Q` el jugador levanta la guardia y **anula** el daño entrante.
-Sin ventana de tiempo: mientras la tecla esté pulsada, protege.
-
-Dos reglas de diseño: solo funciona **en el suelo**, y **no se puede caminar** con
-la guardia activa. El movimiento se congela guardando la X antes del `update()`
-del motor y restaurándola después, porque la máquina de estados fija la velocidad
-e integra la posición dentro de `player.update()`, sin ningún punto intermedio
-accesible desde fuera.
-
-Se implementa envolviendo `apply_damage` del jugador, no modificándolo:
-`REDUCCION = 1.0` deja pasar `amount * (1 - REDUCCION) = 0`. Si más adelante se
-quisiera una guardia parcial, basta con bajar esa constante.
-
-### 8.2 Overlay de depuración — `overlays/debug_overlay.py`
+### 8.1 Overlay de depuración — `overlays/debug_overlay.py`
 
 La tecla `F1`. Dibuja lo que las Unidades II y III hacen, en pantalla y en vivo:
 la polilínea de cada Bézier, sus cuatro puntos de control etiquetados, la posición
@@ -530,7 +770,7 @@ distancia medida, y el vector velocidad de cada proyectil.
 La conversión mundo → pantalla es una resta:
 $p_{pantalla} = p_{mundo} - \text{offset}_{camara}$.
 
-### 8.3 Dos correcciones a fallos del motor, hechas desde esta carpeta
+### 8.2 Dos correcciones a fallos del motor, hechas desde esta carpeta
 
 El motor y el framework son del profesor y no se tocan. Estos dos fallos se
 compensan desde la escena propia, después de que corra el `update()` heredado.
@@ -566,9 +806,9 @@ actual y cae al spawn del TMX si no es válido.
 python -m pytest src/stages/stage1_1/tests -q
 ```
 
-**128 pruebas**, escritas con TDD: primero la prueba fallando, después el código.
-Cubren la matemática de las cuatro unidades, la guardia, el overlay, los tips de
-entrada y las dos correcciones al motor.
+**172 pruebas**, escritas con TDD: primero la prueba fallando, después el código.
+Cubren la matemática de las cuatro unidades, el overlay, los tips de entrada y
+las dos correcciones al motor.
 
 La del hitstop merece una nota. El escenario llevaba un parche propio porque el
 motor se quedaba en cámara lenta para siempre tras el primer golpe conectado. El

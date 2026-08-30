@@ -84,7 +84,9 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "HURT": ("player_hurt.png", 4),
     "DYING": ("player_die.png", 8),
     "DASHING": ("player_walk.png", 4),
-    "PARRY": ("player_hurt.png", 4),
+    # AUD-XXX — parry ya no reutiliza hurt: hoja propia con bloqueo vertical y chispa,
+    # 2 piernas y espada separada (antes hurt era copia de idle con 3 piernas).
+    "PARRY": ("player_parry.png", 4),
     "CHARGE_ATTACK": ("player_short_attack.png", 4),
     "DASH_ATTACK": ("player_short_attack.png", 4),
     "WALL_SLIDE": ("player_jump.png", 2),
@@ -102,17 +104,22 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     # `DASH_ATTACK`/`AERIAL_ATTACK`: sin arte propio, una silueta
     # coherente vale más que una inventada.
     "SWIM_ATTACK": ("player_short_attack.png", 6),
-    # F5.14 — lianas y tirolesas. Reutilizan la hoja de salto: el jugador va
-    # colgado, y hasta que haya arte propio es mejor un sprite coherente que
-    # uno inventado.
-    "CLIMBING": ("player_jump.png", 2),
-    "ZIPLINE": ("player_jump.png", 2),
+    # F5.14 — lianas y tirolesas. Reutilizaban `player_jump.png` (pose de salto
+    # genérica) — ahora hojas propias colgado/tirolesa con ancla abajo-centro
+    # idéntica al resto (2 piernas, espada separada, outline 1px, Bayer).
+    "CLIMBING": ("player_climb.png", 4),
+    "ZIPLINE": ("player_zipline.png", 2),
     "ULTIMATE": ("player_long_attack.png", 10),
     "AERIAL_ATTACK": ("player_short_attack.png", 6),
     "AERIAL_SLAM": ("player_short_attack.png", 6),
+    # AUD-619 — el pisotón reutiliza la hoja del ataque corto: sin arte
+    # propio, una silueta coherente vale más que una inventada (AUD-558).
+    "GROUND_POUND": ("player_short_attack.png", 6),
     "AIR_CHASE": ("player_jump.png", 3),
     "CHARGE_RELEASE": ("player_short_attack.png", 4),
     "LEDGE_GRAB": ("player_jump.png", 2),
+    "STAGGER": ("player_hurt.png", 4),
+    "POSSESSED": ("player_idle.png", 4),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -150,8 +157,13 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "ULTIMATE": 16.0,
     "AERIAL_ATTACK": 18.0,
     "AERIAL_SLAM": 16.0,
+    # AUD-619 — la caída del pisotón es corta; a 14 fps recorre la hoja
+    # antes de tocar suelo, que es justo lo que se ve.
+    "GROUND_POUND": 14.0,
     "AIR_CHASE": 12.0,
     "CHARGE_RELEASE": 14.0,
+    "STAGGER": 10.0,
+    "POSSESSED": 8.0,
 }
 
 
@@ -182,8 +194,11 @@ class PlayerState(str, Enum):
     ULTIMATE = "ULTIMATE"
     AERIAL_ATTACK = "AERIAL_ATTACK"
     AERIAL_SLAM = "AERIAL_SLAM"
+    GROUND_POUND = "GROUND_POUND"
     AIR_CHASE = "AIR_CHASE"
     CHARGE_RELEASE = "CHARGE_RELEASE"
+    STAGGER = "STAGGER"
+    POSSESSED = "POSSESSED"
 
 
 class Player(BaseEntity):
@@ -318,6 +333,14 @@ class Player(BaseEntity):
         self._pendientes: list[Any] = []
         #: ¿Pisaba suelo antes de resolver este fotograma? Ver `_resolve_collision`.
         self._venia_del_suelo: bool = False
+        #: AUD-636 — Squash & Stretch. Factores de escala del sprite, con
+        #: identidad (1.0) como reposo. `_squash_y < 1` aplasta (aterrizaje),
+        #: `> 1` estira (salto); `_squash_x` compensa para conservar el área.
+        #: El decay vive en `_tick_timers`; el dibujado los aplica anclando
+        #: abajo-centro — si el sprite encoge desde su centro flota sobre el
+        #: suelo y deja de leerse como masa.
+        self._squash_x: float = 1.0
+        self._squash_y: float = 1.0
 
         # --- State pattern ---
         self._state_instance: PlayerStateBase
@@ -325,6 +348,8 @@ class Player(BaseEntity):
         self._init_state()
 
         # --- Combo state (public) ---
+        # C8: combo de suelo (ventana tiempo, daño escalado) ≠ combo_air_hits (aéreo,
+        # 2 hits → slam, ver player_state.py:37). Este es el que ve HUD y logros.
         self.combo_count: int = 0
         self.combo_timer: float = 0.0
         self.last_attack_type: str = ""
@@ -734,6 +759,11 @@ class Player(BaseEntity):
         Apply damage to the player. No-op if invincibility is active.
         Emits PLAYER_DAMAGED and potentially PLAYER_DIED.
         """
+        # Assist mode: invulnerabilidad total
+        from src.engine.core.user_settings import get
+        if get().assist_invulnerable:
+            return
+        
         if self._invincibility_timer > 0:
             return
         if self._state_instance.state_enum == PlayerState.DYING:
@@ -764,6 +794,11 @@ class Player(BaseEntity):
         )
         self._invincibility_timer = cfg.invincibility_duration + extra_titan
         self._flash_timer = 0.0
+        # AUD-COMBO: recibir daño rompe el combo (y deja de contar)
+        self.combo_count = 0
+        self.combo_timer = 0.0
+        self.combo_active = False
+        self.last_attack_type = ""
 
         # Knockback away from source
         dx = self.position.x - source_position[0]
@@ -933,6 +968,7 @@ class Player(BaseEntity):
         if (
             input_manager is not None
             and self.is_grounded
+            and self.perfil.modo == PLATAFORMAS
             and self._state_instance.state_enum not in (
                 PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
             )
@@ -976,10 +1012,27 @@ class Player(BaseEntity):
                 frame = flipped_frames[frame_idx]
 
             # Center the 32-wide sprite on the 20-wide collision rect
+            # AUD-XXX — ancla abajo-centro idéntica para TODAS las hojas (antes CROUCHING
+            # usaba 0 y quedaba 12px por debajo del suelo; ahora rect.height - SPRITE_H
+            # = -12 para agachado y 0 para de pie, pies siempre en rect.bottom).
             offset_x = (self.rect.width - SPRITE_W) // 2
-            offset_y = 0 if self._state_instance.state_enum == PlayerState.CROUCHING else self.rect.height - SPRITE_H
+            offset_y = self.rect.height - SPRITE_H
 
             destino = (screen_x + offset_x, screen_y + offset_y)
+
+            # AUD-636 — Squash & Stretch. Sólo se paga el `transform.scale`
+            # cuando hay deformación real: el 99 % de los fotogramas el
+            # jugador está en 1.0/1.0 y este bloque es dos comparaciones.
+            if (self._squash_x != 1.0 or self._squash_y != 1.0):
+                ancho = max(1, int(frame.get_width() * self._squash_x))
+                alto = max(1, int(frame.get_height() * self._squash_y))
+                frame = pygame.transform.scale(frame, (ancho, alto))
+                # Anclado ABAJO-centro: si encoge desde su centro, los pies
+                # flotan sobre el suelo y la masa deja de leerse.
+                dx = (SPRITE_W - ancho) // 2
+                dy = SPRITE_H - alto
+                destino = (screen_x + offset_x + dx, screen_y + offset_y + dy)
+
             dibujar_con_contorno(surface, frame, destino)
             return
 
@@ -998,8 +1051,54 @@ class Player(BaseEntity):
     # Timer ticking
     # ──────────────────────────────────────────────
 
+    #: AUD-636 — cuánto tarda el squash en volver a identidad, en 1/s.
+    _SQUASH_RETORNO: ClassVar[float] = 10.0
+    #: Aplastamiento máximo. A la velocidad de caída máxima (500 px/s) el
+    #: sprite llega a 0,72 de alto — se lee como impacto sin romper la silueta.
+    _SQUASH_MAX: ClassVar[float] = 0.28
+
+    def aplicar_squash_por_aterrizaje(self, velocidad_caida: float) -> None:
+        """Aplasta el sprite al aterrizar, proporcional a la caída (AUD-636).
+
+        La proporcionalidad es la mitad del efecto: caer dos baldosas y caer
+        a un pozo no pueden deformar igual, o el grado deja de informar.
+        `fuerza` viaja también en `VFX_LAND_DUST` para que las partículas
+        hereden la misma lectura.
+        """
+        fuerza = max(0.0, min(1.0, abs(velocidad_caida) / settings.PLAYER_MAX_FALL_SPEED))
+        # Umbral: una pisada de escalón no aplasta nada.
+        if fuerza < 0.12:
+            return
+        aplaste = self._SQUASH_MAX * fuerza
+        self._squash_y = 1.0 - aplaste
+        # Conserva el área visual: lo que se pierde en alto se gana en ancho.
+        self._squash_x = 1.0 + aplaste * 0.7
+        self._event_bus.emit(
+            Events.VFX_LAND_DUST,
+            pos=(self.rect.centerx, self.rect.bottom),
+            fuerza=fuerza,
+        )
+
+    def aplicar_stretch_por_salto(self) -> None:
+        """Estira el sprite al despegar (AUD-636). Fijo: todo salto pesa lo
+        mismo porque el impulso es constante (`perfil.salto_impulso`)."""
+        self._squash_y = 1.14
+        self._squash_x = 0.9
+        self._event_bus.emit(
+            Events.VFX_JUMP_DUST,
+            pos=(self.rect.centerx, self.rect.bottom),
+        )
+
     def _tick_timers(self, dt: float) -> None:
         """Tick all cooldown and duration timers."""
+        # AUD-636 — retorno del squash a identidad. Exponencial y acotado:
+        # multiplicar por un factor < 1 converge sin sobrepasar.
+        if self._squash_x != 1.0 or self._squash_y != 1.0:
+            decaimiento = min(1.0, dt * self._SQUASH_RETORNO)
+            self._squash_x += (1.0 - self._squash_x) * decaimiento
+            self._squash_y += (1.0 - self._squash_y) * decaimiento
+            if abs(self._squash_x - 1.0) < 0.005 and abs(self._squash_y - 1.0) < 0.005:
+                self._squash_x = self._squash_y = 1.0
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
             period = 0.1
@@ -1016,11 +1115,17 @@ class Player(BaseEntity):
             self._cooldown_timer -= dt
         if self._dash_cooldown > 0:
             self._dash_cooldown -= dt
+        # AUD-XXX — cadena wall-jump 3× con cooldown 0.15
+        if self._wall_jump_cooldown > 0:
+            self._wall_jump_cooldown -= dt
+            if self._wall_jump_cooldown < 0:
+                self._wall_jump_cooldown = 0.0
         if self.combo_timer > 0:
             self.combo_timer -= dt
             if self.combo_timer <= 0:
                 self.combo_active = False
                 self.combo_count = 0
+                self.last_attack_type = ""
         self._animation_timer += dt
 
     def _advance_animation(self, dt: float) -> None:
@@ -1032,7 +1137,12 @@ class Player(BaseEntity):
         )[1]
         if self._animation_timer >= frame_duration:
             self._animation_timer -= frame_duration
-            self._animation_frame = (self._animation_frame + 1) % total_frames
+            # 5. Muerte no rebobina — ya corregido en enemy_base.py:439; aplicar mismo a Player
+            if self._state_instance.state_enum == PlayerState.DYING:
+                if self._animation_frame < total_frames - 1:
+                    self._animation_frame += 1
+            else:
+                self._animation_frame = (self._animation_frame + 1) % total_frames
 
     # ──────────────────────────────────────────────
     # State machine (delegated to player_states.py)
@@ -1239,6 +1349,10 @@ class Player(BaseEntity):
         del ledge grab viven ahora en `resolver_eje_x` y `resolver_eje_y`,
         que son el código que las cumple.
         """
+        # AUD-636 — la velocidad de ANTES de resolver: el resolutor anula
+        # `velocity.y` al aterrizar, y el aplastamiento necesita saber con
+        # cuánta fuerza se llegó al suelo, no que ahora vale cero.
+        vy_antes = self.velocity.y
         estado = self._estado_de_movimiento_para_resolver()
         eje_x = resolver_eje_x(estado, dt, collision_rects)
         if self.perfil.modo == PLATAFORMAS:
@@ -1261,8 +1375,15 @@ class Player(BaseEntity):
         self._venia_del_suelo = estado.venia_del_suelo
         if eje_y.aterrizo_en == "suelo":
             self._event_bus.emit(Events.SFX_PLAYER_LAND)
+            # AUD-636 — sólo si venía CAYENDO: aterrizar tras un salto cortado
+            # (vy ≈ 0) no aplasta ni suelta polvo; la deformación es la señal
+            # de impacto, y sin impacto no hay señal.
+            if vy_antes > 0.0:
+                self.aplicar_squash_por_aterrizaje(vy_antes)
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            # AUD-XXX — cadena wall-jump: al tocar suelo se reinicia
+            self._wall_jump_count = 3
 
     def _resolver_pendientes(self, dt: float) -> None:
         """AUD-334 — delega en `resolver_cuestas`; los pies sobre la cuesta.
@@ -1299,6 +1420,7 @@ class Player(BaseEntity):
         if contacto.aterrizo:
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            self._wall_jump_count = 3
 
     def _resolve_one_way_collision(self, dt: float, one_way_rects: list[pygame.Rect]) -> None:
         """AUD-334 — delega en `resolver_repisas`.
@@ -1330,6 +1452,7 @@ class Player(BaseEntity):
         if contacto.aterrizo:
             self._air_dash_count = 0
             self._air_jumps_used = 0
+            self._wall_jump_count = 3
         if contacto.aterrizo_desde_el_aire and self._event_bus is not None:
             self._event_bus.emit(Events.SFX_ENVIRONMENT_ONE_WAY_PLATFORM)
 

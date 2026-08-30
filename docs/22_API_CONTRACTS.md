@@ -1547,7 +1547,7 @@ class PlayerState(str, Enum):
     AIR_CHASE = "AIR_CHASE"
     CHARGE_RELEASE = "CHARGE_RELEASE"
 
-# AUD-455: esta lista tenía 19 de los 26 estados reales — faltaban CLIMBING,
+# AUD-455: esta lista tenía 19 de los 28 estados reales — faltaban CLIMBING,
 # ZIPLINE, ULTIMATE, AERIAL_ATTACK, AERIAL_SLAM, AIR_CHASE, CHARGE_RELEASE.
 # Verificado contra `src/framework/entities/player.py::PlayerState`.
 

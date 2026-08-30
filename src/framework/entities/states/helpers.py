@@ -31,21 +31,33 @@ def _handle_charge_input(player: Player, inp: _InputSnapshot) -> bool:
 
 
 def _handle_wall_jump(player: Player, inp: _InputSnapshot) -> bool:
-    if player._can_wall_jump and inp.jump_pressed:
-        wall_dir = player._wall_side
-        player._air_jumps_used = 0
-        player.velocity.y = player.perfil.salto_impulso * 0.85
-        player.is_grounded = False
-        player._coyote_counter = player.perfil.coyote_frames + 1
-        player._jump_cut_applied = False
-        player._wall_side = 0
-        player._can_wall_jump = False
-        player.facing_direction = -wall_dir
-        from src.framework.entities.states import JumpingState
-        player._change_state_instance(JumpingState())
-        player._event_bus.emit(Events.SFX_PLAYER_JUMP)
-        return True
-    return False
+    # AUD-XXX — cadena global 3× con cooldown 0.15s (P0): antes solo 1 sin cooldown y sin impulso x
+    if not player._can_wall_jump or not inp.jump_pressed:
+        return False
+    if getattr(player, "_wall_jump_cooldown", 0.0) > 0:
+        return False
+    if getattr(player, "_wall_jump_count", 3) <= 0:
+        return False
+    wall_dir = player._wall_side
+    player._air_jumps_used = 0
+    # -320y/90x (AUD-663 4_1b) — el 0.85 de salto_impulso es ~-323, idéntico a -320
+    player.velocity.y = -320.0
+    player.velocity.x = float(-wall_dir) * 90.0
+    player.is_grounded = False
+    player._coyote_counter = player.perfil.coyote_frames + 1
+    player._jump_cut_applied = False
+    player._wall_side = 0
+    player._can_wall_jump = False
+    player.facing_direction = -wall_dir
+    # cadena y cooldown
+    if hasattr(player, "_wall_jump_count"):
+        player._wall_jump_count = max(0, int(player._wall_jump_count) - 1)
+    if hasattr(player, "_wall_jump_cooldown"):
+        player._wall_jump_cooldown = 0.15
+    from src.framework.entities.states import JumpingState
+    player._change_state_instance(JumpingState())
+    player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+    return True
 
 
 def _handle_grounded_attack_input(
@@ -114,6 +126,12 @@ def _can_jump(player: Player) -> bool:
     # es progresión sino un juego roto.
     if player.is_grounded or player._coyote_counter < player.perfil.coyote_frames:
         return True
+    
+    # Assist mode: saltos infinitos sin requerir habilidad
+    from src.engine.core.user_settings import get
+    if get().assist_infinite_jumps:
+        return True
+    
     return (
         player._air_jumps_used < player.perfil.saltos_aereos
         and _tiene_habilidad("skill_double_jump", player)
@@ -124,6 +142,9 @@ def _do_jump(player: Player) -> None:
     was_grounded = player.is_grounded
     was_truly_airborne = not was_grounded and player._coyote_counter >= player.perfil.coyote_frames
     player.velocity.y = player.perfil.salto_impulso
+    # AUD-636 — estirar al despegar. Va después de fijar la velocidad para
+    # que el fotograma del impulso ya se vea alargado.
+    player.aplicar_stretch_por_salto()
     player.is_grounded = False
     player._coyote_counter = player.perfil.coyote_frames + 1
     player._jump_cut_applied = False
@@ -140,44 +161,42 @@ def _reset_air_jumps(player: Player) -> None:
 def _start_attack(player: Player, attack_type: object) -> None:
     atk_name = "SHORT_ATTACK" if attack_type == player.SHORT_ATTACK else "LONG_ATTACK"
 
+    # AUD-COMBO: el conteo no debe quedar condicionado a `changed`.
+    # Antes `if changed:` hacía que un ataque denegado (cooldown, mismo estado)
+    # dejara el combo congelado y el siguiente golpe retomara con el contador
+    # viejo: el conteo "seguía" aunque el ataque no salió. Ahora avanza siempre
+    # que se pulsa, y si el estado no cambia el siguiente golpe igual resetea
+    # por `last_attack_type`/ventana.
+    if (player.combo_active
+            and player.combo_timer > 0
+            and player.last_attack_type == atk_name
+            and player.combo_count < settings.COMBO_MAX):
+        player.combo_count += 1
+    else:
+        player.combo_count = 1
+    from src.engine.core.difficulty import get_config
+
+    player.combo_timer = float(
+        getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+    player.last_attack_type = atk_name
+    player.combo_active = True
+
     from src.framework.entities.states import (
         LongAttackState,
         ShortAttackState,
     )
-    changed = False
     if attack_type == player.SHORT_ATTACK:
-        changed = player._change_state_instance(ShortAttackState())
+        player._change_state_instance(ShortAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
     else:
-        changed = player._change_state_instance(LongAttackState())
+        player._change_state_instance(LongAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_LONG_ATTACK)
 
-    if changed:
-        if (player.combo_active
-                and player.combo_timer > 0
-                and player.last_attack_type == atk_name
-                and player.combo_count < settings.COMBO_MAX):
-            player.combo_count += 1
-        else:
-            player.combo_count = 1
-        # AUD-154 — la ventana de combo sale de la dificultad, no de `settings`.
-        #
-        # Los tres presets declaran `combo_window` (0,60 en fácil; 0,35 en
-        # difícil) y nadie los leía: todo el mundo encadenaba con los 0,50 de
-        # `settings.COMBO_WINDOW`. Era el segundo de los ocho mandos de la
-        # dificultad sin conectar.
-        from src.engine.core.difficulty import get_config
-
-        player.combo_timer = float(
-            getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
-        player.last_attack_type = atk_name
-        player.combo_active = True
-
-        from src.framework.entities.states import CrouchingState
-        player._crouching_at_attack_start = isinstance(
-            player._state_instance,
-            CrouchingState,
-        ) if hasattr(player, "_state_instance") else False
+    from src.framework.entities.states import CrouchingState
+    player._crouching_at_attack_start = isinstance(
+        player._state_instance,
+        CrouchingState,
+    ) if hasattr(player, "_state_instance") else False
 
 
 def _can_dash(player: Player, inp: _InputSnapshot) -> bool:
@@ -221,6 +240,7 @@ def _reset_combo(player: Player) -> None:
     player.combo_count = 0
     player.combo_timer = 0.0
     player.combo_active = False
+    player.last_attack_type = ""
 
 
 def _build_attack_hitbox(player: Player, frame: int) -> pygame.Rect:

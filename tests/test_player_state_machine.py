@@ -14,6 +14,7 @@ from src.framework.entities.states import (
     DyingState,
     FallingState,
     GrabState,
+    GroundPoundState,
     HurtState,
     IdleState,
     JumpingState,
@@ -112,7 +113,10 @@ _ENUM_MAP: list[tuple[type[PlayerStateBase], PlayerState]] = [
     (ChargeReleaseState, PlayerState.CHARGE_RELEASE),
     (AerialAttackState, PlayerState.AERIAL_ATTACK),
     (AerialSlamState, PlayerState.AERIAL_SLAM),
+    # AUD-619 — el pisotón aéreo entra al contrato del enum como los demás.
+    (GroundPoundState, PlayerState.GROUND_POUND),
     (AirChaseState, PlayerState.AIR_CHASE),
+    (ChargeReleaseState, PlayerState.CHARGE_RELEASE),
 ]
 
 

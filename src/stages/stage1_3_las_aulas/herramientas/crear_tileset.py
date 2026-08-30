@@ -9,29 +9,38 @@ from PIL import Image
 
 TILE, COLS, FILAS = 16, 8, 8
 
+# AUD-Yariel-01: reskin a la paleta "aula moderna" que pidio el profesor para
+# la Practica II (blanco/hueso + gris concreto/carbon + azul electrico como
+# acento tecnologico). Se cambian solo los VALORES de color de las letras que
+# ya existian -no las formas de los tiles-, asi que ningun art() de mas abajo
+# se toca: pintan lo mismo, con otro color. "a"/"A" (antes amarillo del marco
+# de la pizarra) y "r"/"R" (antes casilleros rojos) pasan a azul electrico:
+# es el "toque tecnologico" que pidio la paleta, sin redibujar nada.
 PALETA = {
     ".": (0, 0, 0, 0),          # transparente
-    "b": (175, 155, 115, 255),  # beige claro (piso)
-    "B": (160, 140, 100, 255),  # beige (pared)
-    "s": (140, 122, 88, 255),   # beige sombra
-    "m": (140, 105, 70, 255),   # madera media
-    "M": (108, 82, 52, 255),    # madera oscura
-    "d": (78, 58, 36, 255),     # madera muy oscura / contorno
-    "z": (45, 65, 110, 255),    # azul pizarra
-    "Z": (70, 95, 150, 255),    # azul claro (vidrio)
-    "t": (230, 225, 210, 255),  # tiza / blanco
-    "r": (161, 71, 62, 255),    # rojo casillero
-    "R": (120, 52, 46, 255),    # rojo oscuro
-    "g": (120, 120, 130, 255),  # gris metal
-    "k": (60, 45, 30, 255),     # negro suave
-    # Colores tomados de las fotos del aula real
-    "w": (238, 238, 232, 255),  # blanco de la pizarra
-    "W": (208, 208, 200, 255),  # sombra del blanco
-    "a": (224, 186, 62, 255),   # amarillo de la pared de acento
-    "A": (188, 152, 44, 255),   # amarillo en sombra
-    "n": (38, 38, 42, 255),     # negro de las sillas
+    "b": (198, 201, 203, 255),  # piso: concreto claro
+    "B": (244, 244, 244, 255),  # pared: gris hueso (#F4F4F4)
+    "s": (168, 172, 174, 255),  # sombra sobre piso/pared
+    "m": (140, 105, 70, 255),   # madera media (estante — se deja: es la señal
+                                 # visual de "aqui se pisa", no tocar el contraste)
+    "M": (126, 136, 140, 255),  # gris concreto (#7E888C): marcos, patas, puertas
+    "d": (58, 58, 58, 255),     # gris carbon (#3A3A3A): contorno / estructura
+    "z": (0, 60, 120, 255),     # azul electrico oscuro
+    "Z": (120, 175, 230, 255),  # azul claro (vidrio de ventanal grande)
+    "t": (248, 248, 246, 255),  # tiza / blanco
+    "r": (0, 85, 165, 255),     # casillero: azul electrico (#0055A5)
+    "R": (0, 60, 120, 255),     # casillero, sombra
+    "g": (126, 136, 140, 255),  # gris concreto (#7E888C): metal / mobiliario
+    "k": (40, 40, 44, 255),     # negro suave
+    "w": (255, 255, 255, 255),  # blanco puro (pizarra acrilica)
+    "W": (222, 222, 220, 255),  # sombra del blanco
+    "a": (0, 85, 165, 255),     # acento: azul electrico (#0055A5) — antes amarillo
+    "A": (0, 60, 120, 255),     # acento en sombra
+    "n": (35, 35, 38, 255),     # negro de las sillas
     "c": (196, 120, 60, 255),   # marcador naranja
     "e": (70, 130, 90, 255),    # marcador verde
+    "U": (200, 225, 255, 255),  # luz LED encendida (glow azul-blanco)
+    "u": (30, 70, 130, 255),    # luz LED apagada/tenue
 }
 
 VACIO = ["." * 16] * 16
@@ -459,20 +468,70 @@ RELOJ = art(
     "................",
 )
 
+# AUD-Yariel-01 (seguimiento): el afiche usaba "z" y "r" para su foto y su
+# franja de acento -- las mismas letras que crear_tileset.py reutiliza para
+# los casilleros y el marco de la pizarra en la paleta "aula moderna". Al
+# recolorear esas letras a azul electrico, el afiche completo se volvio azul
+# de casualidad (parecia un objeto nuevo repitiendose por el mapa, no un
+# poster). Usa "g" y "c" -- ya definidas, ninguna compartida con el acento
+# de los casilleros -- para que un cambio de paleta ahi no vuelva a
+# arrastrar al afiche sin querer.
 AFICHE = art(
     "................",
     "..dddddddddddd..",
     "..dttttttttttd..",
-    "..dtzzzzzzzztd..",
-    "..dtzttttttztd..",
-    "..dtzttttttztd..",
-    "..dtzzzzzzzztd..",
+    "..dtggggggggtd..",
+    "..dtgttttttgtd..",
+    "..dtgttttttgtd..",
+    "..dtggggggggtd..",
     "..dttttttttttd..",
-    "..dtrrrrrrrrtd..",
+    "..dtcccccccctd..",
     "..dttttttttttd..",
     "..dtmmmmmmmmtd..",
     "..dtttttttttd...",
     "..dddddddddddd..",
+    "................",
+    "................",
+    "................",
+)
+
+# Panel LED de techo, "toque tecnologico" pedido en la paleta. Dos tiles con
+# la misma forma que solo cambian el color del foco (U brillante / u tenue):
+# generar_mapa.py declara una <animation> en el TMX que alterna entre los dos,
+# como la lampara parpadeante del cementerio (stage4_1) que sirvio de referencia.
+LUZ_LED_ON = art(
+    "................",
+    "..dddddddddddd..",
+    "..dggggggggggd..",
+    "..dUUUUUUUUUUd..",
+    "..dUUUUUUUUUUd..",
+    "..dddddddddddd..",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+)
+
+LUZ_LED_OFF = art(
+    "................",
+    "..dddddddddddd..",
+    "..dggggggggggd..",
+    "..duuuuuuuuuud..",
+    "..duuuuuuuuuud..",
+    "..dddddddddddd..",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
     "................",
     "................",
     "................",
@@ -523,6 +582,8 @@ TILES = [
     ("PIZARRA_INF_CEN", PIZARRA_INF_CEN),  # 22
     ("PIZARRA_INF_DER", PIZARRA_INF_DER),  # 23
     ("VENTANA_INF", VENTANA_INF),          # 24
+    ("LUZ_LED_ON", LUZ_LED_ON),             # 25
+    ("LUZ_LED_OFF", LUZ_LED_OFF),           # 26
 ]
 
 hoja = Image.new("RGBA", (COLS * TILE, FILAS * TILE), (0, 0, 0, 0))

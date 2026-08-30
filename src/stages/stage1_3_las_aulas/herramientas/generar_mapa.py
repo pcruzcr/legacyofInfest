@@ -26,6 +26,7 @@ ESTANTE, MESA_I, MESA_D, SILLA_D, SILLA_I = 6, 7, 8, 9, 10
 PIZ_I, PIZ_C, PIZ_D, VENTANA = 11, 12, 13, 14
 PUERTA_S, PUERTA_I, CASILLERO, PAPELERA, RELOJ, AFICHE = 15, 16, 17, 18, 19, 20
 PIZ_INF_I, PIZ_INF_C, PIZ_INF_D, VENTANA_INF = 21, 22, 23, 24
+LUZ_ON, LUZ_OFF = 25, 26
 
 
 def pizarra(dest, col, fila, cuerpos=5):
@@ -80,10 +81,14 @@ for _c, _w in HUECOS:
     _cols_hueco.update(range(_c, _c + _w))
 
 
-# ── ESCALERAS: cada escalon sube 2 filas (32 px) y avanza 3 col (48 px) ─
-# Con subida de 32 px el alcance con margen es 69*0.7 = 48 px exactos.
-def escalera(col_inicio, fila_inicio, escalones, sentido=1, ancho=4):
-    """Genera escalones que suben desde el piso hacia un entrepiso."""
+# ── ESCALERAS: tres patrones distintos, no el mismo copiado tres veces ──
+# Las tres suben las mismas 10 filas (160 px, del piso al entrepiso), pero
+# con una geometria distinta cada una para que las 3 pantallas no se sientan
+# identicas. Cada escalon se valida igual que antes (salto_valido, abajo),
+# asi que "distinto" nunca significa "sin comprobar".
+def escalera_clasica(col_inicio, fila_inicio, escalones=5, sentido=1, ancho=4):
+    """Patron original: escalones parejos de 32 px, avanzando 1 columna
+    de hueco entre uno y el siguiente. Se deja tal cual para el aula 1."""
     salida = []
     for i in range(escalones):
         col = col_inicio + sentido * i * (ancho + 1)
@@ -92,13 +97,61 @@ def escalera(col_inicio, fila_inicio, escalones, sentido=1, ancho=4):
     return salida
 
 
+def escalera_zigzag(col_inicio, fila_inicio):
+    """Aula 2: sube en zigzag -- adelante, adelante, ATRAS, adelante, adelante.
+
+    No es la misma forma que la clasica con otros numeros: aqui el tercer
+    escalon queda **detras** de donde ya se estuvo, a mas altura, asi que
+    hay que saltar hacia atras para seguir subiendo. Un salto hacia atras
+    siempre es seguro (avance = max(0, ...) en salto_valido: si el destino
+    queda detras del borde de despegue, la distancia horizontal exigida es
+    0 sin importar cuanto suba), asi que el truco no rompe la validacion,
+    solo aprovecha una regla que ya existia. Los ultimos dos escalones son
+    mas anchos para terminar de cerrar la distancia hasta el entrepiso.
+    """
+    c0, f0 = col_inicio + 2, fila_inicio - 2         # adelante
+    c1, f1 = c0 + 5, f0 - 2                          # adelante
+    c2, f2 = c1 - 7, f1 - 2                          # ATRAS y mas arriba
+    c3, f3 = c2 + 5, f2 - 2                          # adelante, plataforma ancha
+    c4, f4 = c3 + 9, f3 - 2                          # adelante, plataforma ancha -- llega al entrepiso
+    return [
+        (f"Plat_Esc{col_inicio}_0", c0, f0, 4),
+        (f"Plat_Esc{col_inicio}_1", c1, f1, 4),
+        (f"Plat_Esc{col_inicio}_2", c2, f2, 4),
+        (f"Plat_Esc{col_inicio}_3", c3, f3, 8),
+        (f"Plat_Esc{col_inicio}_4", c4, f4, 8),
+    ]
+
+
+def escalera_ritmo_quebrado(col_inicio, fila_inicio):
+    """Aula 3: ritmo irregular -- dos saltos cortos, UNO grande, uno corto.
+
+    La version anterior era un salto grande a una plataforma larga: se leia
+    como "dos pasos largos y ya", parecido a un escalon con otro numero. Esta
+    no tiene una cadencia unica que repetir: empieza como la clasica (32 px,
+    32 px), pero al tercer tramo pega el salto mas comprometido del nivel
+    (64 px de una vez, con solo 32.3 px de alcance de sobra) y termina con
+    un salto corto y normal. Ni todo parejo (A) ni todo en zigzag (B) ni un
+    solo salto grande: sube-sube-SALTA-sube.
+    """
+    c0, f0 = col_inicio + 2, fila_inicio - 2   # sube 32 px
+    c1, f1 = c0 + 6, f0 - 2                    # sube 32 px mas
+    c2, f2 = c1 + 6, f1 - 4                    # EL salto grande: 64 px de una vez
+    return [
+        (f"Plat_Esc{col_inicio}_0", c0, f0, 4),
+        (f"Plat_Esc{col_inicio}_1", c1, f1, 4),
+        (f"Plat_Esc{col_inicio}_2", c2, f2, 8),
+    ]
+
+
 PLATAFORMAS = []
-# Escalera A: sube desde el aula 1 hasta el entrepiso izquierdo
-PLATAFORMAS += escalera(20, FILA_PISO, 5)
-# Escalera B: sube en el aula 2
-PLATAFORMAS += escalera(96, FILA_PISO, 5)
-# Escalera C: sube en el aula 3
-PLATAFORMAS += escalera(140, FILA_PISO, 5)
+# Escalera A (aula 1): la clasica -- sirve de "tutorial" al ser la primera
+# que se encuentra el jugador. Las otras dos ya no se le parecen en nada.
+PLATAFORMAS += escalera_clasica(20, FILA_PISO)
+# Escalera B (aula 2): zigzag -- adelante, adelante, ATRAS, adelante, adelante.
+PLATAFORMAS += escalera_zigzag(96, FILA_PISO)
+# Escalera C (aula 3): ritmo irregular -- sube, sube, SALTA (grande), sube.
+PLATAFORMAS += escalera_ritmo_quebrado(140, FILA_PISO)
 
 # Entrepisos: quedan a la altura del ultimo escalon de cada escalera
 ENTREPISOS = [("Plat_Entrepiso1", 44, 26, 18),
@@ -106,9 +159,11 @@ ENTREPISOS = [("Plat_Entrepiso1", 44, 26, 18),
               ("Plat_Entrepiso3", 164, 26, 20)]
 PLATAFORMAS += ENTREPISOS
 
-# Plataformas sueltas sobre los huecos: dan una ruta alternativa por arriba
-for _c, _w in HUECOS:
-    PLATAFORMAS.append((f"Plat_Puente{_c}", _c, FILA_PISO - 4, _w + 1))
+# Decision de diseno de Yariel: NINGUN hueco lleva tablon por encima. La
+# primera version le ponia una plataforma-puente arriba de los 4 (ruta
+# segura, opcional); luego se le quito solo a 2. Ahora no hay ninguna: los
+# 4 huecos hay que saltarlos de verdad, sin atajo por arriba -- si no se
+# salta bien, se cae.
 
 
 # ── TERRENO SOLIDO ─────────────────────────────────────────────────────
@@ -148,8 +203,17 @@ for _c in range(4, ANCHO - 4, 18):
     BG_FAR.append(bloque(_c, 30, 2, 5, PARED))   # pilastras de la pared del fondo
 
 BG_MID = []
-# Pizarras de la planta baja: 2 filas de alto (30-31), justo sobre el piso
-for _c in (5, 76, 148):
+# Paneles LED de techo, justo debajo del Solid_Techo (filas 2-3). Todos se
+# pintan con el GID "encendido"; el parpadeo lo hace Tiled con la <animation>
+# que se declara mas abajo sobre ese mismo tile, no hace falta alternar GIDs
+# a mano aqui.
+for _c in range(10, ANCHO - 10, 22):
+    BG_MID.append(bloque(_c, 4, 1, 1, LUZ_ON))
+
+# Pizarras de la planta baja: 2 filas de alto (30-31), justo sobre el piso.
+# La tercera se corrio de 148 a 176: col148 queda debajo de la plataforma
+# larga de escalera_salto_de_fe (fila 31, cols 142-163) y la taparia.
+for _c in (5, 76, 176):
     pizarra(BG_MID, _c, 30, cuerpos=5)
 # Pizarras de los entrepisos
 for _c in (48, 124, 168):
@@ -220,8 +284,22 @@ oid = 1
 objetos = [f'  <object id="{oid}" type="PlayerSpawn" name="PlayerSpawn_01" x="64" y="{piso_y}"/>']
 oid += 1
 
-# Checkpoint justo antes de cada hueco + uno al inicio de cada escalera
-_cols_cp = [18, 44, 84, 94, 126, 138, 164]
+# Decision de diseno de Yariel: pocos checkpoints, no uno por cada hueco.
+# Caerse cuesta caro a proposito -- "si uno se cae, se muere y ya esta", no
+# un respawn a un paso del peligro. Los tres van a mitad de un tramo de piso,
+# lejos de cualquier DeathPit (>=19 columnas = 304 px de margen a cada lado).
+#
+# Por que 3 y no 2: el calificador (scripts/grade_stage.py) tiene DOS reglas
+# de checkpoints independientes.
+#   - "checkpoints": 5 pts por checkpoint, techo en 15 -> 2 checkpoints
+#     son 10/15, 3 ya son 15/15 (el techo). Un checkpoint mas y gratis.
+#   - "design_pacing": -6 si el tramo mas largo sin checkpoint pasa de
+#     500 px. El nivel mide ~3000 px, y eso es matematicamente imposible
+#     de cumplir con menos de 5-6 checkpoints, asi que 2 y 3 pagan la
+#     MISMA penalizacion aqui (no hay puntos parciales por acercarse).
+# Con esos dos datos, 3 dobla el maximo de la primera regla sin pagar nada
+# de mas en la segunda -- no hay ninguna razon para quedarse en 2.
+_cols_cp = [68, 108, 148]
 for _i, _c in enumerate(_cols_cp):
     objetos.append(
         f'  <object id="{oid}" type="Checkpoint" name="Checkpoint_{_i:02d}" '
@@ -232,6 +310,46 @@ for _i, _c in enumerate(_cols_cp):
 
 objetos.append(f'  <object id="{oid}" type="NextTrigger" name="NextTrigger_01" '
                f'x="{190 * TILE}" y="{piso_y - 64}" width="32" height="64"/>')
+oid += 1
+
+# Coleccionables: hojas de examen sueltas en el piso, una por aula. Usan
+# "Pickup" (framework/stage/interactables.py, sin tocarlo) con automatico=True
+# -- se cogen al pasar por encima, como una moneda, sin pedir el boton de usar.
+# scripts/grade_stage.py exige >=3 para el maximo de la categoria
+# "collectibles" (antes 0, 5/10); no afecta ninguna otra regla del disenio.
+for _i, _c in enumerate((22, 115, 175)):
+    objetos.append(
+        f'  <object id="{oid}" type="Pickup" name="Pickup_{_i:02d}" '
+        f'x="{_c * TILE}" y="{piso_y - 16}" width="16" height="16">\n'
+        f'   <properties>\n'
+        f'    <property name="item_id" value="hoja_de_examen"/>\n'
+        f'    <property name="mensaje" value="Una hoja de examen suelta."/>\n'
+        f'   </properties>\n  </object>')
+    oid += 1
+
+# Casillero interactivo (Practica II, Unidad VI). Usa el sistema de
+# interactuables del framework (framework/stage/interactables.py, tipo "Door")
+# sin tocar ningun archivo del profesor: el objeto se declara aqui y
+# stage_objetos.py ya sabe leerlo. key_id vacio = se abre sin llave, con el
+# boton de usar. "evento" es el nombre propio que escucha Stage1_3_LasAulas
+# para arrancar la animacion por easing (ver stage1_3_las_aulas.py).
+# Coordenadas: mismo casillero que BG_NEAR dibuja en col=62, fila=33.
+CASILLERO_COL, CASILLERO_FILA = 62, 33
+objetos.append(
+    f'  <object id="{oid}" type="Door" name="CasilleroInteractivo" '
+    f'x="{CASILLERO_COL * TILE}" y="{CASILLERO_FILA * TILE}" '
+    f'width="{2 * TILE}" height="{3 * TILE}">\n'
+    # OJO: no declarar key_id="" — pytmx parsea un value="" vacio como None
+    # (no como cadena vacia), y stage_objetos.py hace str(None) = "None": una
+    # cadena no vacia que la Cerradura interpreta como llave exigida, y la
+    # puerta queda bloqueada sin que nada en Tiled avise del porque. Omitir
+    # la propiedad del todo es la forma correcta de decir "sin llave": el
+    # .get(..., "") de stage_objetos.py entonces si cae en su valor por
+    # defecto real.
+    f'   <properties>\n'
+    f'    <property name="evento" value="CASILLERO_ABIERTO"/>\n'
+    f'    <property name="mensaje" value="Un casillero de estudiante."/>\n'
+    f'   </properties>\n  </object>')
 oid += 1
 
 # DeathPit debajo de cada hueco
@@ -307,8 +425,10 @@ for nombre, c, f, w in PLATAFORMAS:
 tmx = f"""<?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="{ANCHO}" height="{ALTO}" tilewidth="{TILE}" tileheight="{TILE}" infinite="0" nextlayerid="9" nextobjectid="{oid}">
  <properties>
+  <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage1_3_las_aulas"/>
   <property name="stage_name" value="STAGE 1-3 — LAS AULAS"/>
+  <property name="author" value="Yariel"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="bgm_track" value="bgm_zone1_traverse"/>
   <property name="background_zone" value="aulas"/>
@@ -317,6 +437,12 @@ tmx = f"""<?xml version="1.0" encoding="UTF-8"?>
  </properties>
  <tileset firstgid="1" name="tileset_aulas_yariel" tilewidth="{TILE}" tileheight="{TILE}" tilecount="64" columns="8">
   <image source="../../tilesets/tileset_aulas_yariel.png" width="128" height="128"/>
+  <tile id="{LUZ_ON - 1}">
+   <animation>
+    <frame tileid="{LUZ_ON - 1}" duration="700"/>
+    <frame tileid="{LUZ_OFF - 1}" duration="120"/>
+   </animation>
+  </tile>
  </tileset>
 {''.join(capa(i, n, g) for i, n, g in capas)} <objectgroup id="6" name="Objects">
 {chr(10).join(objetos)}
@@ -349,8 +475,14 @@ for _c, _w in HUECOS:
 print("  escaleras (se mide el hueco real entre borde y borde):")
 _por_nombre = {n: (c, f, w) for n, c, f, w in PLATAFORMAS}
 for _base in (20, 96, 140):
-    _pasos = [(f"Plat_Esc{_base}_{i}", *_por_nombre[f"Plat_Esc{_base}_{i}"])
-              for i in range(5)]
+    # Cada escalera puede tener un numero de escalones distinto ahora (la
+    # clasica 5, la de saltos largos 3, la irregular 5 con anchos propios):
+    # se cuentan los que de verdad existen en vez de asumir range(5).
+    _i = 0
+    _pasos = []
+    while f"Plat_Esc{_base}_{_i}" in _por_nombre:
+        _pasos.append((f"Plat_Esc{_base}_{_i}", *_por_nombre[f"Plat_Esc{_base}_{_i}"]))
+        _i += 1
     # Primer escalon: desde el piso
     _n, _c, _f, _w = _pasos[0]
     subida = (FILA_PISO - _f) * TILE

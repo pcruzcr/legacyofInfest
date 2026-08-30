@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from src.engine.core.events import Events
 from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 from src.framework.entities.states.helpers import _handle_wall_jump
 
@@ -14,6 +15,13 @@ class WallSlideState(PlayerStateBase):
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
         super().__init__(PlayerState.WALL_SLIDE)
+        self._sfx_timer: float = 0.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        self._sfx_timer = 0.0
+        player._event_bus.emit(Events.SFX_PLAYER_WALL_SLIDE,
+                               pos=(player.position.x, player.position.y))
 
     def update(
         self,
@@ -22,6 +30,12 @@ class WallSlideState(PlayerStateBase):
         input_manager: InputManager | None,
     ) -> None:
         inp = _InputSnapshot(input_manager)
+        # AUD-722 — roce cada 0.32s mientras desliza
+        self._sfx_timer += dt
+        if self._sfx_timer >= 0.32:
+            self._sfx_timer = 0.0
+            player._event_bus.emit(Events.SFX_PLAYER_WALL_SLIDE,
+                                   pos=(player.position.x, player.position.y))
 
         if _handle_wall_jump(player, inp):
             return

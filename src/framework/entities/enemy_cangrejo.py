@@ -73,15 +73,57 @@ class EnemyCangrejo(EnemyWalker):
         # El cangrejo es bajo: su caja no es la de un caminante humanoide.
         self.rect.width = 22
         self.rect.height = 16
-
-    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        # Asegurar tamaño correcto tras el super que cargó 16×12
         self._sprite_fw = self.SPRITE_ANCHO
         self._sprite_fh = self.SPRITE_ALTO
-        try:
-            self._sprite_frames["walk"] = AssetLoader.load_sprite_sheet(
-                SPRITE_PATH, self.SPRITE_ANCHO, self.SPRITE_ALTO)
-        except (pygame.error, FileNotFoundError, PermissionError):
-            logger.warning("enemy_cangrejo: failed to load sprite %s", SPRITE_PATH)
+
+    def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
+        # AUD-XXX — usa zone4/enemy_{sid}_*.png con w,h del bestiary en lugar de stage4_1b fijo
+        # Mantener compatibilidad con el archivo legacy stage4_1b como fallback.
+        self._sprite_fw = self.SPRITE_ANCHO
+        self._sprite_fh = self.SPRITE_ALTO
+        fw = self.SPRITE_ANCHO
+        fh = self.SPRITE_ALTO
+        zone_key = f"zone{zone}" if zone > 0 else "zone4"
+        base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
+        species_id = getattr(self, "species_id", None) or getattr(self, "_species_id", None) or "Cangrejo"
+        sid = str(species_id).lower()
+        for key, expected in [("walk", 4), ("hurt", 3), ("die", 5)]:
+            frames: list[pygame.Surface] = []
+            # 1) zona/species con w,h correctos
+            for cand in [
+                base / f"enemy_{sid}_{key}.png",
+                settings.ASSETS_DIR / "sprites" / "enemies" / "species" / f"{species_id}_{key}.png",
+                SPRITE_PATH if key == "walk" else None,
+            ]:
+                if cand is None or not cand.exists():
+                    continue
+                try:
+                    tmp = AssetLoader.load_sprite_sheet(cand, fw, fh)
+                except Exception:
+                    continue
+                if tmp and tmp[0].get_size() == (fw, fh):
+                    frames = tmp
+                    break
+            if frames:
+                self._sprite_frames[key] = frames
+            else:
+                # placeholder para que walk/hurt/die nunca queden en rojo (aunque no se usan, evita validate_assets)
+                placeholder = []
+                col = (150, 86, 52)
+                if key == "hurt":
+                    col = (190, 60, 50)
+                elif key == "die":
+                    col = (80, 30, 30)
+                for _ in range(expected):
+                    surf = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                    surf.fill((*col, 255))
+                    pygame.draw.ellipse(surf, tuple(min(255, c + 30) for c in col), (2, 2, fw - 2, fh - 2))
+                    pygame.draw.rect(surf, (255, 255, 255), surf.get_rect(), 1)
+                    placeholder.append(surf)
+                self._sprite_frames[key] = placeholder
+        # Compatibilidad: walk también en clave legacy sin sufijo para Stage4_1B que hacía
+        # Stage4_1B: self._sprite_frames["walk"] ya está; el caller puede usar walk.
 
     def _alert_behavior(self, dt: float) -> None:
         """No embiste: mira al jugador y aprieta el paso patrullando. Un

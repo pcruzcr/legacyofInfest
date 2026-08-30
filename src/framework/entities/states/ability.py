@@ -21,11 +21,24 @@ if TYPE_CHECKING:
 
 _DASH_DURATION = 0.15
 
+#: AUD-620 — ventana de cancelación del dash con salto, en segundos.
+#:
+#: El dash ya se cancelaba con ataque (`DashAttackState`, en cualquier
+#: instante); con salto no se cancelaba nunca, y eso convertía el dash en
+#: un carril fijo de 0,15 s: quien dash-ea y quiere saltar encima de algo
+#: tiene que esperar a que termine. La ventana —y no el dash entero— es lo
+#: que separa una decisión temprana del spam: pasada ella, el salto espera.
+_VENTANA_CANCELACION_SALTO = 0.1
+
 
 class DashingState(PlayerStateBase):
     def __init__(self) -> None:
         from src.framework.entities.player import PlayerState
         super().__init__(PlayerState.DASHING)
+        self._transcurrido: float = 0.0
+        self._dir_x: float = 0.0
+        self._dir_y: float = 0.0
+        self._dir_inicializado: bool = False
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -33,12 +46,22 @@ class DashingState(PlayerStateBase):
         # comprobado que hay bastante; cobrar en el sitio donde el dash
         # empieza de verdad evita el caso de gastar por un dash que después
         # otra condición cancela.
+        # P0: estamina check global — si no hay, no se entra (defensivo por si _can_dash se saltó)
+        if not player.hay_estamina_para_correr:
+            from src.framework.entities.states import FallingState, IdleState
+            target = IdleState if player.is_grounded else FallingState
+            player._change_state_instance(target())
+            return
         player.gastar_estamina()
         player._dash_timer = _DASH_DURATION
+        self._transcurrido = 0.0
+        self._dir_inicializado = False
         if not player.is_grounded:
             player._air_dash_count += 1
         player.velocity.y = 0.0
         player._invincibility_timer = max(player._invincibility_timer, _DASH_DURATION)
+        # P0: VFX_SLAM al dash — feedback de impacto
+        player._event_bus.emit(Events.VFX_SLAM, pos=(player.position.x, player.position.y))
 
     def update(
         self,
@@ -46,14 +69,57 @@ class DashingState(PlayerStateBase):
         dt: float,
         input_manager: InputManager | None,
     ) -> None:
+        self._transcurrido += dt
         player._dash_timer -= dt
 
-        player.velocity.x = float(player.facing_direction) * settings.PLAYER_DASH_SPEED
-
         inp = _InputSnapshot(input_manager)
+        # P0: 8-dir global — captura dirección al primer fotograma (suelo y aire)
+        if not self._dir_inicializado:
+            if inp.move_x != 0 or inp.move_y != 0:
+                dx = float(inp.move_x)
+                dy = float(inp.move_y)
+            else:
+                dx = float(player.facing_direction)
+                dy = 0.0
+            # cenital ya normaliza 0.707 en player.py:882; aquí igual para 8-dir
+            if dx != 0.0 and dy != 0.0:
+                dx *= 0.70710678
+                dy *= 0.70710678
+            self._dir_x = dx
+            self._dir_y = dy
+            self._dir_inicializado = True
+            # actualizar facing según componente x
+            if self._dir_x > 0:
+                player.facing_direction = 1
+            elif self._dir_x < 0:
+                player.facing_direction = -1
+        # 8-dir: velocidad en ambos ejes
+        player.velocity.x = self._dir_x * settings.PLAYER_DASH_SPEED
+        # P0 8-dir global: vertical en suelo lo frena la colisión si no aplica
+        player.velocity.y = self._dir_y * settings.PLAYER_DASH_SPEED
+
         if inp.short_attack or inp.long_attack:
             from src.framework.entities.states import DashAttackState
             player._change_state_instance(DashAttackState())
+            return
+
+        # AUD-620 — cancelación con salto, sólo dentro de la ventana. Se
+        # hace a mano y NO con `_do_jump` a propósito: aquél vería al
+        # jugador realmente aéreo (`was_truly_airborne`) y CONSUMIRÍA un
+        # salto del aire por cancelar un dash — castigar la técnica mejor.
+        # La velocidad horizontal NO se toca: conservar los 200 px/s del
+        # dash es toda la recompensa (el mismo contrato de AUD-204, que
+        # conserva la inercia cuando se suelta la dirección).
+        if inp.jump_pressed and self._transcurrido <= _VENTANA_CANCELACION_SALTO:
+            player.velocity.y = player.perfil.salto_impulso
+            player._coyote_counter = player.perfil.coyote_frames + 1
+            player._jump_cut_applied = False
+            # Mismo cooldown que el fin natural: sin él, cancelar y
+            # re-dash en fotogramas consecutivos sería un dash infinito.
+            player._dash_cooldown = 0.1
+            player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            from src.framework.entities.states import JumpingState
+            player._change_state_instance(JumpingState())
             return
 
         if player._dash_timer <= 0:
@@ -75,7 +141,8 @@ class DashingState(PlayerStateBase):
 #: dificultad declaraban `parry_window` (0,30 en fácil; 0,15 en difícil) y
 #: **nadie los leía**: todo el mundo jugaba con 0,20. Uno de los ocho mandos de
 #: la dificultad no estaba conectado a nada.
-_PARRY_DURATION = 0.2
+#: P0: 0.20→0.25s (NORMAL ahora 0.25)
+_PARRY_DURATION = 0.25
 
 
 def _ventana_de_parry() -> float:

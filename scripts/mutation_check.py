@@ -105,6 +105,20 @@ OBJETIVOS: tuple[tuple[str, str], ...] = (
      "tests/test_composicion_del_tiempo.py "
      "tests/test_gameplay_integration.py "
      "tests/test_new_pipeline_modules.py"),
+    # AUD-636 — Juice systems: squash&stretch, polvo, kill flash, hit pause variable
+    ("src/framework/entities/player.py",
+     "tests/test_juice_sistema.py "
+     "tests/test_player_physics.py"),
+    # AUD-638 — Audio pipeline loudness normalization
+    ("src/engine/audio/audio_pipeline.py",
+     "tests/test_new_pipeline_modules.py"),
+    # AUD-639 — Reverb zones
+    ("src/engine/audio/reverb_zones.py",
+     "tests/test_la_reverberacion_esta_horneada.py"),
+    # AUD-425 — Pulso visual (cámara + brillo ambiental en compás)
+    ("src/framework/stage/camera.py",
+     "tests/test_camera.py "
+     "tests/test_mas_capas_de_parallax.py"),
 )
 
 #: Nota mínima para dar por buena la defensa de un módulo.

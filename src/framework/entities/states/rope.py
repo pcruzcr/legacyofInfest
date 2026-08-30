@@ -60,6 +60,7 @@ class TrepandoState(PlayerStateBase):
         #: en que se ha soltado, que produce el clásico «no puedo saltar de la
         #: cuerda» al mantener pulsado el botón.
         self._t = 0.0
+        self._sfx_timer: float = 0.0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -68,6 +69,9 @@ class TrepandoState(PlayerStateBase):
         player._air_jumps_used = 0
         player._air_dash_count = 0
         self._t = 0.0
+        self._sfx_timer = 0.0
+        player._event_bus.emit(Events.SFX_PLAYER_CLIMB,
+                               pos=(player.position.x, player.position.y))
         if self._liana is not None:
             # Centrarse en la cuerda. Sin esto se trepa en diagonal si te
             # agarraste torcido, y el sprite se sale visualmente de la liana.
@@ -91,6 +95,13 @@ class TrepandoState(PlayerStateBase):
         else:
             player.velocity.y = 0.0
         player.velocity.x = 0.0
+        # AUD-722 — tic de tela cada 0.28s mientras trepa
+        if player.velocity.y != 0.0:
+            self._sfx_timer += dt
+            if self._sfx_timer >= 0.28:
+                self._sfx_timer = 0.0
+                player._event_bus.emit(Events.SFX_PLAYER_CLIMB,
+                                       pos=(player.position.x, player.position.y))
 
         # Soltarse saltando, con impulso hacia donde se mire.
         if inp.jump_pressed and self._t > 0.08:
@@ -119,12 +130,16 @@ class TirolesaState(PlayerStateBase):
         super().__init__(PlayerState.ZIPLINE)
         self._cable = cable
         self._t = 0.0
+        self._sfx_timer: float = 0.0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
         player.is_grounded = False
         player._air_jumps_used = 0
         self._t = 0.0
+        self._sfx_timer = 0.0
+        player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
+                               pos=(player.position.x, player.position.y))
         if self._cable is not None:
             enganche = self._cable.punto_mas_cercano(
                 pygame.Vector2(player.rect.center),
@@ -157,6 +172,12 @@ class TirolesaState(PlayerStateBase):
         avance = direccion * self._cable.velocidad * dt
         player.position += avance
         player.rect.topleft = (int(player.position.x), int(player.position.y))
+        # AUD-722 — zumbido de cable cada 0.35s
+        self._sfx_timer += dt
+        if self._sfx_timer >= 0.35:
+            self._sfx_timer = 0.0
+            player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
+                                   pos=(player.position.x, player.position.y))
 
         # Soltarse: saltando, o al llegar al final del cable.
         llego = self._cable.progreso(pygame.Vector2(player.rect.center)) >= 0.995
@@ -173,3 +194,108 @@ class TirolesaState(PlayerStateBase):
             player._change_state_instance(
                 JumpingState() if inp.jump_pressed else FallingState(),
             )
+
+
+class BalanceoEnLianaSaltoState(PlayerStateBase):
+    """Colgado de una liana de salto — balanceo y salto entre lianas.
+
+    Distinta a TrepandoState: aquí no subes con arriba/abajo, te cuelgas y
+    te balanceas como pendulo. Con izquierda/derecha bombeas, con salto te
+    sueltas con impulso hacia la siguiente liana. Es la liana de DKC
+    Jungle Swing, no la enredadera de Zelda.
+    """
+
+    # Impulso al saltar de una liana de salto — mayor que Trepando para cruce
+    IMPULSO_SALTO: float = 220.0
+    IMPULSO_VERTICAL: float = 0.85
+
+    def __init__(self, liana_salto) -> None:
+        from src.framework.entities.player import PlayerState
+        # Reusa CLIMBING como enum pero con liana distinta — evita nuevo estado en PlayerState
+        super().__init__(PlayerState.CLIMBING)
+        self._liana_salto = liana_salto
+        self._t = 0.0
+        self._balanceo_fase = 0.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        player.velocity.update(0.0, 0.0)
+        player.is_grounded = False
+        player._air_jumps_used = 0
+        player._air_dash_count = 0
+        self._t = 0.0
+        self._balanceo_fase = 0.0
+        if self._liana_salto is not None:
+            # Engancha por debajo del punto de anclaje, centrado
+            player.rect.centerx = self._liana_salto.rect.centerx
+            # Cuelga `largo` px por debajo del anclaje
+            player.rect.top = self._liana_salto.rect.bottom
+            player.position.update(float(player.rect.x), float(player.rect.y))
+
+    def update(
+        self,
+        player: Player,
+        dt: float,
+        input_manager: InputManager | None,
+    ) -> None:
+        inp = _InputSnapshot(input_manager)
+        self._t += dt
+        if self._liana_salto is None:
+            from src.framework.entities.states import FallingState
+            player._change_state_instance(FallingState())
+            return
+
+        # Balanceo automático + bombeo del jugador
+        # La liana ya oscila por sistema_lianas_salto (rect.x pendular), aquí
+        # solo hacemos que el jugador siga y pueda bombear.
+        # Bombeo: pulsando dirección en el momento correcto aumenta fase
+        if inp.move_x != 0:
+            # Si pulsas a favor del balanceo, amplificas
+            dir_balanceo = 1 if self._liana_salto.rect.x > self._liana_salto._origen_x else -1
+            if inp.move_x == dir_balanceo:
+                self._balanceo_fase += dt * 2.0
+            else:
+                self._balanceo_fase -= dt * 1.0
+
+        # Sigue la liana horizontalmente (pendulo)
+        # El sistema ECS ya movió el rect de la liana; el jugador la sigue
+        player.rect.centerx = self._liana_salto.rect.centerx
+        player.position.x = float(player.rect.x)
+        # Mantiene distancia vertical `largo` por debajo del anclaje
+        # El anclaje es top-center de la liana
+        player.rect.top = self._liana_salto.rect.bottom
+        player.position.y = float(player.rect.y)
+        player.velocity.y = 0.0
+        player.velocity.x = 0.0
+
+        # Soltarse: salto con impulso + velocidad de la liana en ese instante
+        if inp.jump_pressed and self._t > 0.12:
+            # Velocidad instantánea de la liana (derivada del seno)
+            # v = amplitud * 2π/periodo * cos(t*2π/periodo)
+            import math as _math
+            li = self._liana_salto
+            if li.periodo > 0.0:
+                v_liana = li.amplitud * 2 * _math.pi / li.periodo * _math.cos(li._t * 2 * _math.pi / li.periodo)
+            else:
+                v_liana = 0.0
+            # Dirección: hacia donde mira o donde bombea, con inercia de la liana
+            dir_x = float(inp.move_x or player.facing_direction)
+            # Si no hay input, usa dirección del balanceo actual
+            if dir_x == 0:
+                dir_x = 1 if v_liana >= 0 else -1
+            player.velocity.x = dir_x * self.IMPULSO_SALTO + v_liana * 0.5
+            player.velocity.y = player.perfil.salto_impulso * self.IMPULSO_VERTICAL
+            player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            from src.framework.entities.states import JumpingState
+            player._change_state_instance(JumpingState())
+            return
+
+        # Si la liana desaparece o ya no colisiona (se alejó mucho verticalmente), cae
+        if not self._liana_salto.rect.colliderect(player.rect.inflate(40, 40)):
+            # Solo si lleva un rato colgado y se soltó naturalmente (no por salto)
+            if self._t > 0.3 and not inp.jump_pressed:
+                # Pequeña tolerancia: si el jugador se aleja mucho horizontalmente, caer
+                if abs(player.rect.centerx - self._liana_salto.rect.centerx) > 60:
+                    from src.framework.entities.states import FallingState
+                    player._change_state_instance(FallingState())
+                    return

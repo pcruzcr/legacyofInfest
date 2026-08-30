@@ -247,9 +247,15 @@ class TitleScene(BaseScene):
             else:
                 self.context.scene_manager.replace(StoryScene(self.context, 1))
         elif opt == "TUTORIAL":
-            from src.engine.scenes.tutorial_scene import TutorialScene
-            self.context.scene_manager.transition.start_fade_out(0.4)
-            self.context.scene_manager.replace(TutorialScene(self.context))
+            # AUD-721 — el tutorial de texto pasa a hub jugable con monedas/XP/logros
+            try:
+                from src.stages.tutorial_hub.tutorial_hub import TutorialHub
+                self.context.scene_manager.transition.start_fade_out(0.4)
+                self.context.scene_manager.push(TutorialHub(self.context))
+            except Exception:
+                from src.engine.scenes.tutorial_scene import TutorialScene
+                self.context.scene_manager.transition.start_fade_out(0.4)
+                self.context.scene_manager.replace(TutorialScene(self.context))
         elif opt == "WORLD MAP":
             from src.engine.scenes.world_map_scene import WorldMapScene
             self.context.scene_manager.transition.start_fade_out(0.4)

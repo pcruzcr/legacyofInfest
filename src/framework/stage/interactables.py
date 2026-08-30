@@ -36,8 +36,12 @@ pygame— y una práctica: así se pueden probar sin abrir una ventana.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import pygame
+
+if TYPE_CHECKING:
+    from src.framework.entities.player import Player
 
 #: Distancia, en píxeles, a la que el jugador puede accionar algo con el botón
 #: de agarrar. Generosa a propósito: obligar a la precisión de un píxel para
@@ -110,6 +114,9 @@ class Cerradura:
     #: tiempo, que es el 90 % de lo que se hace con un interruptor.
     cierra_en: float = 0.0
     _cierre: float = 0.0
+
+    #: AUD-635 — skill_id requerido para abrir la cerradura.
+    requires_skill: str = ""
 
     def abrir(self, temporal: bool = True) -> None:
         """Abre la cerradura y arranca el temporizador si lo tiene."""
@@ -202,6 +209,8 @@ class ZonaDeWarp:
     enfriamiento: float = 0.5
     #: Texto que se enseña al cruzar. Vacío = ninguno.
     mensaje: str = ""
+    #: AUD-635 — skill_id requerido para usar el warp.
+    requires_skill: str = ""
     usado: bool = False
     _espera: float = 0.0
 
@@ -225,6 +234,117 @@ class Llavero:
 
     def gastar(self, key_id: str) -> None:
         self.llaves.discard(key_id)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# AUD-625 — Salidas secretas y salas secretas (SecretExit / SecretRoom)
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class SecretExit:
+    """Salida oculta que revela un nuevo nodo en el mapa del mundo.
+
+    No se dibuja: es un disparador invisible. Cuando el jugador lo toca,
+    emite el evento `SECRET_FOUND` con el ID del secreto, y el mapa del
+    mundo revela el nuevo nodo. El diseñador controla la recompensa
+    (ítem, atajo, lore) vía el manejador del evento en su escena.
+    """
+
+    rect: pygame.Rect
+    secret_id: str
+    #: Si `True`, el secreto se revela al tocarlo. Si `False`, al pulsar
+    #: el botón de usar (para secretos que requieren acción deliberada).
+    automatico: bool = True
+    #: Si `True`, el secreto solo se puede descubrir una vez por partida.
+    una_vez: bool = True
+    #: Si no está vacío, hace falta esta llave/ítem para revelarlo.
+    key_id: str = ""
+    descubierto: bool = False
+
+    def revelar(self, player: Player) -> bool:
+        """Intenta revelar el secreto. Devuelve True si se revela ahora."""
+        if self.descubierto:
+            return False
+        if self.key_id and not self._tiene_llave(player, self.key_id):
+            return False
+        self.descubierto = True
+        return True
+
+    @staticmethod
+    def _tiene_llave(player: Player, key_id: str) -> bool:
+        if not key_id:
+            return True
+        from src.engine.core.inventory import get_inventory
+        return get_inventory().has_skill(key_id) or getattr(player, "_habilidades_libres", False)
+
+
+@dataclass
+class SecretRoom:
+    """Sala oculta con tell visual sutil (sparkle cada 3s).
+
+    Se dibuja como un rectángulo invisible con tell visual. Al entrar,
+    emite `SECRET_FOUND` y puede dar un recogible o activar algo.
+    """
+
+    rect: pygame.Rect
+    secret_id: str
+    #: Ítem que se otorga al descubrirla (opcional).
+    recompensa: str = ""
+    #: Tell visual: "sparkle" (default), "particles", "sound", "none".
+    tell: str = "sparkle"
+    descubierto: bool = False
+
+    def intentar_descubrir(self, player: Player) -> bool:
+        """Si el jugador entra en el rectángulo y no está descubierto, lo revela."""
+        if self.descubierto or not self.rect.colliderect(player.rect):
+            return False
+        self.descubierto = True
+        return True
+
+
+# ──────────────────────────────────────────────────────────────────────
+# AUD-XXX — Placa de presión (PressurePlate)
+# ──────────────────────────────────────────────────────────────────────
+
+@dataclass
+class PlacaDePresion:
+    """Boton en el suelo que se activa con peso y abre puertas mientras esta pisada.
+
+    Es el eslabon que faltaba entre ``BloqueEmpujable`` (AUD-140) y
+    ``Cerradura.abre_con_evento`` (AUD-132): un ``PushBlock`` encima de la
+    placa abre la puerta cuyo ``abre_con`` coincide con ``evento``, y al
+    quitar el bloque la puerta se cierra (si ``mantener`` es ``True``, el
+    comportamiento de puzzle Sokoban).
+
+    Por que no es un ``Disparador``
+    --------------------------------
+    ``Disparador`` solo mira al jugador y dispara una vez. La placa mira a
+    **bloques empujables** (y opcionalmente al jugador) cada fotograma, y su
+    estado es continuo: ``activa`` mientras haya peso encima. Sin esto, un
+    puzzle de "pon el bloque en el boton" no se podia declarar desde Tiled y
+    obligaba a escribir Python en cada nivel (GAP del usuario 2026-08-26).
+
+    Modos de ``requiere``
+    ----------------------
+    * ``"bloque"`` (defecto) — cualquier ``BloqueEmpujable``.
+    * ``"jugador"`` — el jugador.
+    * ``"ambos"`` — bloque Y jugador a la vez.
+    * ``"cualquiera"`` — bloque O jugador.
+
+    ``mantener`` decide si la puerta se cierra al liberar la placa. Con
+    ``False`` la placa es un interruptor que queda enclavado.
+    """
+
+    rect: pygame.Rect
+    evento: str
+    requiere: str = "bloque"
+    mantener: bool = True
+    una_vez: bool = False
+    mensaje: str = ""
+    activa: bool = False
+    disparada: bool = False
+    # Estado del fotograma anterior — para detectar flancos sin bus.
+    _activa_previa: bool = False
 
 
 def alcanza(jugador: pygame.Rect, objetivo: pygame.Rect, margen: int = ALCANCE_DE_USO) -> bool:

@@ -1,0 +1,29 @@
+# AUD-640 — pre-commit: previene regresiones antes del commit.
+# Instalación: pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^(src/engine|src/framework|src/stages/stage0|tests|scripts|tools)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: mypy-scope
+        name: mypy (mypy_scope.txt)
+        entry: .venv/Scripts/python.exe -m mypy
+        args: []
+        language: system
+        pass_filenames: false
+        # El scope lo lee el propio comando desde mypy_scope.txt
+        pre_requisite: [ruff]
+        always_run: true
+
+      - id: check-translations
+        name: check_translations (--ci)
+        entry: .venv/Scripts/python.exe scripts/check_translations.py
+        args: [--ci, --permitted-orphans, locale/permitted_orphans.json]
+        language: system
+        pass_filenames: false
+        always_run: true

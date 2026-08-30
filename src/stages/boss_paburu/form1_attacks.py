@@ -1,3 +1,5 @@
+# Autor: Alejandro Josué Rodríguez Zamora
+# Stage 4-2 «El Gran Shamán Paburu» — Legacy of InFest
 """
 Ataques de la Forma 1 — "La Cabeza de Piedra" (GDD §4).
 
@@ -66,15 +68,48 @@ class StoneProjectile:
     DAMAGE = 0.5           # GDD §4: 0.5 corazones cada uno
     LIFETIME = 4.0         # red de seguridad: nada vive para siempre
 
+    #: Velocidad con la que sale la piedra devuelta. Más rápida que la que
+    #: llegó: parar es la acción más difícil del juego y tiene que sentirse
+    #: como que le arrancaste el ataque de las manos.
+    VEL_DEVUELTA = 340.0
+    #: Daño al jefe cuando vuelve. Vale más que un golpe de palo (1.0)
+    #: porque exige leer el telegraph y acertar una ventana de 0.2 s.
+    DAMAGE_DEVUELTA = 1.5
+
     def __init__(self, origin: pygame.Vector2, velocity: pygame.Vector2) -> None:
         self.pos = pygame.Vector2(origin)
         self.vel = pygame.Vector2(velocity)
         self.alive = True
         self.spin = 0.0            # solo visual: la piedra rota al volar
         self._life = self.LIFETIME
+        #: True tras un parry. Cambia de dueño: deja de dañar al jugador y
+        #: pasa a dañar a Paburu.
+        self.devuelta = False
+
+    def devolver(self, hacia: pygame.Vector2) -> None:
+        """Un parry la manda de vuelta, apuntada al jefe.
+
+        No se limita a invertir la velocidad: se **apunta**. Invertir el
+        vector devolvería la piedra por la parábola por la que vino, y como
+        vino cayendo, se estrellaría contra el suelo antes de llegar. Se
+        recalcula la dirección hacia el objetivo y se le da velocidad propia.
+
+        Unidad II: dirección normalizada por `vec2_normalize`.
+        """
+        rumbo = pygame.Vector2(vec2_normalize(pygame.Vector2(hacia) - self.pos))
+        if rumbo.length_squared() == 0.0:
+            rumbo = pygame.Vector2(-1.0, 0.0)
+        self.vel = rumbo * self.VEL_DEVUELTA
+        self.devuelta = True
+        self._life = self.LIFETIME
+        # La piedra devuelta no cae: viaja recta. Es una decisión de
+        # legibilidad — el jugador tiene que poder ver que va a dar.
+        self.spin = 0.0
 
     def update(self, dt: float) -> None:
-        self.vel.y += self.GRAVITY * dt
+        # La devuelta no pesa: viaja recta hasta el jefe o hasta salirse.
+        if not self.devuelta:
+            self.vel.y += self.GRAVITY * dt
         self.pos += self.vel * dt
         self.spin += dt * 8.0
         self._life -= dt
@@ -212,54 +247,149 @@ class EyeBeam:
     HEIGHT = 8             # px
     DAMAGE = 1.0
 
-    def __init__(self, eye_pos: pygame.Vector2, direction: int) -> None:
+    #: Cada cuántos px se muestrea el segmento para resolver el impacto.
+    #: Más chico que la mitad del alto del hurtbox del jugador (28 px), así
+    #: no puede colarse entre dos muestras.
+    PASO_MUESTREO = 6.0
+
+    def __init__(self, eye_pos: pygame.Vector2,
+                 target: pygame.Vector2 | None = None,
+                 direction: int = 1) -> None:
+        """Rayo APUNTADO al objetivo.
+
+        Antes salía siempre horizontal a la altura de los ojos, así que solo
+        podía alcanzar al jugador de pie en el suelo: subido a cualquier
+        plataforma pasaba por debajo sin rozarlo. Con la arena llena de
+        salientes, eso convertía el ataque en un adorno la mayor parte del
+        tiempo.
+
+        Ahora la dirección se calcula al **nacer el telegraph**, apuntando al
+        objetivo. Eso es importante: se fija ANTES del aviso, no después. El
+        jugador ve durante medio segundo la línea exacta por donde va a pasar
+        el rayo, y ese medio segundo es su oportunidad de salirse. Si el rayo
+        siguiera al jugador durante el telegraph, el aviso no serviría de nada
+        y el ataque sería inesquivable.
+
+        Unidad II: la dirección es el vector objetivo − origen, normalizado
+        con `vec2_normalize`.
+        """
         self.origin = pygame.Vector2(eye_pos)
-        self.direction = 1 if direction >= 0 else -1
+        if target is not None:
+            delta = pygame.Vector2(target) - self.origin
+            self.heading = pygame.Vector2(vec2_normalize(delta))
+            if self.heading.length_squared() == 0.0:
+                self.heading = pygame.Vector2(1.0 if direction >= 0 else -1.0, 0.0)
+        else:
+            self.heading = pygame.Vector2(1.0 if direction >= 0 else -1.0, 0.0)
+        self.direction = 1 if self.heading.x >= 0 else -1
         self.telegraph_timer = self.TELEGRAPH
         self.length = 0.0
         self.alive = True
+        #: True tras un parry: cambia de dueño y pasa a dañar a Paburu.
+        self.devuelto = False
+
+    #: Daño del rayo devuelto. Más que la piedra: cuesta más pararlo, porque
+    #: el rayo cruza la arena entera en un instante.
+    DAMAGE_DEVUELTO = 2.0
 
     @property
     def is_telegraphing(self) -> bool:
         return self.telegraph_timer > 0.0
+
+    @property
+    def tip(self) -> pygame.Vector2:
+        """Punta actual del rayo."""
+        return self.origin + self.heading * self.length
+
+    def devolver(self, desde: pygame.Vector2) -> None:
+        """Un parry lo refleja: nace donde se paró y vuelve por donde vino.
+
+        Un rayo no se puede "atrapar" como una piedra, así que devolverlo es
+        **reflejarlo**: el origen pasa a ser el punto donde el jugador lo
+        paró, el rumbo se invierte, y la longitud vuelve a cero para que se
+        vea salir. Visualmente lee como que el jugador lo cortó y lo mandó
+        de regreso, que es exactamente lo que hizo.
+        """
+        self.origin = pygame.Vector2(desde)
+        self.heading = -self.heading
+        self.direction = 1 if self.heading.x >= 0 else -1
+        self.length = 0.0
+        self.telegraph_timer = 0.0
+        self.devuelto = True
+        self.alive = True
 
     def update(self, dt: float) -> None:
         if self.telegraph_timer > 0.0:
             self.telegraph_timer -= dt
             return
         self.length += self.SPEED * dt
-        tip = self.origin.x + self.direction * self.length
-        if not (arena.PLAY_LEFT <= tip <= arena.PLAY_RIGHT):
+        p = self.tip
+        fuera = not (arena.PLAY_LEFT <= p.x <= arena.PLAY_RIGHT)
+        fuera = fuera or not (0 <= p.y <= arena.ARENA_H)
+        if fuera:
             self.alive = False
+
+    def hits(self, target_rect: pygame.Rect) -> bool:
+        """¿El segmento toca el rect?
+
+        Se muestrea el segmento en vez de resolver la intersección analítica.
+        Con un paso menor a la mitad del hurtbox no hay forma de saltárselo, y
+        el código se lee de un vistazo — que para un rayo que dura medio
+        segundo vale más que la elegancia.
+        """
+        if self.is_telegraphing or self.length <= 0.0:
+            return False
+        inflado = target_rect.inflate(self.HEIGHT, self.HEIGHT)
+        pasos = max(1, int(self.length / self.PASO_MUESTREO))
+        for i in range(pasos + 1):
+            p = self.origin + self.heading * (self.length * i / pasos)
+            if inflado.collidepoint(int(p.x), int(p.y)):
+                return True
+        return False
 
     @property
     def rect(self) -> pygame.Rect | None:
-        """Rect de daño, o None mientras está en telegraph."""
+        """Caja envolvente del rayo. Solo para descartes rápidos y depuración.
+
+        **No sirve para resolver el impacto**: un rayo en diagonal tiene una
+        envolvente enorme que abarca zonas por las que el rayo no pasa. Para
+        el daño hay que usar `hits()`.
+        """
         if self.is_telegraphing or self.length <= 0.0:
             return None
-        x0 = self.origin.x if self.direction > 0 else self.origin.x - self.length
+        p = self.tip
+        x0, x1 = sorted((self.origin.x, p.x))
+        y0, y1 = sorted((self.origin.y, p.y))
+        h = self.HEIGHT / 2
         return pygame.Rect(
-            int(x0), int(self.origin.y - self.HEIGHT / 2),
-            int(self.length), self.HEIGHT,
+            int(x0 - h), int(y0 - h),
+            int(x1 - x0 + self.HEIGHT), int(y1 - y0 + self.HEIGHT),
         )
 
     def draw(self, surface: pygame.Surface, offset: pygame.Vector2) -> None:
+        o = (int(self.origin.x - offset.x), int(self.origin.y - offset.y))
+
         if self.is_telegraphing:
-            # Telegraph: línea fina parpadeante marcando la trayectoria.
+            # Telegraph: la línea EXACTA por donde va a pasar el rayo,
+            # prolongada hasta el borde de la arena. Es el contrato con el
+            # jugador — lo que se dibuja acá es lo que va a doler después.
+            lejos = self.origin + self.heading * 1200.0
             if int(self.telegraph_timer * 16.0) % 2 == 0:
-                y = int(self.origin.y - offset.y)
-                x0 = int(self.origin.x - offset.x)
-                x1 = arena.PLAY_RIGHT if self.direction > 0 else arena.PLAY_LEFT
                 pygame.draw.line(
-                    surface, (0, 140, 70), (x0, y), (int(x1 - offset.x), y), 1,
+                    surface, (0, 140, 70), o,
+                    (int(lejos.x - offset.x), int(lejos.y - offset.y)), 1,
                 )
             return
-        r = self.rect
-        if r is None:
+
+        if self.length <= 0.0:
             return
-        r = r.move(-int(offset.x), -int(offset.y))
-        pygame.draw.rect(surface, arena.COL_SPECTRAL, r)
-        pygame.draw.rect(surface, (220, 255, 235), r.inflate(0, -4))
+        p = self.tip
+        fin = (int(p.x - offset.x), int(p.y - offset.y))
+        # Dos trazos concéntricos: el ancho da el cuerpo espectral, el fino
+        # de adentro el núcleo caliente. Con líneas y no con rects porque el
+        # rayo ya no es horizontal.
+        pygame.draw.line(surface, arena.COL_SPECTRAL, o, fin, self.HEIGHT)
+        pygame.draw.line(surface, (220, 255, 235), o, fin, max(1, self.HEIGHT - 4))
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -547,8 +677,26 @@ class SealMemory:
         """
         self._t += dt
 
+    #: AUD-496 — CUÁNTAS MARCAS CABEN EN EL SUELO. El playtest, con razón:
+    #: «salieron esas cosas» — una maraña de líneas verdes cruzándose sobre
+    #: la arena justo al empezar la pelea.
+    #:
+    #: `engrave` no tenía tope. EL SELLO se invoca cada ~10 s y cada
+    #: invocación añade un pentagrama girado sobre los mismos 104 px de radio;
+    #: a la quinta, los cinco pentagramas superpuestos dejan de leerse como un
+    #: sello y se leen como ruido tachando el suelo — que es exactamente donde
+    #: el jugador necesita ver caer las piedras.
+    #:
+    #: Cuatro es el número: se distingue que el sello CRECE (que es lo que
+    #: cuenta el lore: los nombres se van grabando) y el suelo sigue legible.
+    #: Al llegar al tope la marca más vieja se apaga, no se borra de golpe —
+    #: el sello no adelgaza, se renueva.
+    MARCAS_MAXIMAS = 4
+
     def engrave(self, rotation_deg: float) -> None:
         self.rotations.append(rotation_deg)
+        if len(self.rotations) > self.MARCAS_MAXIMAS:
+            del self.rotations[0]
 
     @property
     def count(self) -> int:

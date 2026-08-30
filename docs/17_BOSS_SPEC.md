@@ -424,6 +424,7 @@ El Rey Terciopelo no es una sola criatura — son miles de víboras terciopelo f
 
 **Efecto visual (Unidad V):**
 Fase 1: `ColorTools.apply_tint(boss_surface, (30, 80, 0))` — un tinte verde enfermizo aplicado a toda la superficie del jefe cada fotograma, que da al cuerpo descompuesto un brillo venenoso.
+> **AUD-XXX:** `apply_tint` ahora preserva el canal alfa per-pixel (antes `array3d+make_surface` convertía `(0,0,0,0)` en `(0,0,0,255)` y dejaba halo opaco). Si tu jefe usa este tinte sobre un sprite con `SRCALPHA`, el fondo seguirá transparente sin coste extra.
 
 #### Fase 2 — "La División" (Vida: 10 → 4 corazones)
 

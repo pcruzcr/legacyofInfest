@@ -197,7 +197,7 @@ def dibuja_panel(
     """
     fondo = Theme.SURFACE_RAISED if elevado else Theme.SURFACE
     compuesta = _superficie_de_panel(rect.width, rect.height, radio,
-                                     tuple(fondo))
+                                      fondo)
     surface.blit(compuesta, (rect.x + 3, rect.y + 4))
     pygame.draw.rect(surface,
                      Theme.BORDER_STRONG if elevado else Theme.BORDER,

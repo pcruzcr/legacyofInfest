@@ -220,7 +220,10 @@ class TestLosSolidosSiguenBloqueando:
 
 class TestLaVistaSaleDelMapa:
     def test_las_dos_vistas_estan_declaradas(self) -> None:
-        assert VISTAS_VALIDAS == {"lateral", "cenital"}
+        assert {"lateral", "cenital"} <= VISTAS_VALIDAS
+        # 13 vistas industria: lateral/cenital + 11 más (isométrica...
+        # .../raycast/paralaje/y-sorting/stencil/dissolve)
+        assert "isometrica" in VISTAS_VALIDAS and "raycast" in VISTAS_VALIDAS
 
     def test_el_cargador_acepta_cenital_en_los_dos_idiomas(self) -> None:
         """`vista` y `view`: el proyecto es bilingüe en propiedades desde F3.1."""
@@ -243,6 +246,6 @@ class TestLaVistaSaleDelMapa:
 
     def test_por_defecto_los_quince_mapas_siguen_siendo_laterales(self) -> None:
         """La regresión que importa: no cambiar quince mapas sin querer."""
-        from src.framework.stage.stage_loader import StageData
+        from src.framework.stage.stage_data import StageProgression
 
-        assert StageData.__dataclass_fields__["vista"].default == "lateral"
+        assert StageProgression.__dataclass_fields__["vista"].default == "lateral"

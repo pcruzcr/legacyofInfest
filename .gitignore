@@ -65,3 +65,15 @@ data/score.json
 *.rej
 *_backup/
 saves/academico/
+
+# Temp grades
+temp_grade.json
+temp2.json
+
+
+# Entregas zip
+entrega 2/
+
+
+src/tools/__pycache__/
+
