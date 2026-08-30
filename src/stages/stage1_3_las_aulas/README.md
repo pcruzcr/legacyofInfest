@@ -4,14 +4,18 @@ assignment_name: "Las Aulas"
 assignment_id: "stage1_3_las_aulas"
 zone: 1
 student_name: "Yariel Andrey Elizondo Jiménez"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Stage 1-3 — Las Aulas
 
 **Yariel Andrey Elizondo Jiménez**
-**Zona 1 (Universidad) · Evaluación Práctica I · Entrega 30 de julio de 2026**
+**Zona 1 (Universidad) · Evaluación Práctica II · Entrega 30 de julio de 2026 (I) / agosto 2026 (II)**
+
+Este documento acumula las dos entregas: las Unidades II–V (§2–§5) son las de
+la Evaluación Práctica I, ya calificada; las Unidades VI–VII (§6–§7) son la
+Evaluación Práctica II, sobre la misma base, sin quitar nada de lo anterior.
 
 ## Cómo ejecutarlo
 
@@ -30,10 +34,14 @@ El piso está roto en cuatro tramos: hay que saltar los huecos o caer al vacío.
 Desde cada salón sale una escalera de estantes que sube a un entrepiso, donde
 hay un aula del piso superior con su propia pizarra.
 
-La paleta no es inventada: los colores se midieron sobre **fotografías del aula
-física** — blanco `(238,238,232)` de la pizarra, amarillo `(224,186,62)` de la
-pared de acento, negro `(38,38,42)` de las sillas, crema `(238,238,232)` de las
-mesas plegables. Las mismas fotos son el fondo parallax del nivel (§5).
+La paleta original se midió sobre **fotografías del aula física** — blanco
+`(238,238,232)` de la pizarra, amarillo `(224,186,62)` de la pared de acento,
+negro `(38,38,42)` de las sillas, crema `(238,238,232)` de las mesas
+plegables. Para la Práctica II el profesor pidió sustituir esas fotos por
+ilustraciones propias (no encajan con la estética pixel art del motor,
+`docs/20_ASSET_BIBLE.md` §2.1) y de paso pasar a una paleta "aula moderna"
+(blanco/hueso + gris carbón/concreto + azul eléctrico como acento). El
+tileset y el fondo parallax se rehicieron con esa paleta nueva — ver §5.5.
 
 ---
 
@@ -301,23 +309,57 @@ y el alcance horizontal es $(t_2 - t_1) \times 90$:
 | 80 px | 0.32 s | 28 px |
 
 Todo el terreno se diseñó contra esta tabla, con un **margen de seguridad del
-70 %**. Las tres escaleras suben de dos filas en dos filas (32 px) avanzando solo
-una columna (16 px), muy por debajo del límite de 48 px. El generador valida las
-18 transiciones automáticamente y reporta cero saltos inválidos.
+70 %**. El generador valida cada transición automáticamente y reporta cero
+saltos inválidos.
+
+**Tres escaleras, tres formas distintas (Práctica II).** Las tres suben las
+mismas 10 filas (160 px) del piso al entrepiso, pero cada una es una **forma**
+distinta de recorrido, no la misma escalera con otros números — la primera
+versión variaba ancho y altura de escalón y seguía siendo "subir, subir,
+subir" en línea recta; esta no:
+
+| Escalera | Forma | Escalones | Transiciones válidas |
+| --- | --- | --- | --- |
+| A (aula 1) | Clásica: escalones parejos de 32 px, en línea recta. Es la primera que se encuentra el jugador — sirve de tutorial. | 5 | 6 |
+| B (aula 2) | **Zigzag**: adelante, adelante, **atrás** (y más arriba), adelante, adelante. El tercer escalón queda detrás de donde ya se estuvo. | 5 | 6 |
+| C (aula 3) | **Ritmo quebrado**: sube, sube, **SALTA** (64 px de una vez, el más comprometido del nivel — solo 32,3 px de alcance de sobra), sube. La primera versión era un solo salto grande a una plataforma larga; se sentía "dos pasos largos y ya", así que ahora el salto grande está rodeado de dos tramos normales, no solo. | 3 | 4 |
+
+Un salto hacia atrás (escalera B) siempre es seguro de validar: si el destino
+queda detrás del borde de despegue, `salto_valido()` mide el avance como
+`max(0, ...)`, o sea 0 sin importar cuánto se suba — la regla ya existía,
+solo hacía falta usarla a propósito. 16 transiciones en total, las 16
+válidas (`SALTOS INVALIDOS: 0`).
+
+**Sin tablón sobre ningún hueco.** Las primeras dos versiones ponían una
+plataforma-puente encima de los huecos (las 4 al principio, luego solo 2) como
+ruta segura opcional. Se quitó del todo: los 4 huecos hay que saltarlos de
+verdad, sin atajo por arriba.
 
 Los cuatro huecos del piso miden **48 px** contra un máximo permitido de 60 px:
-hay que saltar, pero con margen. Cada uno lleva un `DeathPit` debajo y un
-**checkpoint inmediatamente antes**, para que morir no obligue a repetir tramos
-largos.
+hay que saltar, pero con margen. Cada uno lleva un `DeathPit` debajo. **Solo 2
+de los 4 (B y D) tienen el tablón de plataforma por encima** como ruta
+alternativa; en A y C no hay atajo — hay que saltar bien o se cae. También
+esto era el mismo patrón las cuatro veces y se sentía repetitivo.
+
+**Cambio de diseño en la Práctica II.** La primera versión ponía un checkpoint
+justo antes de cada hueco (7, luego 8 tras el primer ajuste de espaciado). Se
+redujo a propósito a **3**, lejos de cualquier caída (≥300 px de margen a cada
+lado): la decisión fue que caerse cueste caro — "si uno se cae, se muere y ya
+está", no un respawn a un paso del peligro. Esto le cuesta 6 puntos en
+`design_pacing` (el calificador exige ≤500 px entre checkpoints en un nivel
+que mide ~3000 px, algo que ni 3 ni 8 checkpoints intermedios evitan del
+todo) a cambio del ritmo que se buscaba — ver §10.
 
 ### 4.5 Objetos de control
 
 | Tipo | Cantidad | Posición |
 | --- | --- | --- |
 | `PlayerSpawn` | 1 | (64, 576) |
-| `Checkpoint` | 7 | ids 0–6, en x = 288, 704, 1344, 1504, 2016, 2208, 2624 |
+| `Checkpoint` | 3 | ids 0–2, en x = 1088, 1728, 2368 (§4.4) |
 | `NextTrigger` | 1 | (3040, 512), 32 × 64 px |
 | `DeathPit` | 4 | x = 736, 1376, 2048, 2656 · 48 × 16 px |
+| `Door` | 1 | casillero interactivo, x = 992 (Unidad VI, §6) |
+| `Pickup` | 3 | hojas de examen sueltas, x = 352, 1840, 2800 |
 
 ---
 
@@ -377,17 +419,173 @@ que predice el modelo.
 
 ### 5.4 Antes y después
 
-![Comparación entre la fotografía original y la capa procesada](capturas/color_antes_despues.png)
+![Comparación entre la ilustración de entrada y la capa procesada](capturas/color_antes_despues.png)
 
-Arriba la fotografía tal como salió del teléfono; abajo la misma imagen después
-de la conversión HSV y la mezcla alfa. El aula sigue siendo reconocible —mesas,
-sillas, techo de listones, pared amarilla— pero pierde la fuerza cromática que
-la haría competir con el pixel art. La saturación media de esta capa baja de
-0.137 a 0.090 en la comparación mostrada.
+Arriba la ilustración de entrada (`aula_medio.png`, ver §5.5); abajo la misma
+imagen después de la conversión HSV y la mezcla alfa. Se ve claramente el
+efecto de la mezcla alfa: las dos franjas de luz se funden en un gris casi
+uniforme, que es justamente el objetivo — que el fondo se lea como fondo y no
+compita con el primer plano.
+
+**Nota honesta sobre el número.** Con las fotos originales (Eval. I) la
+saturación medida bajaba (0.137 → 0.090): el efecto dominante era la pérdida
+de color de una imagen ya saturada. Con la ilustración nueva —deliberadamente
+pálida desde el origen, para no repetir el problema de bordes duros del §9.4
+del reporte de bugs— la saturación de partida ya es casi nula (0.037), y la
+mezcla contra el lienzo azulado sube ese número un poco (a 0.053) en vez de
+bajarlo. El efecto que sí se mantiene, y es el que importa para esta capa, es
+el de la mezcla alfa oscureciendo y aplanando la imagen — no hay contradicción
+con la Unidad V, solo un punto de partida distinto.
+
+### 5.5 Actualización para la Práctica II — de fotos a ilustraciones
+
+`generar_fondos.py` (§5.1–§5.2) no cambió una línea: sigue siendo HSV +
+`alpha_blend`. Lo que cambió es de dónde saca la imagen de entrada. Antes
+eran tres fotos del aula real (`aula1.jpg.jpeg`…); ahora las genera
+`herramientas/dibujar_ilustraciones_aula.py`, tres ilustraciones pixel-art en
+la paleta "aula moderna" (blanco/hueso, gris carbón/concreto, azul eléctrico
+`#0055A5`). El pipeline de perspectiva atmosférica corre igual sobre esa
+entrada nueva; sólo cambia la fuente, no la Unidad V que ya se calificó.
 
 ---
 
-## 6. Lógica personalizada
+## 6. Unidad VI — Animación por easing e interacción con `EventBus`
+
+Archivo: [`stage1_3_las_aulas.py`](stage1_3_las_aulas.py) (`_dibujar_casillero_animado`,
+`_on_casillero_abierto`) · Objeto TMX: `CasilleroInteractivo`, generado por
+[`herramientas/generar_mapa.py`](herramientas/generar_mapa.py).
+
+### 6.1 El circuito: puerta → `EventBus` → animación
+
+El motor ya trae un sistema de interactuables
+(`framework/stage/interactables.py`, `InteractableSystem`) pensado justo para
+esto: un objeto `type="Door"` en el TMX se vuelve una `Cerradura`, y al
+abrirla con el botón de usar emite el evento que se le indique en la
+propiedad `evento`. No hizo falta tocar el framework — sólo declarar el
+objeto y escuchar su evento desde la propia escena:
+
+```
+Tiled: <object type="Door" name="CasilleroInteractivo">
+           <property name="evento" value="CASILLERO_ABIERTO"/>
+                     │
+                     ▼
+InteractableSystem (framework): jugador + botón de usar → cerradura.abrir()
+                     │
+                     ▼  bus.emit("CASILLERO_ABIERTO")
+Stage1_3_LasAulas.on_enter(): context.event_bus.subscribe("CASILLERO_ABIERTO", ...)
+                     │
+                     ▼
+_on_casillero_abierto(): arranca el temporizador de la animación
+```
+
+Esa suscripción **es** la interacción propia de `EventBus` que pide la
+rúbrica: el framework sólo sabe que una puerta se abrió; qué significa eso
+visualmente lo decide el escenario.
+
+### 6.2 La animación: `ease_out_bounce`
+
+El panel del casillero (un rectángulo dibujado a mano, azul eléctrico con
+marco carbón) tapa el casillero mientras está cerrado. Al abrirse, su ancho
+se encoge según:
+
+$$\text{ancho}(t) = \text{ancho}_{\text{total}} \cdot \bigl(1 - \text{easeOutBounce}(t)\bigr), \qquad t \in [0,1]$$
+
+con $t$ avanzando a razón de $1/0.6\ \text{s}^{-1}$ en `update()`. Se eligió
+`ease_out_bounce` (no `lerp`) porque el efecto pedido es "la puerta se abre
+de golpe y rebota un poco antes de quedarse quieta", no un deslizamiento
+uniforme — es exactamente lo que hace esa curva: gana velocidad rápido y
+pega tres rebotes cada vez más pequeños antes de asentarse en 1.0.
+
+### 6.3 Antes / después
+
+![Casillero cerrado antes de interactuar](capturas/casillero_antes.png)
+![Casillero abierto tras la animación](capturas/casillero_despues.png)
+
+Arriba, el casillero cerrado (estado por defecto, `t=0`). Abajo, tras
+interactuar y completarse la animación (`t=1`): el panel desapareció del
+todo y se ve el hueco del casillero.
+
+### 6.4 Un hallazgo de `pytmx` documentado en el camino
+
+Declarar `<property name="key_id" value=""/>` para decir "sin llave" **no
+funciona**: `pytmx` parsea un `value=""` vacío como `None`, no como cadena
+vacía, y `stage_objetos.py` hace `str(props.get("key_id", ""))` — como la
+clave `key_id` sí existe en el diccionario (con valor `None`), el `.get(...,
+"")` nunca cae en su valor por defecto, y el resultado es la cadena `"None"`
+de cuatro letras, que la `Cerradura` interpreta como "hace falta la llave
+literal 'None'". La puerta quedaba bloqueada sin ningún aviso en Tiled. La
+solución correcta es **no declarar la propiedad del todo** cuando no hace
+falta llave: así el `.get()` sí encuentra la clave ausente y usa `""`. Quedó
+comentado en `generar_mapa.py` para no repetir el error.
+
+---
+
+## 7. Unidad VII — Histograma dirigiendo convolución y brillo
+
+Archivo: [`stage1_3_las_aulas.py`](stage1_3_las_aulas.py) (`_procesar_fondo_lejano`).
+
+### 7.1 Por qué esto no es cosmético
+
+La capa `BG_Far` del parallax (la más lejana, velocidad 0.15×) se procesa al
+entrar al nivel, pero **qué filtro se aplica lo decide su propio
+histograma**, no una decisión fija de antemano:
+
+```python
+histograma = FilterTools.compute_histogram(lejos)
+luminancia_media = sum(v * c for v, c in enumerate(histograma["luminance"])) / histograma["total_pixels"]
+
+if luminancia_media < 100.0:      # zona en penumbra
+    kernel = FilterTools.get_standard_kernel("box_blur_5")   # difuminado fuerte
+    resultado = FilterTools.apply_kernel(lejos, kernel)
+    resultado = FilterTools.adjust_brightness(resultado, 1.15)
+else:                              # zona ya clara
+    kernel = FilterTools.get_standard_kernel("box_blur")     # difuminado suave
+    resultado = FilterTools.apply_kernel(lejos, kernel)
+```
+
+Medido sobre el fondo real de este nivel: luminancia media **62.1/255**, por
+debajo del umbral de 100 → toma la rama oscura (difuminado fuerte +
+`adjust_brightness(1.15)`). Si se regenerara el fondo con una ilustración más
+clara, el mismo código tomaría la otra rama sin tocar una línea: es la propia
+medición la que decide, no un `if` sobre un valor fijo.
+
+### 7.2 La matriz de convolución
+
+`box_blur_5`, un kernel 5×5 de promediado (cada celda pesa 1/25):
+
+$$
+K = \frac{1}{25}
+\begin{bmatrix}
+1 & 1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 & 1 \\
+1 & 1 & 1 & 1 & 1
+\end{bmatrix}
+$$
+
+`FilterTools.apply_kernel()` la aplica canal por canal (R, G, B por
+separado) con `scipy.ndimage.convolve` y `mode="reflect"` en el borde.
+
+### 7.3 Resultado medido y antes/después
+
+| | Luminancia media |
+|---|---|
+| Antes (`bg_aulas_far.png` tal cual lo escribe `generar_fondos.py`) | 62.1 / 255 |
+| Después (`apply_kernel` + `adjust_brightness(1.15)`) | 70.8 / 255 |
+
+![Fondo lejano antes del filtro: nitido](capturas/fondo_lejos_antes.png)
+![Fondo lejano despues del filtro: difuminado y mas claro](capturas/fondo_lejos_despues.png)
+
+El efecto refuerza la perspectiva atmosférica de la Unidad V (§5): la capa
+más lejana no sólo pierde saturación, ahora también pierde nitidez, que es
+justo lo que un ojo real hace con la distancia — y esta vez la decisión de
+*cuánto* desenfocar la toma el propio histograma de la imagen, no un número
+fijo elegido a ojo.
+
+---
+
+## 8. Lógica personalizada
 
 - **Detección vectorial** (`estudiante_infectado.py`): sobrescribe
   `_player_in_range()` de `EnemyBase` para reemplazar la caja rectangular por
@@ -403,18 +601,20 @@ la haría competir con el pixel art. La saturación media de esta capa baja de
 
 ---
 
-## 7. Problemas del framework encontrados y resueltos
+## 9. Problemas del framework encontrados y resueltos
 
 Los tres se resolvieron **sobrescribiendo métodos en la subclase**, sin
-modificar ningún archivo de `src/engine/` ni de `src/framework/`.
+modificar ningún archivo de `src/engine/` ni de `src/framework/`. (Un cuarto
+hallazgo, de la Práctica II — el `key_id=""` de `pytmx` — está en §6.4, junto
+al código que lo usa.)
 
-### 7.1 `on_stage_start()` sin `super()`
+### 9.1 `on_stage_start()` sin `super()`
 
 La plantilla `stage_template.py` sobrescribe `on_stage_start()` con `pass`, pero
 la implementación de `StageScene` dispara el overlay de tutorial. Sin llamar a
 `super().on_stage_start()` el tutorial nunca aparece.
 
-### 7.2 El mapa de azulejos no scrollea
+### 9.2 El mapa de azulejos no scrollea
 
 `StageScene` sincroniza pyscroll asignando directamente el rectángulo de vista:
 
@@ -436,7 +636,7 @@ self._stage_data.map_layer._map_layer.center((
 ))
 ```
 
-### 7.3 Los fondos parallax nunca se ven
+### 9.3 Los fondos parallax nunca se ven
 
 `DrawingSystem.draw()` ejecuta en este orden:
 
@@ -454,7 +654,7 @@ recién pintado. Por eso ningún nivel del juego muestra su fondo, aunque
 
 ---
 
-## 8. Verificación
+## 10. Verificación
 
 | Prueba | Resultado |
 | --- | --- |
@@ -465,10 +665,21 @@ recién pintado. Por eso ningún nivel del juego muestra su fondo, aunque
 | Validación de saltos (18 transiciones) | 0 inválidas |
 | Recorrido completo con 12 entidades activas | sin excepciones |
 | Salida de consola en partida real | solo el banner de pygame |
+| `scripts/validate_tmx.py` | `[OK]`, sin avisos |
+| `scripts/grade_stage.py` | **118/130 (90,8 %)** |
+| Casillero: abrir con `usar` dispara `CASILLERO_ABIERTO` y anima `t: 0→1` | verificado en modo headless |
+| Fondo lejano: `compute_histogram` → rama oscura → `apply_kernel` + `adjust_brightness` | 62,1 → 70,8 de luminancia media |
+| Coleccionables (`Pickup` × 3, `automatico=True`) se recogen al pisarlos | verificado en modo headless |
+
+Los 12 puntos que faltan para el máximo **no son un descuido**: 6 son
+`design_geometry`, un falso positivo del calificador que no toca ningún
+archivo de Yariel (ver Bug #1 en el reporte de bugs, y §9); los otros 6 son
+`design_pacing`, la decisión deliberada de dejar solo 3 checkpoints (§4.4).
+118/130 es, con esas dos decisiones en pie, el máximo alcanzable.
 
 ---
 
-## 9. Reflexión
+## 11. Reflexión
 
 Lo más difícil no fue programar las fórmulas, sino descubrir que el motor tenía
 tres fallos que hacían invisible el trabajo: el mapa no scrolleaba, los fondos
@@ -488,9 +699,19 @@ disparar proyectiles con predicción de trayectoria, y derivaría el tileset
 directamente de las fotografías mediante segmentación por color, que es
 justamente lo que pide la Evaluación III.
 
+**Práctica II.** El hallazgo más caro esta vez no fue del motor, fue de
+`pytmx`: `value=""` no es "cadena vacía", es `None` (§6.4). Costó media hora
+de puerta bloqueada sin ningún mensaje de error que apuntara ahí. La lección
+repetida es la misma que en la Práctica I — cuando algo no funciona y el
+código "se ve bien", medir en modo headless con prints en cada paso antes de
+sospechar del propio diseño. Para la Práctica III, la rama de
+`_procesar_fondo_lejano()` (§7.1) ya deja el terreno preparado para volver
+sobre la misma capa con umbralización real (Unidad VIII) en vez de un umbral
+fijo sobre la luminancia media.
+
 ---
 
-## 10. Archivos entregados
+## 12. Archivos entregados
 
 ```
 src/stages/stage1_3_las_aulas/
@@ -500,21 +721,26 @@ src/stages/stage1_3_las_aulas/
 ├── __init__.py
 ├── README.md                   este documento
 ├── capturas/
-│   ├── curva_bezier_f1.png     curva y puntos de control (§3.4)
-│   └── color_antes_despues.png foto original vs procesada (§5.4)
+│   ├── curva_bezier_f1.png       curva y puntos de control (§3.4)
+│   ├── color_antes_despues.png   foto original vs procesada, Practica I (§5.4)
+│   ├── casillero_antes.png       casillero cerrado, Unidad VI (§6.3)
+│   ├── casillero_despues.png     casillero abierto tras la animacion (§6.3)
+│   ├── fondo_lejos_antes.png     BG_Far nitido, Unidad VII (§7.3)
+│   └── fondo_lejos_despues.png   BG_Far tras histograma + convolucion (§7.3)
 └── herramientas/
-    ├── crear_tileset.py        dibuja el tileset propio
-    ├── generar_mapa.py         genera el TMX y valida los saltos
-    └── generar_fondos.py       procesa las fotos con ColorTools
+    ├── crear_tileset.py            dibuja el tileset propio (paleta "aula moderna")
+    ├── generar_mapa.py             genera el TMX, valida los saltos, declara el casillero
+    ├── generar_fondos.py           HSV + alpha_blend (Unidad V), sin cambios de logica
+    └── dibujar_ilustraciones_aula.py  ilustraciones de entrada, reemplazan las fotos (§5.5)
 
 assets/maps/stage1_3_las_aulas/
 └── stage1_3_las_aulas.tmx      mapa, 200x38 tiles
 
 assets/tilesets/
-└── tileset_aulas_yariel.png    tileset propio, 64 tiles de 16x16
+└── tileset_aulas_yariel.png    tileset propio, 64 tiles de 16x16 (paleta "aula moderna")
 
 assets/backgrounds/aulas/
-├── bg_aulas_far.png            parallax derivado de fotos del aula real
+├── bg_aulas_far.png            parallax derivado de ilustraciones propias (§5.5)
 ├── bg_aulas_mid.png
 └── bg_aulas_near.png
 ```

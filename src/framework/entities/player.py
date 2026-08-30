@@ -23,14 +23,9 @@ from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
-from src.framework.entities.player_components import (
-    PlayerAnimationComponent,
-    PlayerCombatComponent,
-    PlayerPhysicsComponent,
-)
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
-from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, Material
+from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, Material, PhysicsProfile
 from src.framework.physics.resolucion import (
     EstadoDeMovimiento,
     acercarse_a,
@@ -123,6 +118,8 @@ _PLAYER_SPRITE_MAP: dict[str, tuple[str, int]] = {
     "AIR_CHASE": ("player_jump.png", 3),
     "CHARGE_RELEASE": ("player_short_attack.png", 4),
     "LEDGE_GRAB": ("player_jump.png", 2),
+    "STAGGER": ("player_hurt.png", 4),
+    "POSSESSED": ("player_idle.png", 4),
 }
 
 # Per-state animation playback rate (frames per second)
@@ -165,6 +162,8 @@ _PLAYER_ANIM_FPS: dict[str, float] = {
     "GROUND_POUND": 14.0,
     "AIR_CHASE": 12.0,
     "CHARGE_RELEASE": 14.0,
+    "STAGGER": 10.0,
+    "POSSESSED": 8.0,
 }
 
 
@@ -198,6 +197,8 @@ class PlayerState(str, Enum):
     GROUND_POUND = "GROUND_POUND"
     AIR_CHASE = "AIR_CHASE"
     CHARGE_RELEASE = "CHARGE_RELEASE"
+    STAGGER = "STAGGER"
+    POSSESSED = "POSSESSED"
 
 
 class Player(BaseEntity):
@@ -253,18 +254,11 @@ class Player(BaseEntity):
         """Initialize the player at the given spawn position."""
         super().__init__(spawn_position, event_bus)
 
-        # ── Componentes extraídos (Facade + Strategy) — AUD-724/725
-        # Player sigue exponiendo la misma API pública para las 26 entregas,
-        # pero internamente delega a componentes testeables por separado.
-        self._physics_comp = PlayerPhysicsComponent()
-        self._combat_comp = PlayerCombatComponent()
-        self._anim_comp = PlayerAnimationComponent()
-
         # ── Canonical state dataclass ──────────────────────────
         # AUD-333 — el perfil de física se crea antes que cualquier dato que
         # lo lea: el estado canónico arranca con el coyote del perfil, que
         # por defecto vale exactamente lo de `settings`.
-        self.perfil = self._physics_comp.perfil
+        self.perfil = PhysicsProfile.plataformas()
         #: AUD-490 — GAP-039, la mitad que faltaba: la restitución del perfil
         #: es una constante para todo el nivel; esto es lo que una
         #: `ZonaDeFriccion` con `material` puede sobreescribir por región,
@@ -354,6 +348,8 @@ class Player(BaseEntity):
         self._init_state()
 
         # --- Combo state (public) ---
+        # C8: combo de suelo (ventana tiempo, daño escalado) ≠ combo_air_hits (aéreo,
+        # 2 hits → slam, ver player_state.py:37). Este es el que ve HUD y logros.
         self.combo_count: int = 0
         self.combo_timer: float = 0.0
         self.last_attack_type: str = ""
@@ -641,8 +637,6 @@ class Player(BaseEntity):
             base = 1.0
         elif state == PlayerState.CHARGE_RELEASE and self._active_hitbox is not None:
             base = 1.0
-        elif state == PlayerState.GROUND_POUND and self._active_hitbox is not None:
-            base = 1.0
         from src.engine.core.difficulty import get_config
         cfg = get_config()
         if base > 0.0 and self.combo_active and self.combo_count > 0:
@@ -800,7 +794,7 @@ class Player(BaseEntity):
         )
         self._invincibility_timer = cfg.invincibility_duration + extra_titan
         self._flash_timer = 0.0
-        # AUD-COMBO: recibir daño rompe el combo
+        # AUD-COMBO: recibir daño rompe el combo (y deja de contar)
         self.combo_count = 0
         self.combo_timer = 0.0
         self.combo_active = False
@@ -1143,7 +1137,12 @@ class Player(BaseEntity):
         )[1]
         if self._animation_timer >= frame_duration:
             self._animation_timer -= frame_duration
-            self._animation_frame = (self._animation_frame + 1) % total_frames
+            # 5. Muerte no rebobina — ya corregido en enemy_base.py:439; aplicar mismo a Player
+            if self._state_instance.state_enum == PlayerState.DYING:
+                if self._animation_frame < total_frames - 1:
+                    self._animation_frame += 1
+            else:
+                self._animation_frame = (self._animation_frame + 1) % total_frames
 
     # ──────────────────────────────────────────────
     # State machine (delegated to player_states.py)

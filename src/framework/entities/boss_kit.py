@@ -104,6 +104,16 @@ class BossAttack:
     #: ella el parry sólo evita daño y no invita a arriesgarse.
     aturde_al_parry: float = 1.2
 
+    def __post_init__(self) -> None:
+        # 1. Telegrafía obligatoria — windup <0.35 es ilegible y vuelve el combate ensayo/error
+        if self.windup < MIN_READABLE_WINDUP:
+            import logging
+            logging.getLogger(__name__).warning(
+                "BossAttack %r windup %.2fs < %.2fs — clamp a mínimo legible",
+                self.name, self.windup, MIN_READABLE_WINDUP,
+            )
+            object.__setattr__(self, "windup", MIN_READABLE_WINDUP)
+
     def available_in(self, phase: int) -> bool:
         return not self.phases or phase in self.phases
 

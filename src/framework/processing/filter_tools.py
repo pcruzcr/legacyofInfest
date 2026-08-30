@@ -51,6 +51,18 @@ class FilterTools:
     @classmethod
     def histogram_equalize(cls, surface: pygame.Surface) -> pygame.Surface:
         cls._validate_surface(surface)
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr = pygame.surfarray.array3d(surface)
         result = np.zeros_like(arr)
         for c in range(3):
@@ -66,19 +78,57 @@ class FilterTools:
                 cdf_masked = (cdf_masked - cdf_min) * 255 / (cdf_max - cdf_min)
                 cdf = np.ma.filled(cdf_masked, 0).astype(np.uint8)
                 result[:, :, c] = cdf[channel]
-        return pygame.surfarray.make_surface(result)
+        rgb_uint8 = result.astype(np.uint8) if result.dtype != np.uint8 else result
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
+        out = pygame.surfarray.make_surface(rgb_uint8)
+        if surface.get_alpha() is not None:
+            out.set_alpha(surface.get_alpha())
+        if surface.get_colorkey() is not None:
+            out.set_colorkey(surface.get_colorkey())
+        return out
 
     @classmethod
     def adjust_brightness(cls, surface: pygame.Surface, factor: float) -> pygame.Surface:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_brightness: factor must be in [0.0, 4.0], got {factor}")
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = (arr * factor).clip(0, 255).astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(arr, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
         result = pygame.surfarray.make_surface(arr)
         src_alpha = surface.get_alpha()
         if src_alpha is not None:
             result.set_alpha(src_alpha)
+        if surface.get_colorkey() is not None:
+            result.set_colorkey(surface.get_colorkey())
         return result
 
     @classmethod
@@ -86,17 +136,52 @@ class FilterTools:
         cls._validate_surface(surface)
         if factor < 0.0 or factor > 4.0:
             raise ValueError(f"FilterTools.adjust_contrast: factor must be in [0.0, 4.0], got {factor}")
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         arr = ((arr - 128.0) * factor + 128.0).clip(0, 255).astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(arr, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
         result = pygame.surfarray.make_surface(arr)
         src_alpha = surface.get_alpha()
         if src_alpha is not None:
             result.set_alpha(src_alpha)
+        if surface.get_colorkey() is not None:
+            result.set_colorkey(surface.get_colorkey())
         return result
 
     @classmethod
     def stretch_contrast(cls, surface: pygame.Surface) -> pygame.Surface:
         cls._validate_surface(surface)
+        w, h = surface.get_size()
+        has_alpha = bool(surface.get_flags() & pygame.SRCALPHA) or surface.get_colorkey() is not None
+        alpha_arr: np.ndarray | None = None
+        try:
+            alpha_arr = pygame.surfarray.array_alpha(surface)
+            if np.all(alpha_arr == 255) and not (surface.get_flags() & pygame.SRCALPHA):
+                has_alpha = False
+                alpha_arr = None
+            elif np.any(alpha_arr != 255):
+                has_alpha = True
+        except Exception:
+            alpha_arr = None
         arr: np.ndarray = pygame.surfarray.array3d(surface).astype(np.float32)
         result = np.zeros_like(arr)
         for c in range(3):
@@ -107,7 +192,22 @@ class FilterTools:
                 result[:, :, c] = ch
             else:
                 result[:, :, c] = ((ch - mn) / (mx - mn) * 255.0).clip(0, 255)
-        return pygame.surfarray.make_surface(result.astype(np.uint8))
+        rgb_uint8 = result.astype(np.uint8)
+        if has_alpha and alpha_arr is not None:
+            rgba = np.zeros((h, w, 4), dtype=np.uint8)
+            rgba[:, :, 0:3] = np.transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 3] = alpha_arr.T
+            try:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()
+            except pygame.error:
+                out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+            return out
+        out = pygame.surfarray.make_surface(rgb_uint8)
+        if surface.get_alpha() is not None:
+            out.set_alpha(surface.get_alpha())
+        if surface.get_colorkey() is not None:
+            out.set_colorkey(surface.get_colorkey())
+        return out
 
     @classmethod
     def apply_kernel(cls, surface: pygame.Surface, kernel: np.ndarray) -> pygame.Surface:

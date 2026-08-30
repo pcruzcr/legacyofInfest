@@ -1,9 +1,10 @@
 """
-Module: test_art_lib
-System: tests
-Description: Tests for art_lib's master palette and its texture helpers
-(bayer_dither, mottle, quantize_to_palette, despeckle) extracted from the
-vignette reference approved as the boss map's frozen visual standard.
+Modulo: test_art_lib
+Sistema: tests
+Descripcion: pruebas de la paleta maestra de art_lib y sus funciones
+auxiliares de textura (bayer_dither, mottle, quantize_to_palette, despeckle)
+extraidas de la referencia de vineta aprobada como estandar visual congelado
+del mapa del boss.
 """
 from __future__ import annotations
 import importlib
@@ -27,7 +28,7 @@ def test_despeckle_replaces_isolated_orphan_with_neighbor_majority() -> None:
     art_lib = importlib.import_module("src.stages.boss_venado.tools.art_lib")
     canvas = np.zeros((5, 5, 3), dtype=np.uint8)
     canvas[:, :] = art_lib.PALETTE["O2"]
-    canvas[2, 2] = art_lib.PALETTE["K0"]  # all 8 neighbors identical (O2), center differs
+    canvas[2, 2] = art_lib.PALETTE["K0"]  # los 8 vecinos son identicos (O2), el centro difiere
     art_lib.despeckle(canvas, art_lib.PALETTE)
     assert tuple(canvas[2, 2]) == art_lib.PALETTE["O2"]
 
@@ -37,7 +38,7 @@ def test_despeckle_leaves_pixel_with_matching_neighbor_untouched() -> None:
     canvas = np.zeros((5, 5, 3), dtype=np.uint8)
     canvas[:, :] = art_lib.PALETTE["O2"]
     canvas[2, 2] = art_lib.PALETTE["K0"]
-    canvas[2, 3] = art_lib.PALETTE["K0"]  # matches a neighbor -> not isolated
+    canvas[2, 3] = art_lib.PALETTE["K0"]  # coincide con un vecino -> no esta aislado
     art_lib.despeckle(canvas, art_lib.PALETTE)
     assert tuple(canvas[2, 2]) == art_lib.PALETTE["K0"]
 
@@ -46,7 +47,7 @@ def test_despeckle_never_touches_protected_colors() -> None:
     art_lib = importlib.import_module("src.stages.boss_venado.tools.art_lib")
     canvas = np.zeros((5, 5, 3), dtype=np.uint8)
     canvas[:, :] = art_lib.PALETTE["O2"]
-    canvas[2, 2] = art_lib.PALETTE["K0"]  # isolated, but explicitly protected below
+    canvas[2, 2] = art_lib.PALETTE["K0"]  # aislado, pero protegido explicitamente abajo
     art_lib.despeckle(canvas, art_lib.PALETTE, protect_keys=("K0",))
     assert tuple(canvas[2, 2]) == art_lib.PALETTE["K0"]
 

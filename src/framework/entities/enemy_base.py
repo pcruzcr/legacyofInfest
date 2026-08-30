@@ -62,6 +62,8 @@ class EnemyState(str, Enum):
     FIRING = "FIRING"
     RECOVER = "RECOVER"
     RETREAT = "RETREAT"
+    FLEEING = "FLEEING"
+    CHANNELING = "CHANNELING"
     STUNNED = "STUNNED"
     HURT = "HURT"
     LAUNCHED = "LAUNCHED"
@@ -152,6 +154,11 @@ class EnemyBase(BaseEntity):
         #: `resistencias`, por ejemplo `veneno:0.5, fuego:2`.
         self.resistencias: dict[str, float] = {}
 
+        # --- Perfil de física para cenital ---
+        from src.framework.physics.perfil import PhysicsProfile
+
+        self.perfil: PhysicsProfile = PhysicsProfile.plataformas()
+
         # --- Collision ---
         self._collision_rects: list[pygame.Rect] = []
         self._one_way_rects: list[pygame.Rect] = []
@@ -216,6 +223,21 @@ class EnemyBase(BaseEntity):
         self._tint_surf: pygame.Surface | None = None
         self._tint_surf_size: tuple[int, int] = (0, 0)
 
+        # Perfil para cenital ya creado arriba
+
+    @property
+    def vista_cenital(self) -> bool:
+        return getattr(self, "perfil", None) is not None and getattr(self.perfil, "modo", "") == "cenital"
+
+    @vista_cenital.setter
+    def vista_cenital(self, v: bool) -> None:
+        from src.framework.physics.perfil import PhysicsProfile
+
+        self.perfil = PhysicsProfile.cenital() if v else PhysicsProfile.plataformas()
+        if v:
+            self._hug_slopes = False
+            self._is_airborne = False
+
     # ──────────────────────────────────────────────
     # Master update (do NOT override in subclasses)
     # ──────────────────────────────────────────────
@@ -238,6 +260,21 @@ class EnemyBase(BaseEntity):
         if self._pre_update(dt):
             return
         self._update_invincibility(dt)
+        # Vista cenital: movimiento 2D sin gravedad ni pendientes
+        if self.vista_cenital:
+            self._run_state_machine(dt)
+            # En cenital, knockback es 2D y no hay suelo
+            if self._knockback_velocity.length_squared() > 0:
+                self.position.x += self._knockback_velocity.x * dt
+                self.position.y += self._knockback_velocity.y * dt
+                self._knockback_velocity *= (0.90 ** (dt * 60.0))
+                if self._knockback_velocity.length() < 1.0:
+                    self._knockback_velocity.update(0.0, 0.0)
+            self._update_rects()
+            self._tick_cooldowns(dt)
+            self._advance_animation(dt)
+            self._post_update(dt)
+            return
         self._run_state_machine(dt)
         self._apply_knockback(dt)
         self._update_rects()
@@ -924,6 +961,8 @@ class EnemyBase(BaseEntity):
         Respects player parry — parried enemies get deflected.
         player: Player — imported locally to avoid circular imports.
         """
+        if not self.is_visible:
+            return
         if not self.is_alive or self.state == EnemyState.DYING:
             return
         if self._contact_cooldown > 0:

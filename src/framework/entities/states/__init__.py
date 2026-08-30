@@ -33,6 +33,10 @@ from src.framework.entities.states.damage import (
     DyingState,
     HurtState,
 )
+from src.framework.entities.states.debuff import (
+    PossessedState,
+    StaggerState,
+)
 from src.framework.entities.states.grounded import (
     CrouchingState,
     IdleState,
@@ -90,8 +94,10 @@ __all__ = (
     "LongAttackState",
     "ParryState",
     "PlayerStateBase",
+    "PossessedState",
     "ShortAttackState",
     "SlideState",
+    "StaggerState",
     "SwimAttackState",
     "SwimmingState",
     "ThrowState",

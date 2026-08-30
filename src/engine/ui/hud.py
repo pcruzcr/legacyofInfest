@@ -753,7 +753,7 @@ class HUD:
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
-        if self._combo_count > 1:
+        if self._combo_count > 0:
             self._draw_combo_indicator(surface)
         self._draw_save_notification(surface)
 

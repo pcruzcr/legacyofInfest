@@ -1,19 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="60" height="38" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="200">
  <properties>
-  <property name="schema_version" value="1"/>
-  <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="stage_id" value="stage3_3_el_patio"/>
-  <property name="stage_name" value="3-3  EL PATIO"/>
-  <property name="zone" type="int" value="3"/>
-  <property name="time_limit" type="int" value="145"/>
-  <property name="bgm_track" value="bgm_zone3_traverse"/>
-  <property name="background_zone" value="zone3"/>
-  <property name="climate" value="clear"/>
-  <property name="gravity_multiplier" type="float" value="1.0"/>
-  <property name="ambient_light" type="float" value="0.85"/>
+  <property name="schema_version" value="1" />
+  <property name="author" value="Rebeca" />
+  <property name="stage_id" value="stage3_3_el_patio" />
+  <property name="stage_name" value="3-3  EL PATIO" />
+  <property name="zone" type="int" value="3" />
+  <property name="time_limit" type="int" value="145" />
+  <property name="bgm_track" value="bgm_zone3_traverse" />
+  <property name="background_zone" value="zone3" />
+  <property name="climate" value="clear" />
+  <property name="gravity_multiplier" type="float" value="1.0" />
+  <property name="ambient_light" type="float" value="0.85" />
  </properties>
- <tileset firstgid="1" source="../../tilesets/tileset_gavilan_ciudad.tsx"/>
+ <tileset firstgid="1" source="../../tilesets/tileset_gavilan_ciudad.tsx" />
  <layer id="1" name="BG_Far" width="60" height="38">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -225,135 +225,135 @@
 </data>
  </layer>
  <objectgroup id="6" name="Objects">
-  <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="40" y="576"/>
+  <object id="1" type="PlayerSpawn" name="PlayerSpawn_01" x="40" y="576" />
   <object id="2" type="Checkpoint" name="Checkpoint_01" x="448" y="576" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="0"/>
+    <property name="checkpoint_id" type="int" value="0" />
    </properties>
   </object>
-  <object id="3" type="NextTrigger" name="NextTrigger_01" x="928" y="512" width="16" height="64"/>
+  <object id="3" type="NextTrigger" name="NextTrigger_01" x="928" y="512" width="16" height="64" />
 
   <object id="10" type="Walker" name="Walker_01" x="176" y="576">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="64"/>
-    <property name="facing" value="right"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
+    <property name="zone" type="int" value="3" />
+    <property name="patrol_length" type="int" value="64" />
+    <property name="facing" value="right" />
+    <property name="patrol_speed" type="float" value="30.0" />
+    <property name="alert_speed" type="float" value="55.0" />
+    <property name="damage_on_contact" type="float" value="0.5" />
    </properties>
   </object>
   <object id="11" type="Walker" name="Walker_02" x="544" y="576">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="64"/>
-    <property name="facing" value="left"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
+    <property name="zone" type="int" value="3" />
+    <property name="patrol_length" type="int" value="64" />
+    <property name="facing" value="left" />
+    <property name="patrol_speed" type="float" value="30.0" />
+    <property name="alert_speed" type="float" value="55.0" />
+    <property name="damage_on_contact" type="float" value="0.5" />
    </properties>
   </object>
   <object id="12" type="Walker" name="Walker_03" x="784" y="576">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="64"/>
-    <property name="facing" value="right"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
+    <property name="zone" type="int" value="3" />
+    <property name="patrol_length" type="int" value="64" />
+    <property name="facing" value="right" />
+    <property name="patrol_speed" type="float" value="30.0" />
+    <property name="alert_speed" type="float" value="55.0" />
+    <property name="damage_on_contact" type="float" value="0.5" />
    </properties>
   </object>
 
   <object id="20" type="Flying" name="Flying_01" x="200" y="260">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
+    <property name="zone" type="int" value="3" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" type="float" value="65.0" />
+    <property name="sine_amplitude" type="float" value="24.0" />
+    <property name="sine_frequency" type="float" value="0.6" />
    </properties>
   </object>
   <object id="21" type="Flying" name="Flying_02" x="340" y="210">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
+    <property name="zone" type="int" value="3" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" type="float" value="65.0" />
+    <property name="sine_amplitude" type="float" value="24.0" />
+    <property name="sine_frequency" type="float" value="0.6" />
    </properties>
   </object>
   <object id="22" type="Flying" name="Flying_03" x="520" y="280">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
+    <property name="zone" type="int" value="3" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" type="float" value="65.0" />
+    <property name="sine_amplitude" type="float" value="24.0" />
+    <property name="sine_frequency" type="float" value="0.6" />
    </properties>
   </object>
   <object id="23" type="Flying" name="Flying_04" x="680" y="220">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
+    <property name="zone" type="int" value="3" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" type="float" value="65.0" />
+    <property name="sine_amplitude" type="float" value="24.0" />
+    <property name="sine_frequency" type="float" value="0.6" />
    </properties>
   </object>
   <object id="24" type="Flying" name="Flying_05" x="840" y="270">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
+    <property name="zone" type="int" value="3" />
+    <property name="flight_mode" value="sine" />
+    <property name="flight_speed" type="float" value="65.0" />
+    <property name="sine_amplitude" type="float" value="24.0" />
+    <property name="sine_frequency" type="float" value="0.6" />
    </properties>
   </object>
 
   <object id="30" type="Shooter" name="Shooter_01" x="24" y="384">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
+    <property name="zone" type="int" value="3" />
+    <property name="fire_rate" type="float" value="0.8" />
+    <property name="projectile_speed" type="float" value="120.0" />
+    <property name="patrol_length" type="int" value="0" />
    </properties>
   </object>
   <object id="31" type="Shooter" name="Shooter_02" x="936" y="384">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
+    <property name="zone" type="int" value="3" />
+    <property name="fire_rate" type="float" value="0.8" />
+    <property name="projectile_speed" type="float" value="120.0" />
+    <property name="patrol_length" type="int" value="0" />
    </properties>
   </object>
   <object id="32" type="Shooter" name="Shooter_03" x="24" y="512">
    <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
+    <property name="zone" type="int" value="3" />
+    <property name="fire_rate" type="float" value="0.8" />
+    <property name="projectile_speed" type="float" value="120.0" />
+    <property name="patrol_length" type="int" value="0" />
    </properties>
   </object>
   <object id="130" type="HazardZone" name="HazardZone_01" x="608" y="560" width="32" height="16">
    <properties>
-    <property name="damage" type="float" value="0.25"/>
+    <property name="damage" type="float" value="0.25" />
    </properties>
   </object>
 </objectgroup>
  <objectgroup id="7" name="Collision">
-  <object id="100" name="Solid_Floor" x="0" y="576" width="960" height="32"/>
-  <object id="101" name="Solid_WallLeft" x="0" y="320" width="32" height="256"/>
-  <object id="102" name="Solid_WallRight" x="928" y="320" width="32" height="192"/>
-  <object id="103" name="Solid_Planter01" x="256" y="544" width="32" height="32"/>
-  <object id="104" name="Solid_Planter02" x="672" y="544" width="32" height="32"/>
-  <object id="105" type="Platform" name="Platform_Fountain" x="464" y="544" width="64" height="16"/>
+  <object id="100" name="Solid_Floor" x="0" y="576" width="960" height="32" />
+  <object id="101" name="Solid_WallLeft" x="0" y="320" width="32" height="256" />
+  <object id="102" name="Solid_WallRight" x="928" y="320" width="32" height="192" />
+  <object id="103" name="Solid_Planter01" x="256" y="544" width="32" height="32" />
+  <object id="104" name="Solid_Planter02" x="672" y="544" width="32" height="32" />
+  <object id="105" type="Platform" name="Platform_Fountain" x="464" y="544" width="64" height="16" />
 
-  <object id="110" type="Platform" name="Platform_Step1" x="160" y="512" width="32" height="16"/>
-  <object id="111" type="Platform" name="Platform_Step2" x="560" y="480" width="48" height="16"/>
-  <object id="112" type="Platform" name="Platform_Step3" x="800" y="512" width="32" height="16"/>
+  <object id="110" type="Platform" name="Platform_Step1" x="160" y="512" width="32" height="16" />
+  <object id="111" type="Platform" name="Platform_Step2" x="560" y="480" width="48" height="16" />
+  <object id="112" type="Platform" name="Platform_Step3" x="800" y="512" width="32" height="16" />
 
-  <object id="120" name="Solid_Cajon01" x="352" y="560" width="16" height="16"/>
-  <object id="121" name="Solid_Cajon02" x="752" y="560" width="16" height="16"/>
+  <object id="120" name="Solid_Cajon01" x="352" y="560" width="16" height="16" />
+  <object id="121" name="Solid_Cajon02" x="752" y="560" width="16" height="16" />
 
 </objectgroup>
  <layer id="8" name="FG_Overlay" width="60" height="38">

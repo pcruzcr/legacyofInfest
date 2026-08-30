@@ -1,4 +1,12 @@
-"""Convierte las fotos del aula real en las 3 capas de parallax del nivel.
+"""Convierte 3 ilustraciones del aula en las 3 capas de parallax del nivel.
+
+El profesor pidio quitar las fotografias reales del fondo (no encajan con la
+estetica pixel art del motor: docs/20_ASSET_BIBLE.md limita la paleta y
+prohibe el antialiasing, algo que una foto rompe por definicion). Las 3
+fotos originales se sustituyen por 3 ilustraciones pixel-art propias
+(dibujar_ilustraciones_aula.py) en la paleta "aula moderna" de la Practica II.
+El pipeline de perspectiva atmosferica de aqui abajo -que es la entrega
+calificada de la Unidad V- no cambia: solo cambia la fuente.
 
 Unidad V — Color y transparencia.
 
@@ -37,9 +45,9 @@ CAPAS = [
     # (archivo, capa, factor_saturacion, factor_brillo, desplazamiento_v, alpha)
     # `alpha` es la mezcla final contra un lienzo oscuro: el fondo tiene que
     # leerse como fondo y no competir con el pixel art del primer plano.
-    ("aula1.jpg.jpeg", "far", 0.25, 0.55, 0.12, 0.30),
-    ("aula2.jpg.jpeg", "mid", 0.55, 0.70, 0.06, 0.34),
-    ("aula3.jpg.jpeg", "near", 0.85, 0.85, 0.02, 0.38),
+    ("aula_lejos.png", "far", 0.25, 0.55, 0.12, 0.30),
+    ("aula_medio.png", "mid", 0.55, 0.70, 0.06, 0.34),
+    ("aula_cerca.png", "near", 0.85, 0.85, 0.02, 0.38),
 ]
 
 # Lienzo de mezcla: gris oscuro CASI NEUTRO.  Se probo con el azul marino del

@@ -13,6 +13,17 @@ date_processed: "2026-08-13"
 **Curso:** Legacy of InFest
 **Referencia:** `27_ACADEMIC_RUBRICS.md` §4–§6, `14_PROFESSOR_DELIVERABLE_MATRIX.md` §14
 
+> **AUD-XXX — reconciliación de rúbricas (26/08 Teams vs este documento).**
+> Existe una contradicción real entre este documento (Eval II: 55 pts por histograma/kernels
+> de Unidade VII — 15+20+20 con animación) y el mensaje de Teams del 26/08
+> (Eval II: curvas/color/texturas de Unidades III/V/VI). Ambas son válidas:
+> la primera es la rúbrica autoritativa de `27_ACADEMIC_RUBRICS.md` §5 y `14` §14.2,
+> la segunda es la expectativa comunicada en clase para quienes vienen de Eval I
+> sin haber cerrado color/curvas. Hasta decisión docente, **se evalúa con README dual**:
+> la entrega demuestra **histograma+kernel+Sobel/Canny (VII)** y mantiene **curva+color+easing (III/V/VI)**
+> sin retroceso — quien cumple ambas saca el 100% en cualquiera de las dos lecturas.
+> Ver también `27_ACADEMIC_RUBRICS.md` §5 y el patrón de grupo en `docs/entregables/NOTAS_EVALUACION_PRACTICA_I.md`.
+
 Tres evaluaciones prácticas acumulativas, cada una con un valor de **15% de la nota final**.
 
 ---

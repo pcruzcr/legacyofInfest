@@ -217,3 +217,46 @@ class World:
         que saber de antemano qué componentes lleva puestos.
         """
         return [t for t, tabla in self._almacen.items() if tabla]
+
+    # -- serialización -------------------------------------------
+    def to_json(self) -> dict[str, object]:
+        """Serializa el mundo a JSON-serializable dict. P0 para motor genérico.
+
+        Solo componentes dataclass con slots son serializables; el resto se
+        ignora con warning. Es suficiente para guardar partida y para tests.
+        """
+        import dataclasses
+        import logging
+
+        out: dict[str, object] = {"vivas": sorted(self._vivas), "componentes": {}}
+        comps: dict[str, list[dict[str, object]]] = {}
+        for tipo, tabla in self._almacen.items():
+            nombre = tipo.__name__
+            lista: list[dict[str, object]] = []
+            for eid, comp in tabla.items():
+                try:
+                    if dataclasses.is_dataclass(comp):
+                        d = dataclasses.asdict(comp)  # type: ignore[arg-type]
+                        # Convierte Rect/Vector2 a tupla
+                        for k, v in list(d.items()):
+                            if hasattr(v, "x") and hasattr(v, "y"):
+                                d[k] = (float(v.x), float(v.y))  # type: ignore[attr-defined]
+                            elif hasattr(v, "width") and hasattr(v, "height"):
+                                d[k] = (int(v.x), int(v.y), int(v.width), int(v.height))  # type: ignore[attr-defined]
+                        d["_eid"] = eid
+                        lista.append(d)
+                except Exception as e:
+                    logging.getLogger(__name__).debug("World.to_json skip %s: %s", nombre, e)
+            if lista:
+                comps[nombre] = lista
+        out["componentes"] = comps
+        out["recursos"] = {k: str(v) for k, v in self._recursos.items()}
+        return out
+
+    def save(self, path: object) -> None:
+        """Guarda el mundo en JSON en `path`."""
+        import json
+        import pathlib
+
+        p = pathlib.Path(path)  # type: ignore[arg-type]
+        p.write_text(json.dumps(self.to_json(), indent=2, ensure_ascii=False), encoding="utf-8")

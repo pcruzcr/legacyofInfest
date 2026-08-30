@@ -45,11 +45,28 @@ class BossPhase:
     phase_index: int
     health_threshold: float
     attack_patterns: list[str] = field(default_factory=list)
+    # --- aliases for retrocompatibilidad (AUD-XXX) ---
+    attacks: list[str] | None = field(default=None, repr=False)
+    attack_names: list[str] | None = field(default=None, repr=False)
+    ataques: list[str] | None = field(default=None, repr=False)
     movement_type: str = "stationary"
     speed_multiplier: float = 1.0
     sprite_override: str | None = None
     filter_effect: str | None = None
-    combos: dict[str, list[str]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        alias_val: list[str] | None = None
+        for cand in (self.attacks, self.attack_names, self.ataques):
+            if cand is not None:
+                alias_val = list(cand) if alias_val is None else alias_val + list(cand)
+        if alias_val is not None:
+            if self.attack_patterns:
+                self.attack_patterns = alias_val + list(self.attack_patterns)
+            else:
+                self.attack_patterns = alias_val
+        object.__setattr__(self, "attacks", None)
+        object.__setattr__(self, "attack_names", None)
+        object.__setattr__(self, "ataques", None)
     # ── F5.7 — mecánicas de fase del dossier de jefes ──────────
     #: Inmune al daño durante toda la fase. Nosk, Metal Sonic, Mother Brain.
     #:

@@ -153,7 +153,7 @@ class ColorTools:
         rgb_uint8 = arr.astype(np.uint8)
         if has_alpha and alpha_arr is not None:
             rgba = np.zeros((h, w, 4), dtype=np.uint8)
-            rgba[:, :, 0:3] = np.transpose(rgb_uint8, (1, 0, 2))
+            rgba[:, :, 0:3] = __import__('numpy').transpose(rgb_uint8, (1, 0, 2))
             rgba[:, :, 3] = alpha_arr.T
             try:
                 out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA").convert_alpha()

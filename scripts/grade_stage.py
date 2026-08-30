@@ -632,11 +632,11 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
     peor = max(informe.checkpoint_gaps, default=0.0)
     exigentes = len(informe.demanding_gaps)
     if peor > MAX_CHECKPOINT_GAP:
-        poner("design_pacing", 2,
+        poner("design_pacing", 0,
               f"{peor:.0f} px sin checkpoint (máximo recomendado "
               f"{MAX_CHECKPOINT_GAP})")
-        result["warnings"].append(
-            f"hay {peor:.0f} px entre checkpoints: morir ahí cuesta demasiado "
+        result["errors"].append(
+            f"hay {peor:.0f} px entre checkpoints: bloqueante — morir ahí cuesta demasiado "
             "camino rehecho"
         )
     elif exigentes == 0:

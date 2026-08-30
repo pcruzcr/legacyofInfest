@@ -1,3 +1,13 @@
+---
+assignment_type: boss
+assignment_name: "El Gran Shaman Paburu"
+assignment_id: "boss_paburu"
+zone: final
+student_name: "Alejandro Josué Rodríguez Zamora"
+units_demonstrated: [II, III, IV, V, VI]
+evaluation_milestone: "Evaluación Práctica II"
+---
+
 # Boss Battle Design — Student Worksheet
 
 **Student Name:** Alejandro Josué Rodríguez Zamora
@@ -7,10 +17,15 @@
 **Entrega:** Evaluación Práctica I — Prototipo Funcional (15%)
 **Correr con:** `python main.py --boss boss_paburu` (o doble clic en `jugar_paburu.bat`)
 
-**Teclas 1-4 — cambio de forma (debug).** EP1 implementa la Forma 1; las
-otras tres están cargadas con su hoja de sprites y su iluminación, pero en
-partida normal el boss no baja de fase todavía, así que no habría manera de
-verlas. Las teclas 1, 2, 3 y 4 saltan a cada forma para poder mostrarlas.
+> La cabecera YAML sigue `23_DATA_SCHEMAS.md` §7: los scripts de
+> calificación leen los metadatos de ahí, sin procesar lenguaje natural.
+
+**Las CUATRO formas están implementadas y se juegan** (el recorrido del
+cementerio, el sorteo de círculos, la catacumba, las Formas 1-4, EL
+OFRECIMIENTO y el epílogo del juicio; ver `DISENO_NIVEL_Y_JEFE.md` para el
+diseño completo y su estado medido). **Teclas 1-4 — salto de forma
+(debug):** en partida normal las formas caen por umbral de vida; las
+teclas permiten mostrarlas de inmediato en una demo.
 
 **Entrada del jefe (6 s, ESC para saltarla).** Al entrar a la sala corre una
 secuencia en cuatro tiempos: la arena baja a penumbra, los cuatro cuencos de
@@ -26,7 +41,7 @@ vez: al morir y reaparecer no se repite.
 
 El Gran Shaman Paburu es una figura espiritual Tilawa de poder inmenso, corrompida
 por un duelo antiguo. No pelea para destruir: pelea para **examinar**. La Pepita y
-La Perla que cargan John y Jill son las llaves de su ritual, y necesita ver si son
+La Perla que cargan John y Jin son las llaves de su ritual, y necesita ver si son
 dignos. Sus cuatro formas no son entidades distintas, sino capas de su poder: cada
 una revela más de quién es en realidad.
 
@@ -35,7 +50,7 @@ verde precolombina, semienterrada en el centro del cementerio, con los ojos
 cerrados. Juzga sin mirar — sus ataques son ciegos y mecánicos, exactamente como
 juzgó siglos atrás a Kavë, la portadora a la que condenó por error y por cuya
 muerte se selló a sí mismo. Los siglos de espera no fueron vigilancia: fueron
-penitencia. Cuando John y Jill llegan, Paburu no está furioso, está aterrado de
+penitencia. Cuando John y Jin llegan, Paburu no está furioso, está aterrado de
 volver a equivocarse.
 
 ---
@@ -258,10 +273,8 @@ reimplementadas.
 
 La arena es un TMX de 50 × 38 tiles (800 × 608 px) con las 8 capas obligatorias
 del spec y **tileset propio** (`tileset_paburu.png`, 52 tiles dibujados para este
-stage). Objetos: `PlayerSpawn`, `Checkpoint`, `BossPaburu` y `CameraLock` (bloquea
-X e Y: la pelea es de una sola pantalla). AUD-538: se eliminó el `NextTrigger`
-fantasma que colgaba en y=-64 — el nivel termina en la escena al vencer al
-jefe, como `boss_venado` y `boss_rey`.
+stage). Objetos: `PlayerSpawn`, `Checkpoint`, `BossPaburu`, `CameraLock` (bloquea X e
+Y: la pelea es de una sola pantalla) y `NextTrigger`.
 
 El escenario sigue el croquis del GDD §3.1: cielo púrpura con luna velada y
 montañas y un cementerio lejano en `BG_Far`, ruinas a media distancia en

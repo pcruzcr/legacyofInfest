@@ -1,70 +1,75 @@
-"""art_lib: shared master palette + reusable pixel-art texture helpers.
+"""art_lib: paleta maestra compartida + helpers de textura pixel-art reutilizables.
 
-Origin
+Origen
 ------
-Extracted from `tools/vignette_reference.py` (the 480x224 twilight vignette
-proof approved by the user on 2026-07-23) — the frozen visual standard for
-this boss's map art. Everything below is either a byte-identical copy of the
-original's data/logic, or a straightforward generalisation of it (hardcoded
-globals like ``canvas``/``W``/``H``/``PAL`` replaced with parameters so the
-same technique can run against any array/palette). No colour value was
-"improved" or re-derived — the palette here must stay byte-identical to the
-approved vignette so downstream generators (tileset, TMX) share one visual
-truth.
+Extraido de `tools/vignette_reference.py` (la prueba de vineta crepuscular de
+480x224 aprobada por el usuario el 2026-07-23) — el estandar visual congelado
+para el arte del mapa de este boss. Todo lo de abajo es o bien una copia
+byte-identica de los datos/logica del original, o una generalizacion directa
+de estos (globales hardcodeados como ``canvas``/``W``/``H``/``PAL`` reemplazados
+por parametros para que la misma tecnica pueda correr sobre cualquier
+arreglo/paleta). Ningun valor de color fue "mejorado" ni re-derivado — la
+paleta de aqui debe permanecer byte-identica a la vineta aprobada para que los
+generadores subsiguientes (tileset, TMX) compartan una sola verdad visual.
 
-What this module exposes
+Que expone este modulo
 -------------------------
-- ``PALETTE``: the 34-colour master palette, name -> (r, g, b). A read-only
-  ``types.MappingProxyType`` view (quality-review hardening: still supports
-  ``len()``/indexing/``.values()``/``.items()`` like a plain dict, but can't
-  be accidentally mutated).
-- ``hash01(x, y, salt=0)``: deterministic per-pixel pseudo-random noise in
-  [0, 1). Faithful copy; underlies both ``mottle`` and the vignette's own
-  per-pixel breakup everywhere (clouds, grass, cracks, ...).
-- ``BAYER_4X4``: the 4x4 ordered-dither matrix, normalised to [0, 1).
-  Read-only (``setflags(write=False)``: quality-review hardening).
-- ``bayer_dither(x, y, a, b, t)``: ordered (Bayer) dither pick between two
-  values. Faithful copy of the original's ``dither2``.
-- ``mottle(x, y, salt=0)``: multi-octave (coarse/medium/fine) clustered noise
-  offset, extracted from ``wall_tone()``'s stucco mottling formula (the
-  hastial wall in the vignette). With ``salt=45`` it reproduces that wall's
-  mottling exactly (the original chained salts 45/46/47 for its three
-  octaves; here a single ``salt`` seeds all three as salt/salt+1/salt+2).
-- ``despeckle(canvas, palette, protect_keys=(), min_majority=6)``:
-  generalised version of the original's ``despeckle_key()`` — clears isolated
-  single-pixel colour orphans by replacing them with their neighbourhood's
-  majority colour, skipping any colour listed in ``protect_keys``. Does not
-  touch the canvas's outer 1px border (see its own docstring).
-- ``quantize_to_palette(rgb, palette)``: NOT present in the original (which
-  hand-paints every pixel with a named palette colour directly and never
-  needs to snap an arbitrary colour). Added here as a foundational technique
-  for later generators that may synthesise colour procedurally and need to
-  snap it back onto the frozen palette. Standard nearest-colour (Euclidean,
-  RGB-space) quantisation; only ever returns values already in ``palette``.
+- ``PALETTE``: la paleta maestra de 34 colores, nombre -> (r, g, b). Una vista
+  ``types.MappingProxyType`` de solo lectura (endurecimiento de revision de
+  calidad: sigue soportando ``len()``/indexado/``.values()``/``.items()`` como
+  un dict normal, pero no puede mutarse por accidente).
+- ``hash01(x, y, salt=0)``: ruido pseudo-aleatorio determinista por pixel en
+  [0, 1). Copia fiel; sustenta tanto a ``mottle`` como al propio desglose
+  por pixel de la vineta en todas partes (nubes, cesped, grietas, ...).
+- ``BAYER_4X4``: la matriz de ordered-dither 4x4, normalizada a [0, 1).
+  De solo lectura (``setflags(write=False)``: endurecimiento de revision de
+  calidad).
+- ``bayer_dither(x, y, a, b, t)``: eleccion de dither ordenado (Bayer) entre
+  dos valores. Copia fiel del ``dither2`` del original.
+- ``mottle(x, y, salt=0)``: offset de ruido agrupado multi-octava
+  (grueso/medio/fino), extraido de la formula de moteado de estuco de
+  ``wall_tone()`` (el muro hastial de la vineta). Con ``salt=45`` reproduce
+  exactamente el moteado de ese muro (el original encadenaba los salts
+  45/46/47 para sus tres octavas; aqui un solo ``salt`` siembra las tres como
+  salt/salt+1/salt+2).
+- ``despeckle(canvas, palette, protect_keys=(), min_majority=6)``: version
+  generalizada del ``despeckle_key()`` del original — limpia huerfanos de
+  color de un solo pixel aislado reemplazandolos con el color mayoritario de
+  su vecindario, saltando cualquier color listado en ``protect_keys``. No
+  toca el borde exterior de 1px del canvas (ver su propio docstring).
+- ``quantize_to_palette(rgb, palette)``: NO presente en el original (el cual
+  pinta a mano cada pixel con un color de paleta con nombre directamente y
+  nunca necesita ajustar un color arbitrario). Anadido aqui como tecnica
+  fundacional para generadores posteriores que puedan sintetizar color de
+  forma procedural y necesiten ajustarlo de vuelta a la paleta congelada.
+  Cuantizacion estandar de color mas cercano (Euclidiana, espacio RGB); solo
+  retorna valores que ya estan en ``palette``.
 
-Name map (original -> here)
+Mapa de nombres (original -> aqui)
 ----------------------------
-- ``PAL`` -> ``PALETTE`` (same 34 key names: S0-S5, W0-W2, F0, O0-O3, R0-R2,
-  C0-C1, V0-V3, G0-G3, K0-K1, P0-P1, RM, RC, PL — untouched).
+- ``PAL`` -> ``PALETTE`` (mismos 34 nombres de clave: S0-S5, W0-W2, F0, O0-O3, R0-R2,
+  C0-C1, V0-V3, G0-G3, K0-K1, P0-P1, RM, RC, PL — sin cambios).
 - ``BAYER`` -> ``BAYER_4X4``.
-- ``dither2`` -> ``bayer_dither`` (same signature/body).
-- the inline ``mott = ...`` expression inside ``wall_tone()`` -> ``mottle()``.
-- ``despeckle_key()`` -> ``despeckle()`` (globals promoted to parameters).
-- ``hx()`` -> ``_hx()``: kept private. It's a one-shot literal helper used
-  only to build ``PALETTE`` below, not a reusable texture technique, so it
-  isn't part of this module's public surface.
+- ``dither2`` -> ``bayer_dither`` (misma firma/cuerpo).
+- la expresion inline ``mott = ...`` dentro de ``wall_tone()`` -> ``mottle()``.
+- ``despeckle_key()`` -> ``despeckle()`` (globales promovidos a parametros).
+- ``hx()`` -> ``_hx()``: se mantiene privada. Es un helper de literal de un
+  solo uso, usado solo para construir ``PALETTE`` abajo, no una tecnica de
+  textura reutilizable, asi que no forma parte de la superficie publica de
+  este modulo.
 
-Composition functions from the original (``build_sky``, ``build_hastial``,
-``draw_crack``, the corrugated-roof inline patterns, etc.) are scene-specific
-— they paint directly onto that vignette's fixed geometry/canvas — and are
-intentionally NOT extracted here. Same for anything requiring a standalone
-function to exist in the original that doesn't (e.g. "corrugated sheet" and
-"grass" are inline one-liners scattered per building/patch, not reusable
-helpers).
+Las funciones de composicion del original (``build_sky``, ``build_hastial``,
+``draw_crack``, los patrones inline del techo corrugado, etc.) son
+especificas de la escena — pintan directamente sobre la geometria/canvas fijo
+de esa vineta — y a proposito NO se extraen aqui. Lo mismo aplica a cualquier
+cosa que requiera que exista una funcion independiente en el original que no
+existe (p. ej. "corrugated sheet" y "grass" son one-liners inline dispersos
+por edificio/parche, no helpers reutilizables).
 
-This module has no side effects on import: no file I/O, no plotting, no
-canvas allocation. Any demo/proof code belongs under a caller's own
-``if __name__ == "__main__":``, not here.
+Este modulo no tiene efectos secundarios al importarse: sin I/O de archivos,
+sin ploteo, sin asignacion de canvas. Cualquier codigo de demo/prueba
+pertenece bajo el propio ``if __name__ == "__main__":`` de quien lo llame,
+no aqui.
 """
 from __future__ import annotations
 
@@ -78,59 +83,61 @@ T = TypeVar("T")
 
 
 def _hx(h: str) -> tuple[int, int, int]:
-    """Hex string ('#RRGGBB' or 'RRGGBB') -> (r, g, b) int tuple. Faithful copy.
+    """Cadena hex ('#RRGGBB' o 'RRGGBB') -> tupla int (r, g, b). Copia fiel.
 
-    Private: a one-shot literal helper used only to build ``PALETTE`` below;
-    not a reusable texture technique, so it isn't exported.
+    Privada: un helper de literal de un solo uso, usado solo para construir
+    ``PALETTE`` abajo; no una tecnica de textura reutilizable, asi que no se
+    exporta.
     """
     h = h.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
 
 # ---------------------------------------------------------------------------
-# MASTER PALETTE — byte-identical to vignette_reference.PAL (34 colours).
-# Wrapped in MappingProxyType: read-only, but still supports len(), .values(),
-# .keys(), .items() and palette[name] indexing exactly like a plain dict.
+# PALETA MAESTRA — byte-identica a vignette_reference.PAL (34 colores).
+# Envuelta en MappingProxyType: de solo lectura, pero sigue soportando len(),
+# .values(), .keys(), .items() e indexado palette[name] exactamente como un
+# dict normal.
 # ---------------------------------------------------------------------------
 PALETTE: Mapping[str, tuple[int, int, int]] = MappingProxyType({
-    # sky (top -> horizon), 6
+    # cielo (arriba -> horizonte), 6
     "S0": _hx("#2A2150"), "S1": _hx("#463A6E"), "S2": _hx("#6E4E7E"),
     "S3": _hx("#9C5E76"), "S4": _hx("#C86C4E"), "S5": _hx("#E8853C"),
-    # warm / glow, 3
+    # calido / resplandor, 3
     "W0": _hx("#F2C878"), "W1": _hx("#F5E1A0"), "W2": _hx("#FFF6D0"),
-    # far silhouette, 1
+    # silueta lejana, 1
     "F0": _hx("#2E2448"),
-    # ochre stucco wall, 4  (dusk-muted mustard, base ~#C99046)
+    # muro de estuco ocre, 4  (mostaza opaca de crepusculo, base ~#C99046)
     "O0": _hx("#47301F"), "O1": _hx("#6E4A2A"), "O2": _hx("#A2743A"), "O3": _hx("#C6934C"),
-    # roof terracotta, 3  (dusk-muted ~#C74A32)
+    # tejado de terracota, 3  (opaco de crepusculo ~#C74A32)
     "R0": _hx("#2A1418"), "R1": _hx("#6E2E22"), "R2": _hx("#A04A32"),
-    # cenefa (cream-white fascia), 2
+    # cenefa (fascia crema-blanco), 2
     "C0": _hx("#E6DCC6"), "C1": _hx("#9A8266"),
-    # vegetation, 4
+    # vegetacion, 4
     "V0": _hx("#10160E"), "V1": _hx("#1E2C18"), "V2": _hx("#33482A"), "V3": _hx("#547038"),
-    # stone sidewalk, 4
+    # acera de piedra, 4
     "G0": _hx("#332C2A"), "G1": _hx("#574B44"), "G2": _hx("#7C6C5C"), "G3": _hx("#A08A72"),
-    # ink, 2
+    # tinta, 2
     "K0": _hx("#0C0A0C"), "K1": _hx("#1E1620"),
-    # flowers, 2
+    # flores, 2
     "P0": _hx("#A83A34"), "P1": _hx("#D06048"),
-    # cool rim, 1
+    # borde frio, 1
     "RM": _hx("#B49AB0"),
-    # jewelry pass: cool AA rim-light + exposed light plaster (spalls), 2
-    "RC": _hx("#9AA8CE"),   # cold violet-blue rim on top silhouette edges / stars
-    "PL": _hx("#C9B48A"),   # pale plaster revealed by spalled stucco
+    # pasada de joyeria: luz de borde AA fria-violeta + yeso claro expuesto (desconchados), 2
+    "RC": _hx("#9AA8CE"),   # borde violeta-azul frio en bordes de silueta superior / estrellas
+    "PL": _hx("#C9B48A"),   # yeso palido revelado por estuco desconchado
 })
 
 
 def hash01(x: int, y: int, salt: int = 0) -> float:
-    """Deterministic pseudo-random noise in [0, 1) for pixel (x, y). Faithful copy."""
+    """Ruido pseudo-aleatorio determinista en [0, 1) para el pixel (x, y). Copia fiel."""
     v = (x * 374761393 + y * 668265263 + salt * 2246822519) & 0xFFFFFFFF
     v = (v ^ (v >> 13)) * 1274126177 & 0xFFFFFFFF
     return ((v ^ (v >> 16)) & 0xFFFF) / 65535.0
 
 
-# Ordered dithering (Bayer 4x4), normalised to [0, 1). Faithful copy of BAYER.
-# Read-only (setflags(write=False)): shared constant, never meant to be mutated.
+# Ordered dithering (Bayer 4x4), normalizado a [0, 1). Copia fiel de BAYER.
+# De solo lectura (setflags(write=False)): constante compartida, nunca pensada para mutarse.
 BAYER_4X4: np.ndarray = np.array([
     [0, 8, 2, 10],
     [12, 4, 14, 6],
@@ -141,27 +148,28 @@ BAYER_4X4.setflags(write=False)
 
 
 def bayer_dither(x: int, y: int, a: T, b: T, t: float) -> T:
-    """Ordered (Bayer 4x4) dither pick between two values.
+    """Eleccion de dither ordenado (Bayer 4x4) entre dos valores.
 
-    Returns ``b`` if ``t`` (fraction toward ``b``, 0..1) clears the dither
-    threshold at (x, y), else ``a``. Faithful copy of the original's
-    ``dither2``; ``a``/``b`` are typically palette names but can be anything.
+    Retorna ``b`` si ``t`` (fraccion hacia ``b``, 0..1) supera el umbral de
+    dither en (x, y); si no, ``a``. Copia fiel del ``dither2`` del original;
+    ``a``/``b`` son tipicamente nombres de paleta pero pueden ser cualquier cosa.
     """
     return b if t > BAYER_4X4[y & 3, x & 3] else a
 
 
 def mottle(x: int, y: int, salt: int = 0) -> float:
-    """Multi-octave (coarse+medium+fine) clustered mottling noise.
+    """Ruido de moteado agrupado multi-octava (grueso+medio+fino).
 
-    Extracted from ``wall_tone()``'s stucco mottling formula in the vignette
-    (soft cluster field, no directional grain): three ``hash01`` octaves at
-    cluster sizes 5px/3px/1px with decreasing amplitude, summed. Returns a
-    signed float offset (~-0.14..0.14) meant to be added to a base
-    luminance/threshold before mapping to a palette ramp.
+    Extraido de la formula de moteado de estuco de ``wall_tone()`` en la
+    vineta (campo de agrupamiento suave, sin veta direccional): tres octavas
+    de ``hash01`` con tamanos de agrupamiento de 5px/3px/1px con amplitud
+    decreciente, sumadas. Retorna un offset flotante con signo (~-0.14..0.14)
+    pensado para sumarse a una luminancia/umbral base antes de mapearlo a una
+    rampa de paleta.
 
-    ``salt`` seeds all three octaves (as salt, salt+1, salt+2); the original
-    hastial wall used salts 45/46/47, i.e. ``mottle(x, y, salt=45)``
-    reproduces it exactly.
+    ``salt`` siembra las tres octavas (como salt, salt+1, salt+2); el muro
+    hastial original usaba los salts 45/46/47, es decir, ``mottle(x, y, salt=45)``
+    lo reproduce exactamente.
     """
     return (
         (hash01(x // 5, y // 5, salt) - 0.5) * 0.15
@@ -174,16 +182,18 @@ def quantize_to_palette(
     rgb: Iterable[int] | np.ndarray,
     palette: dict[str, tuple[int, int, int]],
 ) -> np.ndarray:
-    """Snap an RGB colour (or array of colours) to the nearest colour in `palette`.
+    """Ajusta un color RGB (o arreglo de colores) al color mas cercano en `palette`.
 
-    Not present in vignette_reference.py — added as a foundational technique
-    for generators that synthesise colour procedurally (e.g. from noise or
-    reference photos) and need to snap it back onto the frozen palette.
-    Nearest-colour by squared Euclidean distance in RGB space.
+    No presente en vignette_reference.py — anadido como tecnica fundacional
+    para generadores que sintetizan color de forma procedural (p. ej. a partir
+    de ruido o fotos de referencia) y necesitan ajustarlo de vuelta a la
+    paleta congelada. Color mas cercano por distancia Euclidiana al cuadrado
+    en espacio RGB.
 
-    ``rgb`` may be a single (r, g, b) tuple/sequence or a numpy array of shape
-    (..., 3). Returns the matching palette value(s) as uint8, in the same
-    shape as the input (never a colour absent from `palette`).
+    ``rgb`` puede ser una unica tupla/secuencia (r, g, b) o un arreglo numpy
+    de forma (..., 3). Retorna el/los valor(es) de paleta coincidente(s) como
+    uint8, en la misma forma que la entrada (nunca un color ausente de
+    `palette`).
     """
     names = list(palette.keys())
     values = np.array([palette[n] for n in names], dtype=np.float32)  # (K, 3)
@@ -205,22 +215,25 @@ def despeckle(
     protect_keys: Iterable[str] = (),
     min_majority: int = 6,
 ) -> np.ndarray:
-    """Clear isolated single-pixel colour orphans on `canvas`.
+    """Limpia huerfanos de color de un solo pixel aislado en `canvas`.
 
-    Generalised from the original's ``despeckle_key()`` (which hardcoded the
-    global ``canvas``/``H``/``W``/``PAL`` and a fixed protect list): for every
-    pixel whose colour matches none of its 8 neighbours and isn't in
-    `protect_keys` (palette names to leave alone, e.g. sparse bright accents
-    that are meant to be isolated), replace it with the majority neighbour
-    colour if at least `min_majority` of the 8 neighbours agree on one.
+    Generalizado a partir del ``despeckle_key()`` del original (el cual
+    hardcodeaba el ``canvas``/``H``/``W``/``PAL`` globales y una lista de
+    proteccion fija): para cada pixel cuyo color no coincide con ninguno de
+    sus 8 vecinos y no esta en `protect_keys` (nombres de paleta para dejar
+    intactos, p. ej. acentos brillantes escasos que estan pensados para
+    quedar aislados), lo reemplaza con el color vecino mayoritario si al
+    menos `min_majority` de los 8 vecinos coinciden en uno.
 
-    `canvas` is an (H, W, 3) uint8 array, mutated in place. `palette` is the
-    name -> (r, g, b) dict used to resolve `protect_keys`. Returns `canvas`.
+    `canvas` es un arreglo uint8 (H, W, 3), mutado in situ. `palette` es el
+    dict nombre -> (r, g, b) usado para resolver `protect_keys`. Retorna
+    `canvas`.
 
-    Caveat (faithful to the original): the outer 1px border of the canvas is
-    never processed — the original iterates ``range(1, H-1)`` / ``range(1,
-    W-1)``, so every pixel it actually inspects has a full 8-neighbour ring;
-    border pixels are left exactly as they were, orphan or not.
+    Advertencia (fiel al original): el borde exterior de 1px del canvas
+    nunca se procesa — el original itera ``range(1, H-1)`` / ``range(1,
+    W-1)``, asi que cada pixel que realmente inspecciona tiene un anillo
+    completo de 8 vecinos; los pixeles de borde quedan exactamente como
+    estaban, sean huerfanos o no.
     """
     H, W = canvas.shape[:2]
     packed = (
@@ -242,12 +255,12 @@ def despeckle(
             n = (rowm1[x - 1], rowm1[x], rowm1[x + 1], row[x - 1], row[x + 1],
                  rowp1[x - 1], rowp1[x], rowp1[x + 1])
             if cpx in n:
-                continue                                    # not isolated
+                continue                                    # no aislado
             best = None; bc = 0
             for v in n:
                 cc = n.count(v)
                 if cc > bc:
                     bc = cc; best = v
-            if bc >= min_majority:                           # strong majority -> stray edge px
+            if bc >= min_majority:                           # mayoria fuerte -> pixel de borde extraviado
                 canvas[y, x] = (best >> 16 & 255, best >> 8 & 255, best & 255)
     return canvas

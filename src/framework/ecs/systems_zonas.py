@@ -202,6 +202,31 @@ def sistema_efectos(mundo: World, dt: float) -> None:
             salud = mundo.obtener(entidad, Salud)
             if salud is not None:
                 salud.actual = max(0.0, salud.actual - por_segundo * dt)
+                # 4. Veneno legible — cada tick hace VFX verde + SFX (throttle 0.5s)
+                try:
+                    from src.engine.core.events import Events
+                    from src.framework.ecs.components import Transform
+                    duenio = getattr(salud, "_duenio", None)
+                    if duenio is None:
+                        tr = mundo.obtener(entidad, Transform)
+                        duenio = getattr(tr, "_duenio", None) if tr is not None else None
+                    if duenio is not None and hasattr(duenio, "_event_bus"):
+                        pos = getattr(duenio, "position", None)
+                        p = (float(pos.x), float(pos.y)) if pos is not None else (0.0, 0.0)
+                        # Dano continuo no debe sonar cada frame: 1 tick cada 0.5s
+                        # Usa un contador en el componente para throttlear
+                        if not hasattr(comp, "_poison_tick"):
+                            comp._poison_tick = 0.0  # type: ignore[attr-defined]
+                        comp._poison_tick += dt  # type: ignore[attr-defined]
+                        if comp._poison_tick >= 0.5:  # type: ignore[attr-defined]
+                            comp._poison_tick = 0.0  # type: ignore[attr-defined]
+                            try:
+                                duenio._event_bus.emit(Events.SFX_POISON_TICK, pos=p)  # type: ignore[attr-defined]
+                                duenio._event_bus.emit(Events.VFX_POISON, pos=p)  # type: ignore[attr-defined]
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
 
         for activo in comp.activos:
             activo.restante -= dt

@@ -64,6 +64,7 @@ import math
 import pygame
 
 from src.engine.utils.math_utils import (
+    ease_in_out_quad,
     vec2_distance,
     vec2_dot,
     vec2_normalize,
@@ -72,6 +73,9 @@ from src.engine.utils.math_utils import (
 #: Segmentos con los que se aproxima el arco del cono al dibujarlo. Doce da un
 #: borde liso a esta escala y mantiene el polígono en catorce vértices.
 _SEGMENTOS_ARCO = 12
+
+#: Evento que emite la cámara en el flanco de subida de la detección.
+EVENTO_DETECCION: str = "stage2_2.camara_detecta"
 
 
 class CamaraSeguridad:
@@ -86,6 +90,7 @@ class CamaraSeguridad:
         periodo: float = 4.2,
         fov: float = 70.0,
         alcance: float = 170.0,
+        event_bus=None,
     ) -> None:
         """
         Args:
@@ -111,11 +116,18 @@ class CamaraSeguridad:
 
         self._t = 0.0
         self.angulo_actual = angulo_base
+        self._bus = event_bus
 
         # Estado observable, para el dibujado y para el README.
         self.detectando = False
+        self.detectando_antes = False
         self.coseno_al_objetivo = -1.0
         self.distancia_al_objetivo = float("inf")
+
+        #: Multiplicador del alcance, entre 0 y 1. Lo fija la escena a partir
+        #: del histograma de la zona donde está el jugador (Unidad VII): en el
+        #: asfalto soleado la cámara ve lejos; a la sombra, mucho menos.
+        self.factor_visibilidad: float = 1.0
 
     # ── Dirección de mira ───────────────────────────────────────────
 
@@ -138,16 +150,33 @@ class CamaraSeguridad:
         Returns:
             ``True`` si el objetivo está dentro del cono y del alcance.
         """
-        # Barrido oscilante. El seno da un vaivén suave que desacelera en los
-        # extremos, que es como se mueve un servo real: un barrido lineal
-        # cambiaría de sentido con un tirón instantáneo.
+        # Barrido con easing (Unidad VI). Se construye una onda triangular
+        # ``u`` que va 0→1→0 en cada periodo y se pasa por `ease_in_out_quad`.
+        #
+        # Antes esto era `sin(2πt/T)`. La sinusoide también desacelera en los
+        # extremos, pero su aceleración es sinusoidal: nunca es constante. Un
+        # servo real bajo par constante tiene **aceleración constante** en cada
+        # mitad del recorrido, que es exactamente lo que describe una función
+        # cuadrática por tramos. `ease_in_out_quad` es 2t² en la primera mitad
+        # y −1+(4−2t)t en la segunda, así que el barrido acelera de forma
+        # uniforme al salir del extremo y frena de forma uniforme al llegar al
+        # otro.
         self._t = (self._t + dt) % self.periodo
-        fase = 2.0 * math.pi * self._t / self.periodo
-        self.angulo_actual = self.angulo_base + self.amplitud_barrido * math.sin(fase)
+        ciclo = self._t / self.periodo
+        u = 2.0 * ciclo if ciclo < 0.5 else 2.0 * (1.0 - ciclo)
+        recorrido = ease_in_out_quad(u)
+        self.angulo_actual = (
+            self.angulo_base - self.amplitud_barrido
+            + 2.0 * self.amplitud_barrido * recorrido
+        )
+
+        self.detectando_antes = self.detectando
 
         # ── Paso 1: magnitud ───────────────────────────────────────
+        # El alcance efectivo lo modula el histograma de la zona (Unidad VII).
+        alcance_efectivo = self.alcance * self.factor_visibilidad
         self.distancia_al_objetivo = vec2_distance(self.posicion, objetivo_centro)
-        if self.distancia_al_objetivo > self.alcance:
+        if self.distancia_al_objetivo > alcance_efectivo:
             self.detectando = False
             self.coseno_al_objetivo = -1.0
             return False
@@ -159,6 +188,19 @@ class CamaraSeguridad:
         # ── Paso 3: ángulo, vía producto punto de dos unitarios ───
         self.coseno_al_objetivo = vec2_dot(direccion_objetivo, self.direccion_mira)
         self.detectando = self.coseno_al_objetivo >= self._cos_umbral
+
+        # Emisión en el **flanco de subida**: solo cuando la detección pasa de
+        # falsa a verdadera. Emitir cada fotograma inundaría el bus con 60
+        # eventos por segundo y los suscriptores tendrían que deduplicar.
+        if self.detectando and not self.detectando_antes and self._bus is not None:
+            self._bus.emit(
+                EVENTO_DETECCION,
+                x=float(objetivo_centro.x),
+                y=float(objetivo_centro.y),
+                distancia=self.distancia_al_objetivo,
+                coseno=self.coseno_al_objetivo,
+            )
+
         return self.detectando
 
     # ── Dibujado ────────────────────────────────────────────────────

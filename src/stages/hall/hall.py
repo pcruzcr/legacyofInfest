@@ -16,6 +16,7 @@ import pygame
 from src.engine.core import settings
 from src.framework.scenes.stage_scene import StageScene
 from src.stages.hall.decor_lamp import SwingingLamp
+from src.stages.hall.light_shimmer import LightPoolShimmer
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -29,6 +30,13 @@ if TYPE_CHECKING:
 # Hang from the ceiling row (CEILING_ROW=5, y=80 in generate_hall_tmx.py),
 # offset from the three skylight columns (16, 36, 53).
 _LAMP_POSITIONS = ((420, 96), (700, 96))
+
+# Charcos de luz sobre la zona inundada (WaterZone_hall, x=1120-1360,
+# y=480-608 — ver el `.tmx`). Igual que las lámparas, instanciados en
+# Python por el mismo motivo: `LightPoolShimmer` no es un tipo de objeto
+# registrado en el TMX y grade_stage.py no importa el módulo del stage.
+# El `phase` desfasado evita que los tres respiren exactamente al unísono.
+_LIGHT_POOL_SPECS = ((1170, 500, 0.0), (1240, 520, 1.1), (1310, 500, 2.2))
 
 
 class Hall(StageScene):
@@ -48,6 +56,11 @@ class Hall(StageScene):
         for Bezier-flight enemies elsewhere in the game.
       - TMX layer stack (Unit IV): 6 tile layers (3 parallax backgrounds,
         Terrain, Terrain_Detail, FG_Overlay) plus Objects/Collision.
+      - Color and alpha transparency (Unit V): `LightPoolShimmer` (see
+        `light_shimmer.py`) tints its glow with `ColorTools.hsl_to_rgb`
+        between warm amber and cool blue-green, and draws it on an
+        `SRCALPHA` surface with a breathing alpha value — real per-pixel
+        transparency, not a solid color standing in for it.
     """
 
     STAGE_ID: str = "hall"
@@ -58,6 +71,7 @@ class Hall(StageScene):
     def __init__(self, context: GameContext) -> None:
         super().__init__(context)
         self._lamps: list[SwingingLamp] = []
+        self._light_pools: list[LightPoolShimmer] = []
 
     # ── Optional lifecycle hooks ────────────────────────────────────
 
@@ -70,6 +84,13 @@ class Hall(StageScene):
             lamp.set_event_bus(self.context.event_bus)
             self._stage_data.entity_list.append(lamp)
             self._lamps.append(lamp)
+
+        self._light_pools = []
+        for x, y, phase in _LIGHT_POOL_SPECS:
+            pool = LightPoolShimmer(pygame.Vector2(x, y), phase=phase)
+            pool.set_event_bus(self.context.event_bus)
+            self._stage_data.entity_list.append(pool)
+            self._light_pools.append(pool)
 
     def update(self, dt: float) -> None:
         super().update(dt)
@@ -85,8 +106,11 @@ class Hall(StageScene):
         # frames of scene.update(). Drawing isn't affected by this same
         # filter (DrawingSystem._draw_entities iterates the raw
         # entity_list), which is exactly why it was visible but static.
+        # `LightPoolShimmer` needs the same manual tick for the same reason.
         for lamp in self._lamps:
             lamp.update(dt)
+        for pool in self._light_pools:
+            pool.update(dt)
 
     def on_player_landed(self) -> None:
         pass

@@ -38,11 +38,14 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.events import Events
 from src.engine.utils.math_utils import vec2_distance
 from src.framework.scenes.stage_scene import StageScene
 
 from .atmosfera import AtmosferaAntenas
-from .camara_seguridad import CamaraSeguridad
+from .barrera_kiosco import EVENTO_ABIERTA, BarreraKiosco
+from .camara_seguridad import EVENTO_DETECCION, CamaraSeguridad
+from .monitor_seguridad import MonitorSeguridad
 from .patrulla_bspline import PatrullaBSpline
 
 if TYPE_CHECKING:
@@ -88,6 +91,9 @@ class Stage2_2(StageScene):
         self._patrulla: PatrullaBSpline | None = None
         self._entidad_curva: EnemyBase | None = None
         self._atmosfera: AtmosferaAntenas | None = None
+        self._barrera: BarreraKiosco | None = None
+        self._monitor: MonitorSeguridad | None = None
+        self._detecciones: int = 0
 
     # ── Hooks del ciclo de vida ─────────────────────────────────────
 
@@ -97,7 +103,64 @@ class Stage2_2(StageScene):
         self._colocar_camaras()
         self._montar_patrulla_bspline()
         self._montar_atmosfera()
+        self._montar_barrera()
+        self._monitor = MonitorSeguridad(ancla="arriba_izquierda")
+        self._suscribir_eventos_propios()
         self._aplicar_modo_pruebas()
+
+    # ── Unidad VI — interacción mediada por EventBus ────────────────
+
+    def _montar_barrera(self) -> None:
+        """Barrera de control de acceso, en el pivote del poste del kiosco.
+
+        El poste está pintado en `Terrain_Detail` en la columna 65, fila 43,
+        o sea en x = 1040, y = 688. El pivote va en el centro del tile.
+        """
+        self._barrera = BarreraKiosco(
+            x=1052.0, y=690.0, event_bus=self.context.event_bus
+        )
+
+    def _suscribir_eventos_propios(self) -> None:
+        """Conecta la cámara con la barrera **a través del bus**.
+
+        Es interacción mediada por eventos, no acoplamiento directo: la cámara
+        no conoce la barrera ni los enemigos, solo publica que vio algo. La
+        escena decide qué hacer con esa información. Cambiar la reacción no
+        obliga a tocar `CamaraSeguridad`.
+
+        `EventBus` guarda referencias **débiles** a los suscriptores, con
+        `weakref.WeakMethod` para métodos ligados. Por eso se suscriben métodos
+        de la escena y no funciones locales: la escena vive mientras el
+        escenario esté activo, así que la suscripción sobrevive. Una lambda
+        suelta se recolectaría en el siguiente `dispatch()`.
+        """
+        bus = self.context.event_bus
+        bus.subscribe(EVENTO_DETECCION, self._on_camara_detecta)
+        bus.subscribe(EVENTO_ABIERTA, self._on_barrera_abierta)
+
+    def _on_camara_detecta(self, **datos) -> None:
+        """Reacción a una detección: sube la barrera y alerta a los guardias."""
+        self._detecciones += 1
+        if self._barrera is not None:
+            self._barrera.abrir()
+        self._alertar_enemigos_cercanos(
+            pygame.Vector2(datos.get("x", 0.0), datos.get("y", 0.0))
+        )
+
+    def _on_barrera_abierta(self, **datos) -> None:
+        """La barrera terminó de subir. Aviso solo la primera vez.
+
+        El mensaje se pide **por el bus** con `Events.SHOW_MESSAGE` y no
+        llamando a `MessageBox`: esa clase no expone ningún `show()` público,
+        se suscribe al evento. Es el mismo camino que usa
+        `HazardSystem` para los `MessageTrigger`.
+        """
+        if self._detecciones == 1:
+            self.context.event_bus.emit(
+                Events.SHOW_MESSAGE,
+                text="El sistema de seguridad te registro.\nLa barrera cede.",
+                duration=3.5,
+            )
 
     # ── Unidad V — color y transparencia ────────────────────────────
 
@@ -178,16 +241,17 @@ class Stage2_2(StageScene):
         * Azotea: sobre la superficie del edificio (y = 256), mirando a la
           derecha (0°) hacia el campo de antenas.
         """
+        bus = self.context.event_bus
         self._camaras = [
             CamaraSeguridad(
                 x=1166.0, y=634.0,
                 angulo_base=180.0, amplitud_barrido=38.0, periodo=4.2,
-                fov=70.0, alcance=190.0,
+                fov=70.0, alcance=190.0, event_bus=bus,
             ),
             CamaraSeguridad(
                 x=1332.0, y=248.0,
                 angulo_base=0.0, amplitud_barrido=30.0, periodo=5.6,
-                fov=64.0, alcance=150.0,
+                fov=64.0, alcance=150.0, event_bus=bus,
             ),
         ]
 
@@ -348,13 +412,23 @@ class Stage2_2(StageScene):
             return
 
         centro_jugador = pygame.Vector2(self._player.rect.center)
-        alguna_detecta = False
-        for camara in self._camaras:
-            if camara.update(dt, centro_jugador):
-                alguna_detecta = True
 
-        if alguna_detecta:
-            self._alertar_enemigos_cercanos(centro_jugador)
+        # Unidad VII: el histograma de la zona donde está el jugador decide
+        # cuánto alcanzan las cámaras. Escena clara -> te ven de lejos; a la
+        # sombra, el alcance cae hasta el 55 %. Es lógica de juego derivada de
+        # una medición real de la imagen, no de una bandera puesta en el mapa.
+        if self._monitor is not None:
+            for camara in self._camaras:
+                camara.factor_visibilidad = self._monitor.factor_visibilidad
+
+        for camara in self._camaras:
+            # La reacción ya no se dispara aquí: cada cámara publica
+            # EVENTO_DETECCION en el flanco de subida y `_on_camara_detecta`
+            # decide qué hacer. Ver `_suscribir_eventos_propios`.
+            camara.update(dt, centro_jugador)
+
+        if self._barrera is not None:
+            self._barrera.update(dt)
 
         self._mover_sobre_curva(dt)
         self._corregir_bloqueo_camara()
@@ -373,6 +447,22 @@ class Stage2_2(StageScene):
         # opción sin tocar `DrawingSystem`: la consecuencia es que un cono
         # queda por encima del HUD si el jugador está en la esquina superior
         # izquierda. Se acepta a cambio de no modificar el framework.
+        # El monitor captura AQUI, justo después de que `super().draw()` pintó
+        # el mundo y antes de que se dibujen los conos, la curva y la barrera.
+        # Si capturara al final, la pantalla de circuito cerrado se mostraría a
+        # sí misma y los conos de visión saldrían dentro de la señal.
+        if self._monitor is not None:
+            centro_pantalla = (
+                int(self._player.rect.centerx - self._camera.offset.x),
+                int(self._player.rect.centery - self._camera.offset.y),
+            )
+            self._monitor.update(
+                self._dt, surface, centro_pantalla,
+                pos_mundo=(float(self._player.rect.centerx),
+                           float(self._player.rect.centery)),
+                alertado=any(c.detectando for c in self._camaras),
+            )
+
         # Orden deliberado: el velo atmosférico va primero, para que tiña la
         # escena; los halos de las antenas después, porque son fuentes de luz
         # y la luz emitida no debe quedar detrás del aire que atraviesa.
@@ -390,3 +480,10 @@ class Stage2_2(StageScene):
 
         for camara in self._camaras:
             camara.draw(surface, self._camera.offset)
+
+        if self._barrera is not None:
+            self._barrera.draw(surface, self._camera.offset)
+
+        # El monitor va al final, sobre todo lo demás: es interfaz.
+        if self._monitor is not None:
+            self._monitor.draw(surface)

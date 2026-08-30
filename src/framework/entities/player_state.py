@@ -34,6 +34,9 @@ class PlayerStateData:
     cooldown_timer: float = 0.0
 
     # Combo state (private)
+    # AUD-COMBO C8: dos contadores distintos — `combo_air_hits` (aéreo: 2→AerialSlam,
+    # resetea al tocar suelo, ver states/airborne.py:181) vs `Player.combo_count`
+    # (suelo: ventana 0.5s, resetea por tiempo/daño, ver player.py:345). No son el mismo.
     combo_air_hits: int = 0
     crouching_at_attack_start: bool = False
 

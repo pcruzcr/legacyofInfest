@@ -105,6 +105,7 @@ class ComboDemoScene(BaseScene):
 
     def _register_hit(self, atk_type: str) -> None:
         import src.engine.core.settings as settings
+        from src.engine.core.difficulty import get_config
         if (self._combo_count > 0
                 and self._combo_timer > 0
                 and self._last_type == atk_type
@@ -112,7 +113,8 @@ class ComboDemoScene(BaseScene):
             self._combo_count += 1
         else:
             self._combo_count = 1
-        self._combo_timer = settings.COMBO_WINDOW
+        # AUD-COMBO: usar ventana de dificultad, no la base fija
+        self._combo_timer = float(getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
         self._last_type = atk_type
         idx = min(self._combo_count - 1, len(settings.COMBO_DAMAGE_MULT) - 1)
         mult = settings.COMBO_DAMAGE_MULT[idx]
@@ -165,7 +167,9 @@ class ComboDemoScene(BaseScene):
         alto_barra = self.WINDOW_BAR_H
         pygame.draw.rect(surface, (60, 60, 80), (bx, y, ancho_barra, alto_barra))
         if self._combo_timer > 0:
-            ratio = max(0.0, min(1.0, self._combo_timer / settings.COMBO_WINDOW))
+            from src.engine.core.difficulty import get_config
+            _win = float(getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+            ratio = max(0.0, min(1.0, self._combo_timer / _win if _win > 0 else 1.0))
             pygame.draw.rect(surface, COLOR_ACCENT,
                              (bx, y, int(ancho_barra * ratio), alto_barra))
         label = self._font_small.render(_("ui.combo.window"), True, COLOR_TEXT)

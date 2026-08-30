@@ -339,6 +339,22 @@ class SenalesDeEscenario:
         self.context.event_bus.subscribe(Events.VFX_MUSGO_STEP, _on_vfx_musgo_step)
         self._vfx_handlers[Events.VFX_MUSGO_STEP] = _on_vfx_musgo_step
 
+        def _on_vfx_poison(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            # Nube verde + destello sutil cada 0.5s de veneno
+            try:
+                self._particle_system.get_emitter("hits").emit(
+                    float(pos[0]), float(pos[1] - 8), HitEffects.BUBBLE,
+                )
+            except Exception:
+                pass
+            try:
+                self._post_processing.flash((40, 160, 40), alpha=60, duration=0.12)
+            except Exception:
+                pass
+        self.context.event_bus.subscribe(Events.VFX_POISON, _on_vfx_poison)
+        self._vfx_handlers[Events.VFX_POISON] = _on_vfx_poison
+
         # AUD-636 — polvo de aterrizaje/salto y destello de muerte.
         self.context.event_bus.subscribe(Events.VFX_LAND_DUST, _on_vfx_land_dust)
         self._vfx_handlers[Events.VFX_LAND_DUST] = _on_vfx_land_dust

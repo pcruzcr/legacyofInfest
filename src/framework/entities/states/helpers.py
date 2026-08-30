@@ -161,10 +161,12 @@ def _reset_air_jumps(player: Player) -> None:
 def _start_attack(player: Player, attack_type: object) -> None:
     atk_name = "SHORT_ATTACK" if attack_type == player.SHORT_ATTACK else "LONG_ATTACK"
 
-    from src.framework.entities.states import (
-        LongAttackState,
-        ShortAttackState,
-    )
+    # AUD-COMBO: el conteo no debe quedar condicionado a `changed`.
+    # Antes `if changed:` hacía que un ataque denegado (cooldown, mismo estado)
+    # dejara el combo congelado y el siguiente golpe retomara con el contador
+    # viejo: el conteo "seguía" aunque el ataque no salió. Ahora avanza siempre
+    # que se pulsa, y si el estado no cambia el siguiente golpe igual resetea
+    # por `last_attack_type`/ventana.
     if (player.combo_active
             and player.combo_timer > 0
             and player.last_attack_type == atk_name
@@ -173,33 +175,28 @@ def _start_attack(player: Player, attack_type: object) -> None:
     else:
         player.combo_count = 1
     from src.engine.core.difficulty import get_config
-    player.combo_timer = float(getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+
+    player.combo_timer = float(
+        getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
     player.last_attack_type = atk_name
     player.combo_active = True
+
+    from src.framework.entities.states import (
+        LongAttackState,
+        ShortAttackState,
+    )
     if attack_type == player.SHORT_ATTACK:
         player._change_state_instance(ShortAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_SHORT_ATTACK)
     else:
         player._change_state_instance(LongAttackState())
         player._event_bus.emit(Events.SFX_PLAYER_LONG_ATTACK)
-        # AUD-154 — la ventana de combo sale de la dificultad, no de `settings`.
-        #
-        # Los tres presets declaran `combo_window` (0,60 en fácil; 0,35 en
-        # difícil) y nadie los leía: todo el mundo encadenaba con los 0,50 de
-        # `settings.COMBO_WINDOW`. Era el segundo de los ocho mandos de la
-        # dificultad sin conectar.
-        from src.engine.core.difficulty import get_config
 
-        player.combo_timer = float(
-            getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
-        player.last_attack_type = atk_name
-        player.combo_active = True
-
-        from src.framework.entities.states import CrouchingState
-        player._crouching_at_attack_start = isinstance(
-            player._state_instance,
-            CrouchingState,
-        ) if hasattr(player, "_state_instance") else False
+    from src.framework.entities.states import CrouchingState
+    player._crouching_at_attack_start = isinstance(
+        player._state_instance,
+        CrouchingState,
+    ) if hasattr(player, "_state_instance") else False
 
 
 def _can_dash(player: Player, inp: _InputSnapshot) -> bool:

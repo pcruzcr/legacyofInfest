@@ -22,11 +22,15 @@ from src.framework.entities.enemy_brute import EnemyBrute
 from src.framework.entities.enemy_buddies import BuddyEnguarde, BuddyExpresso, BuddyRino
 from src.framework.entities.enemy_cangrejo import EnemyCangrejo
 from src.framework.entities.enemy_caster import EnemyCaster
+from src.framework.entities.enemy_ceibo import EnemyCeibo
+from src.framework.entities.enemy_cerbatana import EnemyCerbatana
 from src.framework.entities.enemy_charger import EnemyCharger
 from src.framework.entities.enemy_climber import EnemyClimber
 from src.framework.entities.enemy_flying import EnemyFlying
 from src.framework.entities.enemy_flying_bomber import EnemyFlyingBomber
+from src.framework.entities.enemy_hormiga import EnemyHormiga
 from src.framework.entities.enemy_medusa import EnemyMedusa
+from src.framework.entities.enemy_oropel import EnemyOropel
 from src.framework.entities.enemy_pez_abismal import EnemyPezAbismal
 from src.framework.entities.enemy_shielded import EnemyShielded
 from src.framework.entities.enemy_shooter import EnemyShooter
@@ -86,6 +90,10 @@ def ensure_registered() -> None:
         "FlyingBomber": EnemyFlyingBomber,
         "TerrainShaper": EnemyTerrainShaper,
         "Summoner": EnemySummoner,
+        "Hormiga": EnemyHormiga,
+        "Oropel": EnemyOropel,
+        "Cerbatana": EnemyCerbatana,
+        "Ceibo": EnemyCeibo,
         "BossVenado": BossVenado,
         "BuddyRino": BuddyRino,
         "BuddyExpresso": BuddyExpresso,

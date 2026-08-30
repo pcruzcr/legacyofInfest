@@ -471,7 +471,7 @@ velocidad. Patrones nuevos: `VINE_SWEEP` (cada 5 s, hitbox de piso completo
 |---|---|
 | Estado | **IMPLEMENTADO** (`boss_rey.tmx`) — diseño **[REFERENCIA]** en `17_BOSS_SPEC.md` |
 | Dificultad | 7/10 (15 corazones, 3 fases) |
-| Dimensiones | 70 × 37 tiles = **1120 × 592 px**; arena de referencia 320×224 con racks como paredes, 3 rejillas (HazardZone 0.25, 2 s cada 5 s) y una plataforma baja |
+| Dimensiones | 70 × 38 tiles = **1120 × 608 px** (corregido AUD-XXX: 37 tiles daban 592 px, contradicción con 86 §2.1 que exige 608 px mínimo; se añade losa de 16 px abajo, validado en `stage_data.py`) ; arena de referencia 320×224 con racks como paredes, 3 rejillas (HazardZone 0.25, 2 s cada 5 s) y una plataforma baja |
 
 **Fase 1 — "La Marioneta" (15→10).** Caminata errática (Catmull-Rom por 4
 puntos, 50 px/s). Patrones: `VENOM_SPIT` (si jugador < 200 px, 0.5), `SERPENT_CARPET`

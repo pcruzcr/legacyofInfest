@@ -446,7 +446,19 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # sistema de diálogo sin abrirse durante meses (AUD-127) — si algún día
         # alguien renombra el campo, quiero un `AttributeError` ruidoso, no un
         # escenario que calla y se juega en la vista equivocada.
-        self._player.vista_cenital = self._stage_data.vista == "cenital"
+        try:
+            from src.framework.stage.vista_system import es_top_down
+            _is_top = es_top_down(self._stage_data.vista)
+        except Exception:
+            _is_top = self._stage_data.vista == "cenital"
+        self._player.vista_cenital = _is_top
+        # 100% cenital — propaga vista a todos los enemigos (top-down vistas usan cenital physics)
+        for _e in getattr(self._stage_data, "entity_list", []):
+            if hasattr(_e, "vista_cenital"):
+                try:
+                    _e.vista_cenital = _is_top
+                except Exception:
+                    pass
         # AUD-141 — la estamina, si este escenario la pide. Por el mismo
         # camino que la vista: una propiedad del mapa que la escena traslada
         # al jugador al cargar.

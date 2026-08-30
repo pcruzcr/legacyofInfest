@@ -4,8 +4,8 @@ assignment_name: "La Entrada de Piedra"
 assignment_id: "stage3_1_la_entrada_de_piedra"
 zone: 3
 student_name: "Avril"
-units_demonstrated: [II, III, IV, V]
-evaluation_milestone: "Evaluación Práctica I"
+units_demonstrated: [II, III, IV, V, VI, VII]
+evaluation_milestone: "Evaluación Práctica II"
 ---
 
 # Stage 3-1 — La Entrada de Piedra
@@ -20,6 +20,14 @@ ala secundaria más clara, césped y camino curvo). El jugador recorre el
 camino de izquierda a derecha, enfrentando enemigos de la Zona 3 (aves
 infestadas) mientras usa dos jardineras elevadas y cuatro plataformas
 adicionales como cobertura y como recorrido de salto.
+
+**Dirección de arte — Atardecer Oscuro (reskin gótico):** la geometría,
+colisiones, enemigos y posiciones descritos en este documento no
+cambiaron; sí cambió por completo el aspecto visual, reconstruido sobre
+una paleta gótica de atardecer (violeta/rosa/azul oscuro, rampas de 5
+tonos por material, dithering ordenado, sombras de contacto, luz
+direccional desde el horizonte). Ver sección 2 (tileset actual) y
+"Créditos de assets" al final.
 
 **Tamaño del mapa (1600×224px, 100×14 tiles):** el mapa se amplió más
 allá del mínimo del enunciado (~560px) para que la cámara del motor
@@ -70,17 +78,40 @@ escenario no agrega ninguna dependencia nueva.
 
 ## 2. Requisitos del tileset
 
-| Tile ID (gid) | Tileset | Descripción | ¿Colisión? |
+**Tileset actual:** `student_assets/tilesets/tileset_invenio_gothic_v5.png`
+(128×192px, grilla de 8×12 tiles de 16×16). Generado por script
+(`art/gen_tileset5.py` + `art/pixelart.py` + `art/palette.py`, todos con
+semilla fija — reproducibles) siguiendo un sistema de rampas de 5 tonos
+por material, dithering ordenado (Bayer 2×2) en toda transición de tono,
+oclusión ambiental (línea oscura de contacto), ruido de superficie
+determinístico y variantes por hash de posición `(x, y)` — nunca aleatorio
+en runtime. La colisión (sección 3/5) no depende del tile visual: el
+`Collision` del TMX no cambió un solo valor al re-pintar el escenario.
+
+| Grupo de tiles | Cantidad | Capa(s) donde aparece | ¿Colisión? |
 |---|---|---|---|
-| 0 | — | Vacío / aire | No |
-| 1 | `tileset_heredia_stone` | Piedra base — superficie del camino (`Terrain`) | Sí (vía objeto `Solid_Floor`) |
-| 3 | `tileset_heredia_stone` | Gris oscuro — fachada del edificio (`BG_Far`) y postes de la pérgola (`BG_Near`) | No |
-| 2 | `tileset_heredia_stone` | Gris claro — ala secundaria del edificio (`BG_Mid`) | No |
-| 6 | `tileset_heredia_stone` | Marrón — viga de la pérgola (`FG_Overlay`) y cuerpo de las jardineras (`Terrain_Detail`) | No |
-| 7 | `tileset_heredia_stone` | Terracota — acento del edificio (`BG_Far`) y superficie de las jardineras (`Terrain_Detail`) | Sí (jardineras, vía objeto `Platform`) |
-| 5 | `tileset_heredia_stone` | Azul — cielo (`BG_Far`) | No |
-| 65 / 66 | `tileset_planicie` | Verde — césped que bordea el camino (`Terrain_Detail`) | No |
-| 67 | `tileset_planicie` | Verde oscuro — copas de los árboles ornamentales (`BG_Near`) | No |
+| `adoquin_0..5` | 6 variantes | `Terrain` (piso completo) | Sí (vía objeto `Solid_Floor`) |
+| `cesped_0..5` | 6 variantes | `Terrain_Detail` (franja sobre el piso) | No |
+| `muro_grafito_0..3` | 4 variantes | `BG_Mid` (fachada INVENIO) | No |
+| `muro_piedra_0..3` | 4 variantes | `BG_Mid` (dintel puerta) | No |
+| `terracota_0..2` | 3 variantes | `BG_Mid` (acento de techo) | No |
+| `ventana_lit` / `ventana_dark` | 2 | `BG_Mid` (fachada y pérgola) | No |
+| `columna_fuste` / `columna_capitel` / `viga_0` | 3 | `BG_Mid` (pérgola, sobre los dos `ShooterQuetzal`) | No |
+| `jardinera_top` | 1 | `BG_Near`, alineado exacto con el objeto `Platform` de cada jardinera | Sí (jardineras, vía objeto `Platform`) |
+| `plataforma_0` | 1 | `BG_Near`, alineado exacto con cada `Plataforma_0X` | Sí (vía objeto `Platform`) |
+| `arbol_a/b/c` | 3 árboles únicos, 3 capas c/u (tronco, follaje en clusters, hojas sueltas + sombra de contacto) | `BG_Near` | No |
+| `nube_a` / `nube_b` | 2 nubes grandes (96×32px, unión de elipses + dithering) | `BG_Far` | No |
+| `arbusto_0/1`, `flor_0/1`, `farola_0`, `ivy_0/1` | detalle | `BG_Near` / `Terrain_Detail` / `FG_Overlay` | No |
+
+**Cielo y montañas — parallax real del motor, no tiles:** el TMX declara
+`background_zone="zone3"`, que `StageLoader._load_backgrounds` resuelve
+contra `assets/backgrounds/zone3/bg_zone3_{far,mid,near}.png` (arte
+oficial del profesor, no tocado) y dibuja a velocidades distintas
+(`VELOCIDAD_DE_FONDO`: far=0.15, mid=0.35, near=0.60) **antes** de las
+capas del TMX — el cielo/montañas violeta de atardecer que se ve detrás
+del escenario viene de ahí, no de un tile pintado. Se comprobó primero
+(sección "Auditoría F0" más abajo) que este hook existe en el framework
+antes de intentar simular parallax a mano.
 
 ## 3. Enemigos y objetos
 
@@ -216,11 +247,10 @@ cuando la nube está encima, casi imperceptible cuando está lejos).
 Implementado en `_draw_cloud_shadow` / `_draw_cloud_shape`, usando
 `ColorTools.hsl_to_rgb` de `src/framework/processing/color_tools.py`.
 
-Además, se sobreescribieron `ambient_light=0.85`, `bloom=0.15` y
-`vignette=0.20` en las propiedades del mapa: los valores por defecto de
-Zona 3 (`AMBIENT_BY_ZONE`, `BLOOM_BY_ZONE`, `VIGNETTE_BY_ZONE` en
-`StageScene`) están pensados para tramos oscuros de interior, y este
-escenario es un exterior diurno y nublado.
+Además, el mapa declara `ambient_light=0.55`, `bloom=0.30` y
+`vignette=0.35` en sus propiedades (ajustados junto con el reskin a
+Atardecer Oscuro — más oscuros que un exterior diurno, coherentes con la
+paleta violeta/rosa del cielo de parallax).
 
 ## 10. Reflexión
 
@@ -232,3 +262,44 @@ supuesto contra `src/framework/` antes de dar una posición o un
 comportamiento por bueno evitó varios errores de diseño que habrían sido
 difíciles de detectar solo jugando. Si lo rehiciera, mediría estos límites
 (rangos, rebotes) antes de la fase de diseño del nivel, no después.
+
+## 11. Auditoría previa al reskin gótico (F0)
+
+Antes de repintar el escenario se auditó `src/framework/stage/` para no
+reinventar nada que ya existiera:
+
+- `StageData.background_layers` / `background_factors` y
+  `StageLoader._load_backgrounds` (AUD-272): el motor **sí** expone un
+  hook de parallax real por capa (`sky/deep/far/mid/near`, velocidades
+  fijas en `VELOCIDAD_DE_FONDO`), activado con la propiedad de mapa
+  `background_zone`. `assets/backgrounds/zone3/` ya traía
+  `bg_zone3_far/mid/near.png` en paleta violeta de atardecer — se
+  activó ese hook (`background_zone="zone3"`) en vez de pintar cielo o
+  montañas como tiles.
+- `StageData.cielo` (AUD-426, cielo procedural por degradado): se dejó
+  **desactivado** a propósito — el mapa ya tiene un fondo pintado
+  (`bg_zone3_far`) y el propio comentario del framework advierte que un
+  degradado detrás de un fondo ya pintado no se vería.
+- `type="Platform"` en la capa `Collision` (no `"Solid_OneWay"`) para
+  plataformas de un solo sentido: confirmado leyendo
+  `StageLoader._load_collision` directamente (documentación aparte no es
+  confiable en este punto).
+- No se tocó `src/engine/`, `src/framework/`, `assets/` globales ni
+  `Stage0`; ningún enemigo fue subclasificado ni se tocó
+  `StageLoader._entity_registry`.
+
+## 12. Créditos de assets
+
+- **Fondos de parallax (`bg_zone3_far/mid/near.png`):** arte oficial del
+  profesor, incluido en el repositorio base (`assets/backgrounds/zone3/`).
+  No se modificó ni redistribuyó — solo se referencia vía
+  `background_zone="zone3"`.
+- **Tileset `tileset_invenio_gothic_v5.png`, todos los props (árboles,
+  nubes, columnas, ventanas, farola, flores, ivy) y el resto de las
+  capas visuales del TMX:** generados por código (Python + Pillow) por
+  la estudiante, con semilla fija y reproducibles desde
+  `src/stages/stage3_1_la_entrada_de_piedra/art/`. No se usaron assets de
+  terceros (OpenGameArt/itch.io/Kenney): la sesión de trabajo no tuvo
+  acceso de red a esos sitios, así que se optó por generar todo por
+  código y subir el nivel de detalle (rampas, dithering, sombras,
+  variantes) en vez de mezclar con arte externo.

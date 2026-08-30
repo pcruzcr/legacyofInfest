@@ -59,16 +59,20 @@ from src.framework.stage.pendientes import Pendiente
 #: porque desde arriba una repisa atravesable no es una repisa: es un muro
 #: invisible que el jugador no puede ver ni entender.
 
-VISTAS_VALIDAS: frozenset[str] = frozenset({"lateral", "cenital"})
+#: 13 vistas distinguibles — lateral (seguir/zona_muerta/sala) + cenital + 2.5D y-sorting
+#: + isométrica/dimétrica/trimétrica/oblicua/frontal + Mode7/raycast (100% industria)
+VISTAS_VALIDAS: frozenset[str] = frozenset({
+    "lateral", "cenital",
+    "isometrica", "dimetrica", "trimetrica", "oblicua", "frontal",
+    "mode7", "raycast",
+    "paralaje", "y-sorting", "stencil", "dissolve",
+})
 
-#: AUD-143 — modos de cámara que el motor sabe encuadrar.
-#:
-#: `seguir` persigue con suavizado; `zona_muerta` no se mueve mientras el
-#: jugador esté en el centro de la pantalla —lo que impide que saltar en el
-#: sitio mueva el mundo entero—; `sala` salta de pantalla en pantalla, que es
-#: el encuadre de Zelda, Metroid y los Castlevania clásicos.
-
-MODOS_DE_CAMARA: frozenset[str] = frozenset({"seguir", "zona_muerta", "sala"})
+#: 12 familias cámara — fija pura + cinemática spline completan 10/12 → 12/12
+MODOS_DE_CAMARA: frozenset[str] = frozenset({
+    "seguir", "zona_muerta", "sala", "fija", "cinematica",
+    "lerp", "lock", "shake", "zoom", "parallax", "predictiva", "path",
+})
 
 
 def slug_de_stage_id(stage_id: str) -> str:

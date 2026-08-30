@@ -7,7 +7,7 @@ sube hacia la Universidad Invenio. Demuestra matemática vectorial explícita
 (JungleFrog y su proyectil), trayectorias Bézier definidas en Tiled
 (CanopyBird) y una pasada de color ámbar de atardecer con ColorTools.
 
-Estudiante: Fabrizio E
+Estudiante: Fabrizio Espinoza Arce
 Diseño de referencia: docs/16_WORLD_DESIGN.md §3.2
 
 Ejecutar con:
@@ -24,10 +24,15 @@ import pygame
 from src.engine.core import settings
 from src.framework.scenes.stage_scene import StageScene
 from src.framework.stage.stage_loader import StageLoader
-from src.stages.stage1_1.combat.guard_system import GuardSystem
+from src.stages.stage1_1.animation.sol_poniente import (
+    EVENTO_SOL_EN_EL_HORIZONTE,
+    SolPoniente,
+)
 from src.stages.stage1_1.entities.canopy_bird import CanopyBird
 from src.stages.stage1_1.entities.jungle_frog import JungleFrog
 from src.stages.stage1_1.overlays.debug_overlay import DebugOverlay
+from src.stages.stage1_1.processing.adaptacion_visual import AdaptacionVisual
+from src.stages.stage1_1.processing.enfoque_bordes import EnfoqueBordes
 from src.stages.stage1_1.processing.sunset_light import SunsetLight
 
 if TYPE_CHECKING:
@@ -56,7 +61,11 @@ class Stage1_1_LaEntrada(StageScene):
     STAGE_ID: str = "stage1_1"
     STAGE_NAME: str = "1-1  LA ENTRADA"
     ZONE: int = 1
-    TIME_LIMIT: int = 180
+    #: Lo que manda es la propiedad `time_limit` del .tmx; esta constante es
+    #: el respaldo del framework. Se suben las dos a 300 s: con 180 no daba
+    #: tiempo de explorar el nivel ni de recorrer la lista de pruebas del
+    #: enunciado, y al llegar a cero el jugador muere.
+    TIME_LIMIT: int = 300
     BGM_TRACK: str = "bgm_stage0"
     TILE: int = 16
 
@@ -82,17 +91,23 @@ class Stage1_1_LaEntrada(StageScene):
     # MessageBox del motor los ENCOLA, así que salen uno tras otro sin
     # pisarse (message_box.py:75 y :127-128).
     #
-    # OJO CON EL LARGO: `_wrap_text` parte por CARACTERES, no por palabras
-    # (message_box.py:104-122, con _MAX_CHARS_PER_LINE = 58 en la linea 14),
-    # y corta en el 58 exacto aunque quede a mitad de palabra.
-    # Por eso cada tip cabe en UNA sola línea: máximo 58
-    # caracteres. Hay una prueba que lo verifica con el partidor del motor.
+    # NO SE REPITE LO QUE EL MOTOR YA ENSEÑA. `TutorialScene` tiene cuatro
+    # páginas accesibles desde la pantalla de título que cubren mover,
+    # saltar, agacharse, los dos ataques, el dash, el parry, el agarre, el
+    # ultimate y el combo aéreo. Repetir aquí esos controles entrena al
+    # jugador a ignorar los carteles.
+    #
+    # Aquí sólo van las tres cosas que ese tutorial NO puede saber: hacia
+    # dónde se va en este escenario, qué obstáculo propio tiene, y la tecla
+    # de diagnóstico que sólo existe en este nivel.
+    #
+    # OJO CON EL LARGO: cada tip cabe en UNA línea del cuadro de mensajes.
+    # `tests/test_tips.py` lo comprueba con el partidor real del motor y a
+    # la MAYOR escala de accesibilidad, que es el peor caso.
     TIPS_INICIO: tuple[tuple[str, float], ...] = (
         ("Sendero a la Universidad Invenio. Subi a la entrada.", 4.0),
-        ("CTRL o Q: mantene pulsado para defenderte del dano.", 6.0),
-        ("Con la guardia puesta no te podes mover del sitio.", 5.0),
-        ("S + Z juntas: parry. Manda al bicho a volar.", 5.0),
-        ("X pega mas lejos que Z. F1 muestra las curvas.", 5.0),
+        ("Salta de piedra en piedra para cruzar el sendero.", 5.0),
+        ("F1 dibuja las curvas de las aves y los vectores.", 5.0),
     )
 
     #: Segundos de espera antes de soltar los tips, contados desde que
@@ -131,7 +146,9 @@ class Stage1_1_LaEntrada(StageScene):
         super().__init__(context, Path(self.TMX_PATH))
         self._sunset = SunsetLight()
         self._overlay = DebugOverlay()
-        self._guardia = GuardSystem()
+        self._sol = SolPoniente()
+        self._adaptacion = AdaptacionVisual()
+        self._enfoque = EnfoqueBordes()
         # Los tips esperan a que el banner de entrada libere la pantalla.
         self._tips_pendientes: list[tuple[str, float]] = []
         self._tiempo_en_escena: float = 0.0
@@ -174,30 +191,76 @@ class Stage1_1_LaEntrada(StageScene):
 
 
     def update(self, dt: float) -> None:
-        # La guardia se evalúa ANTES del update del motor: es dentro de ese
-        # update donde los enemigos comprueban el contacto y llaman a
-        # apply_damage, así que la bandera tiene que estar ya puesta.
-        x_antes: float | None = None
-        if self._player is not None:
-            self._guardia.actualizar(self._player, GuardSystem.leer_teclado())
-            # Se guarda la X antes del update del motor: la máquina de
-            # estados fija velocity.x e integra la posición dentro de
-            # player.update(), sin ningún punto intermedio accesible desde
-            # fuera. Restaurarla después es la única forma de inmovilizar
-            # al jugador sin tocar player.py.
-            x_antes = self._player.position.x
-
         super().update(dt)
-
-        if self._player is not None and x_antes is not None:
-            self._guardia.congelar(self._player, x_antes)
-
         self._bombear_tips(dt)
+        # El sol avisa UNA vez al tocar el horizonte. Se consulta después del
+        # update del motor para que `stage_progress()` ya refleje la posición
+        # de este fotograma.
+        self._sol.revisar_horizonte(self.stage_progress(), self.context.event_bus)
+        # Unidad VII — la tecla de enfoque se lee aquí; el filtro se aplica
+        # en draw(), que es donde existe el fotograma sobre el que operar.
+        self._enfoque.actualizar(EnfoqueBordes.leer_teclado())
 
         if self._stage_data is not None:
             self.sincronizar_scroll(
                 self._stage_data.map_layer, self._camera.offset,
             )
+
+        self._animar_cartel_final(dt)
+
+    def _animar_cartel_final(self, dt: float) -> None:
+        """Anima el cartel «STAGE COMPLETE», que el motor deja congelado.
+
+        EL DEFECTO, MEDIDO. Al tocar la salida el escenario hace dos cosas en
+        el mismo fotograma (`stage_scene.py:1188-1191`): pone
+        `stage_complete = True` y lanza el cartel. Pero el bloque que anima la
+        interfaz está guardado por esa misma bandera
+        (`stage_scene.py:797`)::
+
+            if not self._game_over and not self._progression.stage_complete:
+                ...
+                self._update_hud_ui(dt)    # unico sitio que anima el cartel
+                self._update_timers(dt)    # y el otro
+
+        O sea que al completar el nivel deja de actualizarse justo lo que
+        tenia que animar el cartel de nivel completado. Se queda en su estado
+        inicial `slide_in` con el desplazamiento de partida —1600, que son dos
+        anchos de pantalla— y `draw()` lo pinta en `bx = 1600 - 800 = 800`:
+        una pantalla entera a la derecha, fuera de cuadro. Se dibuja los 174
+        fotogramas y no se ve ni uno.
+
+        Medido con el jugador puesto en la salida::
+
+            f    t       completo  timer  estado     offset
+            0    0.00s   True      2.88   slide_in   1600.0
+            90   1.50s   True      1.38   slide_in   1600.0
+            180  3.00s   True     -0.02   slide_in   1600.0
+
+        Congelado los tres segundos. El cartel del NOMBRE del nivel, en
+        cambio, funciona perfecto —`slide_in` -> `hold` en `bx = 0` ->
+        `slide_out`—, porque en el arranque la bandera es falsa. El sistema de
+        carteles esta sano; lo unico roto es el caso del final.
+
+        Y hay una pista de que es un descuido y no una decision: dentro de
+        `_update_timers` hay un `if self._progression.stage_complete:`. Es
+        codigo inalcanzable — solo se llama cuando la bandera es falsa, y su
+        cuerpo exige que sea verdadera. Alguien escribio el manejo del final y
+        la condicion de fuera lo dejo muerto.
+
+        POR QUE SE ARREGLA DESDE AQUI. El defecto es del motor y la regla del
+        repositorio es reportarlo, no tocarlo — va como F-016 en
+        `claude-workspace/12-REPORTE-DE-BUGS.md`. Esto no lo corrige: llama al
+        `update` que el motor se salta, desde el escenario propio, que es
+        codigo mio. Si algun dia el motor lo arregla, esta llamada se vuelve
+        inofensiva: `ScreenBanner.update` sale sola cuando el estado es
+        `idle`, y llamarla dos veces en el mismo fotograma solo adelantaria la
+        animacion, cosa que no puede pasar porque la del motor sigue sin
+        ejecutarse mientras la bandera este puesta.
+        """
+        if self._banner is None:
+            return
+        if self._progression.stage_complete:
+            self._banner.update(dt)
 
     # ── Corrección: spawn inválido de una partida guardada vieja ────
 
@@ -248,18 +311,48 @@ class Stage1_1_LaEntrada(StageScene):
         return cls.ENEMIGOS_ACTIVOS
 
     def on_exit(self) -> None:
-        """Quita el envoltorio de la guardia al salir del escenario."""
-        self._guardia.desenganchar()
+        """Se da de baja del evento propio antes de dejar el escenario.
+
+        El `EventBus` es global y vive más que la escena: dejar la suscripción
+        puesta significa que un `SolPoniente` muerto siga contestando en el
+        siguiente nivel.
+        """
+        self.context.event_bus.unsubscribe(
+            EVENTO_SOL_EN_EL_HORIZONTE, self._al_ponerse_el_sol)
         super().on_exit()
+
+    def _al_ponerse_el_sol(self, **datos: object) -> None:
+        """Reacción al evento propio del escenario (Unidad VI)."""
+        from src.engine.core.events import Events
+        self.context.event_bus.emit(
+            Events.SHOW_MESSAGE,
+            text="El sol se mete tras el cerro. Apura el paso.",
+            duration=4.0,
+        )
+
+    def dibujar_fondo(self, surface: pygame.Surface,
+                      offset: pygame.Vector2) -> None:
+        """Unidad VI — el sol, animado con easing, DETRÁS del mapa.
+
+        `StageScene.dibujar_fondo()` (AUD-162) se llama después del parallax y
+        antes de las baldosas, así que las colinas de `BG_Far` tapan el disco:
+        el sol *se pone tras el paisaje*. Desde `draw()` se pintaría encima de
+        todo y flotaría delante de las montañas.
+        """
+        super().dibujar_fondo(surface, offset)
+        self._sol.draw(surface, self.stage_progress())
 
     def on_stage_start(self) -> None:
         """Se llama tras cargar el escenario y completar el setup."""
         super().on_stage_start()
 
-        # La guardia intercepta player.apply_damage, que es el único punto
-        # por donde entra TODO el daño (contacto, proyectiles, hazards).
-        if self._player is not None:
-            self._guardia.enganchar(self._player)
+        # Unidad VI — la otra mitad de la interacción. Emitir un evento que
+        # nadie escucha no es una interacción: es un `print`. El escenario se
+        # suscribe a su PROPIO evento (el del sol) y responde.
+        self._sol.reiniciar()
+        self._adaptacion.reiniciar()
+        self.context.event_bus.subscribe(
+            EVENTO_SOL_EN_EL_HORIZONTE, self._al_ponerse_el_sol)
 
         # No se emiten aquí: quedarían tapados por el banner de entrada.
         # update() los suelta al cumplirse RETARDO_TIPS.
@@ -374,10 +467,19 @@ class Stage1_1_LaEntrada(StageScene):
         super().draw(surface)
         self._sunset.apply(surface, self.stage_progress())
 
-        # Escudo de la guardia: va tras el pase de color para que se lea
-        # claro incluso con el atardecer al máximo.
-        if self._player is not None:
-            self._guardia.draw(surface, self._player, self._camera.offset)
+        # ── Unidad VII ────────────────────────────────────────────────
+        #
+        # El ORDEN importa. La adaptación mide DESPUÉS del tinte ámbar de la
+        # Unidad V porque lo que tiene que corregir es lo que el jugador ve
+        # de verdad, no la escena sin teñir: el tinte es justamente una de
+        # las cosas que apagan el contraste al final del nivel.
+        self._adaptacion.actualizar(surface)
+        self._adaptacion.apply(surface)
+
+        # Y el realce de contornos va al final del pase de color, para que
+        # los bordes que dibuja no se vuelvan a corregir ni a teñir: son una
+        # lectura de la escena, no parte de ella.
+        self._enfoque.apply(surface)
 
         # El overlay va DESPUÉS del pase de color: son líneas de diagnóstico
         # y deben conservar su color puro, sin teñirse de ámbar.

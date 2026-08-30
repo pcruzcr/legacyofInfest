@@ -97,7 +97,12 @@ _CAIDA_SATURACION: float = 0.80
 #: Opacidad del velo atmosférico. Deliberadamente baja: el efecto debe leerse
 #: como aire, no como un filtro de fotografía, y la interfaz tiene que seguir
 #: siendo legible por debajo.
-_ALFA_VELO: int = 42
+#:
+#: Bajada de 42 a 28 al repintar el parqueo en color: con el tileset gris
+#: original 42 pasaba desapercibido, pero sobre un cielo azul saturado el velo
+#: cálido lo viraba a verde azulado y ensuciaba toda la paleta. El efecto sigue
+#: siendo medible y visible en el tránsito suelo→azotea.
+_ALFA_VELO: int = 28
 
 
 def lerp_hsv(

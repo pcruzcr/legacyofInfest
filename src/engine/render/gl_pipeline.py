@@ -315,7 +315,7 @@ class GLRenderer:
         # GPU este fotograma y la pasada no corre.
         self._lote_de_sprites: SpriteBatchGPU | None = None
 
-    def crear_lote_de_sprites(self) -> SpriteBatchGPU:
+    def crear_lote_de_sprites(self) -> SpriteBatchGPU:  # type: ignore[valid-type]
         """Crea (una vez) el lote de sprites de GPU que compone este renderer.
 
         AUD-342, fase 5 lote 2 — la pasada de composición. El lote dibuja
