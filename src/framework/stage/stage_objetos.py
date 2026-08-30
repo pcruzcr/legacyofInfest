@@ -79,11 +79,40 @@ class ObjetosDeTiled:
         waypoints_by_owner: dict[str, list[tuple[float, float]]],
         report: TmxReport,
     ) -> bool:
+        # Registry dispatch — OCP: nuevo tipo = @register sin tocar este método
+        from src.framework.stage.object_handler_registry import get_handler
+
         player_spawn_found = False
         for obj in tmx_data.get_layer_by_name("Objects"):
             obj_type = getattr(obj, "type", None) or ""
             obj_name = getattr(obj, "name", "") or ""
             props = dict(obj.properties) if obj.properties else {}
+
+            # 1. Registry para tipos simples (24 handlers)
+            handler = get_handler(obj_type)
+            if handler is not None:
+                try:
+                    # La mayoría: (stage, obj, props)
+                    handler(stage, obj, props)
+                except TypeError:
+                    # Cerradura/Buddy necesitan obj_type extra
+                    try:
+                        handler(stage, obj, props, obj_type)
+                    except TypeError:
+                        # BossSpawn con report, etc. — fallback al if/elif
+                        pass
+                    else:
+                        if obj_type == "PlayerSpawn":
+                            if player_spawn_found:
+                                raise FrameworkUsageError("More than one PlayerSpawn object found")
+                            player_spawn_found = True
+                        continue
+                else:
+                    if obj_type == "PlayerSpawn":
+                        if player_spawn_found:
+                            raise FrameworkUsageError("More than one PlayerSpawn object found")
+                        player_spawn_found = True
+                    continue
 
             if obj_type == "PlayerSpawn":
                 if player_spawn_found:
@@ -222,10 +251,12 @@ class ObjetosDeTiled:
         )
 
     @classmethod
+    @register("PlayerSpawn")
     def _handle_player_spawn(cls, stage: StageData, obj: Any) -> None:
         stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)
 
     @classmethod
+    @register("MessageTrigger","MessageTrigger_Once")
     def _handle_message_trigger(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         rect = pygame.Rect(obj.x, obj.y, obj.width or 32, obj.height or 32)
         text = props.get("text", "")
@@ -270,6 +301,7 @@ class ObjetosDeTiled:
         stage.entity_list.append(entity)
 
     @classmethod
+    @register("BossSpawn")
     def _handle_boss_spawn(cls, stage: StageData, obj: Any) -> TmxObjectProblem | None:
         """`BossSpawn` — dónde entra el jefe que el mapa nombra (AUD-259).
 
@@ -334,6 +366,7 @@ class ObjetosDeTiled:
         return cleaned
 
     @classmethod
+    @register("Checkpoint")
     def _handle_checkpoint(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if "checkpoint_id" not in props:
             raise FrameworkUsageError("Checkpoint missing required property: checkpoint_id")
@@ -361,6 +394,7 @@ class ObjetosDeTiled:
     }
 
     @classmethod
+    @register("Light")
     def _handle_light(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """Convierte un objeto `Light` de Tiled en un `LightSpec`.
 
@@ -404,6 +438,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("AmbientLightZone")
     def _handle_zona_luz_ambiente(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -447,6 +482,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("MusicZone")
     def _handle_zona_musica(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -478,6 +514,7 @@ class ObjetosDeTiled:
             rect=rect, track=track, fundido_ms=fundido_ms))
 
     @classmethod
+    @register("CameraZoomZone")
     def _handle_zona_zoom(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -516,6 +553,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("ArenaZone")
     def _handle_zona_arena(cls, stage: StageData, obj: Any) -> None:
         """Convierte un objeto `ArenaZone` de Tiled en el rect de arena
         del jefe (AUD-605).
@@ -628,6 +666,7 @@ class ObjetosDeTiled:
         return cls.LIGHT_COLORS["warm"]
 
     @classmethod
+    @register("Pickup","Key")
     def _handle_recogible(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`Pickup` / `Key` — algo que el jugador coge del suelo.
 
@@ -649,6 +688,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Door","Cage","LockedDoor")
     def _handle_cerradura(
         cls, stage: StageData, obj: Any, props: dict[str, Any], obj_type: str,
     ) -> None:
@@ -672,6 +712,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Chest")
     def _handle_cofre(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`Chest` — se abre con el botón y entrega su contenido una vez."""
         stage.cofres.append(Cofre(
@@ -683,6 +724,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("EventTrigger")
     def _handle_disparador(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`EventTrigger` — emite un evento del bus; el escenario decide qué hace."""
         evento = str(props.get("evento") or obj.name or "")
@@ -701,6 +743,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("Slope")
     def _handle_pendiente(cls, stage: StageData, obj: Any,
                           props: dict[str, Any]) -> None:
         """`Slope` — suelo inclinado (AUD-297).
@@ -735,6 +778,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("WarpZone")
     def _handle_warp(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """`WarpZone` — teletransporta dentro del mismo mapa (AUD-287).
 
@@ -773,6 +817,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("ScrollZone")
     def _handle_scroll_forzado(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
     ) -> None:
@@ -1047,6 +1092,7 @@ class ObjetosDeTiled:
         stage.componentes.append(grupo)
 
     @classmethod
+    @register("HazardZone")
     def _handle_hazard_zone(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if obj.width == 0 or obj.height == 0:
             return
@@ -1107,6 +1153,7 @@ class ObjetosDeTiled:
             ))
 
     @classmethod
+    @register("Objective")
     def _handle_objetivo(cls, stage: StageData, obj: Any, props: dict[str, Any],
                          nombre: str = "") -> None:
         """AUD-400 — `Objective` en Tiled. Cierra GAP-047.
@@ -1128,6 +1175,7 @@ class ObjetosDeTiled:
             stage.objetivos.append(objetivo)
 
     @classmethod
+    @register("Cutscene")
     def _handle_cutscene(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """AUD-136 — `Cutscene` en Tiled.
 
@@ -1153,6 +1201,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("CameraLock")
     def _handle_camera_lock(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         if obj.width == 0 or obj.height == 0:
             return
@@ -1162,6 +1211,7 @@ class ObjetosDeTiled:
         stage.camera_locks.append(CameraLock(rect=rect, lock_x=lock_x, lock_y=lock_y))
 
     @classmethod
+    @register("BuddyRino","BuddyExpresso","BuddyEnguarde")
     def _handle_buddy(cls, stage: StageData, obj: Any, props: dict[str, Any], buddy_type: str) -> None:
         """Maneja la colocación de buddies (compañeros montables) en el mapa."""
         if obj.width <= 0 or obj.height <= 0:
@@ -1187,6 +1237,7 @@ class ObjetosDeTiled:
         stage.entity_list.append(buddy)
 
     @classmethod
+    @register("SecretExit")
     def _handle_secret_exit(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """AUD-625 — `SecretExit`: salida oculta que revela un nodo en el mapa del mundo.
 
@@ -1215,6 +1266,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("SecretRoom")
     def _handle_secret_room(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """AUD-625 — `SecretRoom`: sala oculta con tell visual sutil.
 
@@ -1240,6 +1292,7 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("PressurePlate","PlacaDePresion","PlacaPresion","Boton")
     def _handle_placa(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
         """PressurePlate / PlacaDePresion — boton que abre puertas con peso.
 

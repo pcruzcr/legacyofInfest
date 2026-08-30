@@ -276,6 +276,9 @@ class HUD:
         self._save_notify_timer: float = 0.0
         #: AUD-281 — lo que queda del rebote del contador de monedas.
         self._pulso_timer: float = 0.0
+        # Builder — desmonolitización HUD 255 líneas (AUD-724)
+        from src.engine.ui.hud_builder import HUDBuilder
+        self._builder = HUDBuilder(self)
 
         # Portrait frame (34x34 with 1px border, inner sprite at 3,3)
         # AUD-499 — el retrato bajó de 34 a 24 de lado (85 px a 60 en
@@ -294,19 +297,16 @@ class HUD:
         # aparte); el resto de esta franja deriva sus posiciones del
         # retrato, así que un solo número mueve todo el bloque de
         # identidad a la vez.
-        MARGEN_DE_PANTALLA = 6
-        self._portrait_frame_rect = _rect_escalado(
-            MARGEN_DE_PANTALLA, MARGEN_DE_PANTALLA, 24, 24)
-        self._portrait_sprite_rect = _rect_escalado(
-            MARGEN_DE_PANTALLA + 1, MARGEN_DE_PANTALLA + 1, 22, 22)
+        # Delegado a Builder — layout del bloque de identidad (HUDBuilder)
+        self._builder.build_layout()
+        # 9-slice y timer — aún aquí, se migrará a Builder.build_assets en siguiente paso
         self._timer_fill = None
         self._timer_edges: dict[str, pygame.Surface] = {}
-        # Load 9-slice frame from hud_frame.png, pre-scale all variants once
         try:
             raw_frame = AssetLoader.load_image(settings.ASSETS_DIR / "ui" / "hud_frame.png")
             fw, fh = raw_frame.get_size()
             if fw >= 6 and fh >= 6:
-                c = 2  # corner size, en la maqueta
+                c = 2
                 esquinas = {
                     "tl": raw_frame.subsurface((0, 0, c, c)),
                     "tr": raw_frame.subsurface((fw - c, 0, c, c)),
@@ -319,23 +319,11 @@ class HUD:
                     "left": raw_frame.subsurface((0, c, c, fh - 2 * c)),
                     "right": raw_frame.subsurface((fw - c, c, c, fh - 2 * c)),
                 }
-                # AUD-459 — las esquinas y el grosor del borde iban a 2 px
-                # dentro de marcos de 80 px: el 9-slice escalaba el relleno y
-                # no la orla. Se escalan al mismo factor que la maqueta y los
-                # bordes se pre-escalan contra ese grosor (`ce`), no contra 2.
                 ce = _e(c)
-                self._frame_corners = {
-                    k: pygame.transform.scale(v, (ce, ce))
-                    for k, v in esquinas.items()
-                }
+                self._frame_corners = {k: pygame.transform.scale(v, (ce, ce)) for k, v in esquinas.items()}
                 self._frame_edges = src_edges
                 src_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
                 self._frame_fill = src_fill
-                # AUD-535 — el retrato ya no usa este marco 9-slice
-                # rectangular (era el "borde en línea recta" que el pedido
-                # quería quitar); sólo lo sigue usando el fondo del reloj,
-                # que conserva su panel rectangular.
-                # Timer background pre-scaling deferred until _timer_bg_rect is set
             else:
                 self._frame_corners = {}
                 self._frame_edges = {}
@@ -345,33 +333,22 @@ class HUD:
             self._frame_corners = {}
             self._frame_edges = {}
             self._frame_fill = None
-
-        # AUD-535 — rediseño espacial pedido tras jugarlo: retrato + tres
-        # barras apiladas (vida/estamina/carga) del mismo ancho que el
-        # retrato, en vez de una fila de corazones separada. Las barras
-        # viven justo debajo del marco del retrato (que termina en
-        # y=2+24=26), con 2 px de aire y 1 px de separación entre ellas.
-        ancho_bloque = self._portrait_frame_rect.width
-        x_bloque = self._portrait_frame_rect.x
-        y_barras = self._portrait_frame_rect.bottom + _e(2)
-        alto_barra = _e(5)
-        paso_barra = alto_barra + _e(1)
-        # AUD-565 — guardadas para que `_reflow_bloque_de_identidad` pueda
-        # recalcular sólo la `y` de la barra de carga más adelante, sin
-        # repetir la aritmética del bloque.
-        self._y_barras_bloque = y_barras
-        self._paso_barra_bloque = paso_barra
-        self._vida_bar_rect = pygame.Rect(x_bloque, y_barras, ancho_bloque, alto_barra)
-        self._estamina_bar_rect = pygame.Rect(
-            x_bloque, y_barras + paso_barra, ancho_bloque, alto_barra)
-        self._carga_bar_rect = pygame.Rect(
-            x_bloque, y_barras + paso_barra * 2, ancho_bloque, alto_barra)
-        # AUD-575 (GAP-071 resuelto) — la barra de oxígeno vive bajo la
-        # estamina, fuera del flujo de `_reflow_bloque_de_identidad`: se
-        # dibuja SOLO cuando hay agua de por medio (`_oxigeno_ratio < 0`
-        # = no se dibuja), así que no le hace falta hueco reservado.
-        self._oxigeno_bar_rect = pygame.Rect(
-            x_bloque, y_barras + paso_barra * 3, ancho_bloque, alto_barra)
+        # Timer rects ya vienen del Builder, solo falta pre escalar el fill
+        self._timer_fill = (
+            pygame.transform.scale(self._frame_fill, (self._timer_bg_rect.width, self._timer_bg_rect.height))
+            if isinstance(self._frame_fill, pygame.Surface) else None
+        )
+        if self._frame_edges:
+            tr = self._timer_bg_rect
+            ce = _e(2)
+            self._timer_edges = {
+                "top": pygame.transform.scale(self._frame_edges["top"], (tr.width - 2 * ce, ce)),
+                "bottom": pygame.transform.scale(self._frame_edges["bottom"], (tr.width - 2 * ce, ce)),
+                "left": pygame.transform.scale(self._frame_edges["left"], (ce, tr.height - 2 * ce)),
+                "right": pygame.transform.scale(self._frame_edges["right"], (ce, tr.height - 2 * ce)),
+            }
+        self._timer_icon_rect = _rect_escalado(137, 6 + 1, 12, 12)
+        self._timer_rect = _rect_escalado(151, 6, 34, 14)
         self._oxigeno_ratio: float = -1.0
         self._oxigeno_avisando: bool = False
         self._oxigeno_flash_timer: float = 0.0

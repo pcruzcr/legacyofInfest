@@ -15,6 +15,7 @@ from src.engine.core.game_context import GameContext
 from src.engine.core.registro import configurar_registro
 from src.engine.core.save_manager import SaveManager
 from src.engine.input.input_manager import InputManager
+from src.engine.render.render_facade import RenderFacade
 from src.engine.scene.scene_manager import SceneManager
 from src.framework import FrameworkUsageError
 
@@ -130,6 +131,7 @@ class App:
         # soportar.
         self._gl_renderer: GLRenderer | None = None
         self._init_pygame()
+        self._render_facade = RenderFacade(prefer_gl=use_gl)
         self._init_subsystems()
         # AUD-458 — el kernel JIT de partículas se compila ANTES del bucle.
         self._precalentar_particulas()
@@ -567,6 +569,9 @@ class App:
             self.scene_manager.current.process_events(events)
 
     def _draw(self, dt: float = 0.0) -> None:
+        # Facade — punto único para backend GL vs Software (AUD-725)
+        from src.engine.render.render_facade import GLBackend, SoftwareBackend
+        self._render_facade.set_backend(GLBackend() if self._use_gl and self._gl_renderer else SoftwareBackend())
         # AUD-222 — se olvida lo publicado en el fotograma anterior *antes* de
         # que dibuje nadie. Los menús no ejecutan post-procesado, así que sin
         # este borrón la pantalla de título heredaría el bloom del nivel del
@@ -670,6 +675,8 @@ class App:
             if matriz is not None:
                 self._gl_renderer.config.color_matrix = matriz
                 self._gl_renderer.config.color_grading_enabled = True
+            else:
+                self._gl_renderer.config.color_grading_enabled = False
             # AUD-215 — el golpe que pidió la escena al recibir daño, y el
             # decaimiento. El impulso se recoge (y se borra) aquí; mantenerlo
             # vivo mientras se apaga es cosa del renderizador, que es quien

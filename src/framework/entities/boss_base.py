@@ -449,8 +449,24 @@ class BossBase(EnemyBase):
         self._invincibility_timer = float("inf")
         self.transition_timer = 2.5
 
+    # Template Method — esqueleto de transición de fase (AUD-725)
+    def on_enter_phase(self, phase: BossPhase) -> None:
+        """Hook para subclases: se ejecuta al entrar a una nueva fase."""
+        pass
+
+    def on_exit_phase(self, phase: BossPhase) -> None:
+        """Hook para subclases: se ejecuta al salir de la fase anterior."""
+        pass
+
     def _finish_phase_transition(self) -> None:
         """Complete phase transition: advance phase, emit event, trigger VFX."""
+        # Hook de salida de la fase anterior (Template Method)
+        if 0 <= self.current_phase < len(self.phases):
+            try:
+                self.on_exit_phase(self.phases[self.current_phase])
+            except Exception:
+                logger.exception("on_exit_phase falló")
+
         self.current_phase += 1
         self.is_transitioning = False
         self._invincibility_timer = 0.0
@@ -472,6 +488,12 @@ class BossBase(EnemyBase):
         if self.current_phase < len(self.phase_health_thresholds):
             self._phase_max_health = self.phase_health_thresholds[self.current_phase]
         self.current_health = min(self.current_health, self._phase_max_health)
+
+        # Hook de entrada a la nueva fase (Template Method)
+        try:
+            self.on_enter_phase(phase)
+        except Exception:
+            logger.exception("on_enter_phase falló")
 
         self._event_bus.emit(
             Events.BOSS_PHASE_CHANGED,
