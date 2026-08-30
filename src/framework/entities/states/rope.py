@@ -60,6 +60,7 @@ class TrepandoState(PlayerStateBase):
         #: en que se ha soltado, que produce el clásico «no puedo saltar de la
         #: cuerda» al mantener pulsado el botón.
         self._t = 0.0
+        self._sfx_timer: float = 0.0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
@@ -68,6 +69,9 @@ class TrepandoState(PlayerStateBase):
         player._air_jumps_used = 0
         player._air_dash_count = 0
         self._t = 0.0
+        self._sfx_timer = 0.0
+        player._event_bus.emit(Events.SFX_PLAYER_CLIMB,
+                               pos=(player.position.x, player.position.y))
         if self._liana is not None:
             # Centrarse en la cuerda. Sin esto se trepa en diagonal si te
             # agarraste torcido, y el sprite se sale visualmente de la liana.
@@ -91,6 +95,13 @@ class TrepandoState(PlayerStateBase):
         else:
             player.velocity.y = 0.0
         player.velocity.x = 0.0
+        # AUD-722 — tic de tela cada 0.28s mientras trepa
+        if player.velocity.y != 0.0:
+            self._sfx_timer += dt
+            if self._sfx_timer >= 0.28:
+                self._sfx_timer = 0.0
+                player._event_bus.emit(Events.SFX_PLAYER_CLIMB,
+                                       pos=(player.position.x, player.position.y))
 
         # Soltarse saltando, con impulso hacia donde se mire.
         if inp.jump_pressed and self._t > 0.08:
@@ -119,12 +130,16 @@ class TirolesaState(PlayerStateBase):
         super().__init__(PlayerState.ZIPLINE)
         self._cable = cable
         self._t = 0.0
+        self._sfx_timer: float = 0.0
 
     def enter(self, player: Player) -> None:
         super().enter(player)
         player.is_grounded = False
         player._air_jumps_used = 0
         self._t = 0.0
+        self._sfx_timer = 0.0
+        player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
+                               pos=(player.position.x, player.position.y))
         if self._cable is not None:
             enganche = self._cable.punto_mas_cercano(
                 pygame.Vector2(player.rect.center),
@@ -157,6 +172,12 @@ class TirolesaState(PlayerStateBase):
         avance = direccion * self._cable.velocidad * dt
         player.position += avance
         player.rect.topleft = (int(player.position.x), int(player.position.y))
+        # AUD-722 — zumbido de cable cada 0.35s
+        self._sfx_timer += dt
+        if self._sfx_timer >= 0.35:
+            self._sfx_timer = 0.0
+            player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
+                                   pos=(player.position.x, player.position.y))
 
         # Soltarse: saltando, o al llegar al final del cable.
         llego = self._cable.progreso(pygame.Vector2(player.rect.center)) >= 0.995

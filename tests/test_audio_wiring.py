@@ -75,8 +75,8 @@ AWAITING_THEIR_BOSS = {
     # emite (`boss_paburu.py`). La lista encogió, que es lo que se dijo que
     # pasaría. `SFX_BOSSES_PABURU_WAVE` sigue esperando a su fase.
     "SFX_BOSSES_PABURU_WAVE",
-    "SFX_BOSSES_REY_SPIT",
-    "SFX_BOSSES_REY_SPLIT",
+    # `SFX_BOSSES_REY_SPIT`/`REY_SPLIT` salieron: `boss_rey.py` los emite
+    # desde su nueva fase (ya en `HEAD`).
     # La reliquia aparece al derrotar a un jefe de zona; hoy sólo existe el
     # Venado y su recompensa se resuelve por la escena de créditos.
     "SFX_BOSSES_RELIC_APPEAR",
@@ -91,7 +91,8 @@ AWAITING_THEIR_BOSS = {
 # subtítulo, y les faltaba **sólo el `emit`**. Ninguno esperaba una
 # funcionalidad: esperaban una línea. La lista se deja declarada porque el
 # hueco que vigila es real y volverá a haber sonidos por delante de su acción.
-AWAITING_THEIR_FEATURE: set[str] = set()
+# AUD-722 — veneno: el daño por segundo existe pero aún no emite su tic sonoro.
+AWAITING_THEIR_FEATURE: set[str] = {"SFX_POISON_TICK"}
 
 
 def _wired_sounds() -> set[str]:

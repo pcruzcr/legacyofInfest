@@ -108,6 +108,10 @@ class Events:
     SFX_STAGE_BANNER: str = "SFX_STAGE_BANNER"
     SFX_STAGE_COMPLETE: str = "SFX_STAGE_COMPLETE"
     SFX_HAZARD_ZONE: str = "SFX_HAZARD_ZONE"
+    SFX_POISON_TICK: str = "SFX_POISON_TICK"
+    """Tick de daño por veneno — `efectos.py:148` `dano_por_segundo`."""
+    VFX_POISON: str = "VFX_POISON"
+    """Nube verde al recibir tick de veneno."""
     #: AUD-443 — la risa de Paburu al confirmar el personaje.
     #:
     #: Es un evento y no una llamada directa al audio por lo mismo que el
@@ -118,6 +122,10 @@ class Events:
     SFX_PLAYER_PARRY: str = "SFX_PLAYER_PARRY"
     SFX_PLAYER_CROUCH: str = "SFX_PLAYER_CROUCH"
     SFX_PLAYER_HEAL: str = "SFX_PLAYER_HEAL"
+    #: AUD-722 — arte propio para pared/liana/tirolesa
+    SFX_PLAYER_WALL_SLIDE: str = "SFX_PLAYER_WALL_SLIDE"
+    SFX_PLAYER_CLIMB: str = "SFX_PLAYER_CLIMB"
+    SFX_PLAYER_ZIPLINE: str = "SFX_PLAYER_ZIPLINE"
     SFX_BOSS_HIT: str = "SFX_BOSS_HIT"
     SFX_UI_GAME_OVER: str = "SFX_UI_GAME_OVER"
     SFX_ENVIRONMENT_SCREEN_SHAKE: str = "SFX_ENVIRONMENT_SCREEN_SHAKE"

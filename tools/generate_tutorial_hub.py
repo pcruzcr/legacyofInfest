@@ -29,6 +29,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DESTINO = PROJECT_ROOT / "assets" / "maps" / "tutorial_hub" / "tutorial_hub.tmx"
+DESTINO_CENITAL = PROJECT_ROOT / "assets" / "maps" / "tutorial_hub_cenital" / "tutorial_hub_cenital.tmx"
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
@@ -219,10 +220,13 @@ def _capa(idx: int, nombre: str, datos: str) -> str:
     )
 
 
-def generar() -> str:
+def generar(vista: str = "lateral") -> str:
     g = _terreno()
     csv = ",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
     ceros = ",".join(["0"] * (MW * MH))
+    stage_id = "tutorial_hub" if vista == "lateral" else "tutorial_hub_cenital"
+    stage_name = "TUTORIAL GUIADO" if vista == "lateral" else "TUTORIAL CENITAL"
+    camara = "seguir"
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.10.2" orientation="orthogonal"
  renderorder="right-down" width="{MW}" height="{MH}"
@@ -230,8 +234,8 @@ def generar() -> str:
  nextlayerid="20" nextobjectid="900">
  <properties>
   <property name="schema_version" value="1"/>
-  <property name="stage_id" value="tutorial_hub"/>
-  <property name="stage_name" value="TUTORIAL GUIADO"/>
+  <property name="stage_id" value="{stage_id}"/>
+  <property name="stage_name" value="{stage_name}"/>
   <property name="author" value="Equipo docente — Legacy of Infest"/>
   <property name="bgm_track" value="bgm_stage0"/>
   <property name="background_zone" value="stage0"/>
@@ -247,8 +251,8 @@ def generar() -> str:
   <property name="habilidades_libres" type="bool" value="true"/>
   <property name="profundidad_min" type="float" value="0.85"/>
   <property name="profundidad_max" type="float" value="1.0"/>
-  <property name="vista" value="lateral"/>
-  <property name="camara" value="seguir"/>
+  <property name="vista" value="{vista}"/>
+  <property name="camara" value="{camara}"/>
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}"
  tileheight="{TS}" tilecount="4096" columns="64">
@@ -272,8 +276,11 @@ def generar() -> str:
 
 def main() -> None:
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
-    DESTINO.write_text(generar(), encoding="utf-8")
+    DESTINO.write_text(generar(vista="lateral"), encoding="utf-8")
     print(f"escrito {DESTINO.relative_to(PROJECT_ROOT)} ({MW}x{MH})")
+    DESTINO_CENITAL.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO_CENITAL.write_text(generar(vista="cenital"), encoding="utf-8")
+    print(f"escrito {DESTINO_CENITAL.relative_to(PROJECT_ROOT)} ({MW}x{MH})")
 
 
 if __name__ == "__main__":

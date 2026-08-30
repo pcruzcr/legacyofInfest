@@ -5050,6 +5050,9 @@ def _gen_all_music():
 
 SFX_CATEGORIES = {
     "player": ["jump", "land", "short_attack", "long_attack", "hit_connect", "hurt", "die", "crouch",
+               "poison_tick",
+               # AUD-722 — arte propio para estados de pared/cuerda/tirolesa
+               "wall_slide", "climb", "zipline",
                # AUD-522 — el musgo resbala y hasta ahora no se oía.
                "footstep_musgo",
                # AUD-551 — GAP-070 punto 1: el lodo frenaba de verdad y
@@ -5941,6 +5944,64 @@ def _gen_sfx(name, rate=SAMPLE_RATE):
                 env = max(0.0, 1.0 - (i - ataque) / (n - ataque))
             samples.append(_square(1200, t, 0.5) * env * 0.35
                             + math.sin(2.0 * math.pi * 200 * t) * env * 0.15)
+    elif name == "wall_slide":
+        # AUD-722 — roce contra muro: lija grave 180Hz + chirrido agudo filtrado,
+        # ataque corto, caída exponencial 0.4s, no loop — cada fotograma renueva
+        anterior = 0.0
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            # cuerpo grave + granuloso
+            crudo = random.uniform(-1.0, 1.0)
+            anterior = anterior * 0.85 + crudo * 0.15
+            grain = _square(180.0 + 40.0 * math.sin(2 * math.pi * 6.0 * t), t, 0.5) * 0.18
+            env = max(0.0, 1.0 - avance) ** 1.6
+            samples.append((anterior * 0.25 + grain) * env * 0.55)
+    elif name == "climb":
+        # AUD-722 — trepa: golpe sordo de tela/piedra 0.18s, 90Hz + armónico 180Hz
+        # con ataque 8ms y relajación 120ms, seco sin cola
+        ataque = max(1, int(rate * 0.008))
+        relaj = max(1, int(rate * 0.12))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            if i < ataque:
+                env = i / ataque
+            else:
+                j = i - ataque
+                env = max(0.0, 1.0 - j / relaj) if j < relaj else 0.0
+            thud = math.sin(2 * math.pi * 90.0 * t) * 0.5 + math.sin(2 * math.pi * 180.0 * t) * 0.2
+            rustle = random.uniform(-0.08, 0.08) * env
+            samples.append((thud + rustle) * env * 0.45)
+    elif name == "zipline":
+        # AUD-722 — tirolesa: silbido de cable 950Hz FM a 18Hz + aire
+        ataque = max(1, int(rate * 0.015))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            # FM leve para cuerda tensada
+            f = 950.0 + 18.0 * math.sin(2.0 * math.pi * 18.0 * t)
+            cable = math.sin(2 * math.pi * f * t) * 0.32 + _tri(f * 2.0, t) * 0.12
+            aire = random.uniform(-0.06, 0.06)
+            if i < ataque:
+                env = i / ataque
+            else:
+                env = max(0.0, 1.0 - avance) ** 1.2
+            # doppler simple: sube leve al inicio, baja al final
+            doppler = 1.0 + 0.06 * math.sin(math.pi * avance)
+            samples.append((cable * doppler + aire) * env * 0.48)
+    elif name == "poison_tick":
+        # AUD-722 — tic de veneno: burbuja verde corta 900Hz + filtrado
+        ataque = max(1, int(rate * 0.005))
+        samples = []
+        for i in range(n):
+            t = i / rate
+            avance = t / dur
+            bubble = math.sin(2 * math.pi * 900.0 * t) * math.exp(-22.0 * t)
+            env = max(0.0, 1.0 - avance) ** 1.8
+            samples.append(bubble * env * 0.4 + random.uniform(-0.02, 0.02) * env)
     else:
         samples = [0.0] * n
 
