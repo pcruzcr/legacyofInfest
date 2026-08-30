@@ -72,11 +72,11 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Escenarios y TMX
 
-**104 tipos de objeto en runtime** (50 integrados del framework + 54 del
+**115 tipos de objeto en runtime** (50 integrados del framework + 65 del
 registro una vez descubiertos los escenarios, más `Solid` y `Platform` en
 `Collision`; la referencia de estudiantes `STAGE_CREATION.md` cuenta el
-registro base sin descubrir: 97, y `check_tmx_coverage.py` cuenta
-base+collision: 99), **18 propiedades de mapa**, 8 capas. Incluye las once
+registro base sin descubrir: 101, y `check_tmx_coverage.py` cuenta
+base+collision: 103), **18 propiedades de mapa**, 8 capas. Incluye las once
 mecánicas de la fase 5 —viento, fricción, cinta, láser, onda, agua, plataforma
 móvil, hundible, bloque rítmico, liana, tirolesa— más sigilo con cono de visión
 y perseguidor, y los cuatro interactivos de F4.1.

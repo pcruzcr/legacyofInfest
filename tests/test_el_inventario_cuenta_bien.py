@@ -157,7 +157,8 @@ class TestLosTiposDeObjeto:
 
         # AUD-598/600/601 — los tipos de zona nuevos subieron el catálogo
         # (AmbientLightZone, MusicZone, CameraZoomZone); AUD-605 añade
-        # ArenaZone; 10 especies nuevas (Ceibo/Cerbatana/Hormiga/Oropel/Ahogado/LaSodaCulebra etc.) suben el registro a 65.
+        # ArenaZone; 10 especies nuevas (Ceibo/Cerbatana/Hormiga/Oropel/
+        # Ahogado/LaSodaCulebra etc.) suben el registro a 65.
         assert objects_runtime == 115, (
             f"el cargador acepta {objects_runtime} tipos en `Objects` con "
             "escenarios descubiertos, no 115: ¿cambió el registro o la prueba?"

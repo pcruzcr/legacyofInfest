@@ -1097,8 +1097,12 @@ class Player(BaseEntity):
             decaimiento = min(1.0, dt * self._SQUASH_RETORNO)
             self._squash_x += (1.0 - self._squash_x) * decaimiento
             self._squash_y += (1.0 - self._squash_y) * decaimiento
-            if abs(self._squash_x - 1.0) < 0.005 and abs(self._squash_y - 1.0) < 0.005:
-                self._squash_x = self._squash_y = 1.0
+            # AUD-747: clamp por eje — antes `and` forzaba snap de ambos
+            # aunque sólo uno estuviera cerca, cortando la interpolación del otro.
+            if abs(self._squash_x - 1.0) < 0.005:
+                self._squash_x = 1.0
+            if abs(self._squash_y - 1.0) < 0.005:
+                self._squash_y = 1.0
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
             period = 0.1
