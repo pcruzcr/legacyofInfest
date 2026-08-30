@@ -144,12 +144,12 @@ def _cifra(texto: str, patron: str) -> int:
 
 class TestLosTiposDeObjeto:
     def test_el_inventario_dice_lo_que_mide_el_cargador(self, inventario, _motor) -> None:
-        """La frase «104 tipos de objeto en runtime» y su desglose tienen que
+        """La frase «115 tipos de objeto en runtime» y su desglose tienen que
         coincidir con el cargador; si el desglose cambia, el documento y esta
         prueba se actualizan juntos. Las cuatro cuentas conviven a propósito:
-        97 = capa `Objects` con el registro base (lo que genera la referencia
-        de estudiantes, en intérprete limpio), 99 = + `Solid`/`Platform`,
-        104 = `Objects` con los escenarios descubiertos, 104 = todo."""
+        101 = capa `Objects` con el registro base (lo que genera la referencia
+        de estudiantes, en intérprete limpio), 103 = + `Solid`/`Platform`,
+        115 = `Objects` con los escenarios descubiertos, 115 = todo."""
         integrados = _motor["integrados_fresco"]
         base = _motor["registro_base"]
         colision = _motor["colision_fresco"]
@@ -157,20 +157,20 @@ class TestLosTiposDeObjeto:
 
         # AUD-598/600/601 — los tipos de zona nuevos subieron el catálogo
         # (AmbientLightZone, MusicZone, CameraZoomZone); AUD-605 añade
-        # ArenaZone; nuevas especies Cangrejo/Medusa/PezAbismal etc. suben el registro.
-        assert objects_runtime == 104, (
+        # ArenaZone; 10 especies nuevas (Ceibo/Cerbatana/Hormiga/Oropel/Ahogado/LaSodaCulebra etc.) suben el registro a 65.
+        assert objects_runtime == 115, (
             f"el cargador acepta {objects_runtime} tipos en `Objects` con "
-            "escenarios descubiertos, no 104: ¿cambió el registro o la prueba?"
+            "escenarios descubiertos, no 115: ¿cambió el registro o la prueba?"
         )
         assert integrados == 50, f"integrados: {integrados}, no 50"
-        assert base == 47, f"registro base limpio: {base}, no 47"
-        assert base + integrados == 97, f"{base}+{integrados}, no 97"
-        assert base + integrados + colision == 99
+        assert base == 51, f"registro base limpio: {base}, no 51"
+        assert base + integrados == 101, f"{base}+{integrados}, no 101"
+        assert base + integrados + colision == 103
 
-        assert "104 tipos de objeto en runtime" in inventario
+        assert "115 tipos de objeto en runtime" in inventario
         assert f"{integrados} integrados" in inventario
         assert f"{_motor['registro_runtime']} del" in inventario
-        assert "97" in inventario and "99" in inventario
+        assert "101" in inventario and "103" in inventario
 
 
 class TestLasPropiedadesDeMapa:

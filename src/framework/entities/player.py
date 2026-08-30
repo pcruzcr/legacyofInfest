@@ -1195,21 +1195,40 @@ class Player(BaseEntity):
         self._wall_side = 0
         self._wall_slide_timer = 0.0
 
-        vy = 0.0
+        # AUD-747: normaliza el vector de entrada, no escala velocity.x
+        # ya fijado por el estado (que puede ser walk 90 o dash 200). Antes
+        # `velocity.x *= 0.707` con `vy*0.707` dejaba dash diagonal a 154
+        # (<200) e incentivaba zigzag inverso.
+        dx = 0.0
+        dy = 0.0
         if input_manager is not None:
             from src.engine.input.action_map import Action
             if input_manager.is_action_held(Action.MOVE_UP):
-                vy -= 1.0
+                dy -= 1.0
             if input_manager.is_action_held(Action.MOVE_DOWN):
-                vy += 1.0
+                dy += 1.0
+            if input_manager.is_action_held(Action.MOVE_RIGHT):
+                dx += 1.0
+            elif input_manager.is_action_held(Action.MOVE_LEFT):
+                dx -= 1.0
 
         velocidad = self.walk_speed
-        if vy != 0.0 and self.velocity.x != 0.0:
-            # Diagonal: se reparte para que el módulo siga siendo `walk_speed`.
-            factor = 0.70710678                      # 1 / raíz de 2
-            self.velocity.x *= factor
-            vy *= factor
-        self.velocity.y = vy * velocidad
+        # Si el estado ya fijó una velocidad mayor (dash), respétala como
+        # módulo deseado en vez de imponer walk_speed.
+        if abs(self.velocity.x) > velocidad:
+            velocidad = abs(self.velocity.x)
+
+        if dx != 0.0 or dy != 0.0:
+            norm = (dx * dx + dy * dy) ** 0.5
+            if norm != 0:
+                dx /= norm
+                dy /= norm
+            self.velocity.x = dx * velocidad
+            self.velocity.y = dy * velocidad
+        else:
+            # Sin entrada en cenital, frena en seco (no hay inercia).
+            self.velocity.x = 0.0
+            self.velocity.y = 0.0
 
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
