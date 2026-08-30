@@ -19,8 +19,8 @@ date_processed: "2026-08-26"
 
 | Hito | Tema | Estado | Evidencia de aceptación |
 |---|---|---|---|
-| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (28 estados, salto 72 px calibrado) |
-| **M2** | Enemies, bosses, AI | ✅ **Completado** | 54 tipos, 8 arquetipos, 13 estados IA, bullet hell NumPy 0.072 ms |
+| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (30 estados, salto 72 px calibrado) |
+| **M2** | Enemies, bosses, AI | ✅ **Completado** | 65 tipos, 8 arquetipos, 15 estados IA, bullet hell NumPy 0.072 ms |
 | **M3** | Audio system (Phase 6) | ✅ **Completado** | `validate_tmx.py --ci` 22/22, mypy limpio en engine/audio |
 | **M4** | Visual polish (Phase 9) | 🔄 **En curso** | color flash, parallax 5 capas, color grading, squash/stretch |
 | **M5** | Zero-Bug Policy tile validator | 📋 **Planificado** | `validate_tmx.py --ci` valida tiles, animaciones, propiedades |
@@ -46,10 +46,10 @@ date_processed: "2026-08-26"
 
 ## M2 — Enemies, bosses, AI (COMPLETADO)
 
-**Alcance:** 54 tipos registrados, 8 arquetipos base, 13 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
+**Alcance:** 65 tipos registrados, 8 arquetipos base, 15 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
 
 **Evidencia:**
-- `pytest tests/test_enemy_state_machine.py -v` → 13 estados
+- `pytest tests/test_enemy_state_machine.py -v` → 15 estados
 - `pytest tests/test_boss_encounter.py -v` → 100% rúbrica (Venado vía `grade_boss.py`)
 - `pytest tests/test_squad_brain.py -v` → 1.82 ms lote vs 11.87 ms unitario
 - `pytest tests/test_mecanicas_f5.py -k TestEnjambreDeBalas -v` → 12.94 ms → 0.072 ms (EnjambreDeBalas, 2000 balas)

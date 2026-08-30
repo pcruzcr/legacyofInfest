@@ -24,7 +24,7 @@ señala y gana el código (regla de precedencia de `CLAUDE.md` §5).
 | §1 | ¿Cómo instalo, corro y pruebo el juego? |
 | §2 | ¿Qué comandos CLI tiene el motor? |
 | §3 | ¿Cuáles son los controles? |
-| §4 | ¿Qué hace el jugador? (28 estados, física, combate, habilidades) |
+| §4 | ¿Qué hace el jugador? (30 estados, física, combate, habilidades) |
 | §5 | ¿Qué enemigos existen y cómo se programan? |
 | §6 | ¿Qué jefes hay y qué API usan? |
 | §7 | ¿Cómo diseño un nivel? (TMX: capas, objetos, propiedades) |
@@ -544,7 +544,7 @@ escenario siguen funcionando sin tocarlas). El puente: `ComponentesDeEntidad` (m
 - `BaseEntity(ComponentesDeEntidad, ABC)`: `set_event_bus(bus)`, `update(dt)` (abstracto),
   `draw(surface, camera_offset)` (abstracto). Posición `pygame.Vector2`, `Rect` de colisión,
   visibilidad, activo.
-- `PlayerState(str, Enum)`: los 28 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
+- `PlayerState(str, Enum)`: los 30 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
 - `entity_factory.ensure_registered()`: registra tipos en el StageLoader (idempotente).
 - `bestiary.py`: `BestiaryEntry(enemy_id, name, description, lore, drops, hp, damage)`,
   `Bestiary.get_instance()` → `id_de(enemigo)`, `get_entry(id)`, `get_all_entries()`,
@@ -906,9 +906,9 @@ de la cola de eventos pygame antes de cada test.
 | Núcleo | 800×600 @60 FPS; 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
 | ECS | Bajo la herencia; 20 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
 | Jugador | 28 estados; 5.0 HP; combate completo; arco; estamina opt-in |
-| Enemigos | 54 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
+| Enemigos | 65 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |
-| TMX | 50 tipos del framework + 54 de entidades, más `Solid`/`Platform` en `Collision` (104 declarables; ver §7.3); 18 propiedades; 8 capas |
+| TMX | 50 tipos del framework + 65 de entidades, más `Solid`/`Platform` en `Collision` (115 declarables; ver §7.3); 18 propiedades; 8 capas |
 | Mecánicas F5 | 11/11 en el motor (stage_mecanicas las enseña) |
 | VFX | Luz, bloom, viñeta, clima, partículas, día/noche, estaciones, niebla, agua, estelas, números de daño |
 | Persistencia | Atómica, hostil-probada |
@@ -958,8 +958,8 @@ de la cola de eventos pygame antes de cada test.
 <!-- /cita-historica -->
 - `22_API_CONTRACTS.md` (histórico): módulos eliminados (`utils/spritesheet.py`,
   `scene/transitions.py`).
-- Conteos de estados: docs 19/25/26/27 según edición; **el código tiene 28**.
-- `EnemyState`: 4 miembros en 22_API vs **13 en código**.
+- Conteos de estados: docs 19/25/26/27 según edición; **el código tiene 30**.
+- `EnemyState`: 4 miembros en 22_API vs **15 en código**.
 - Brute HP: 6.0 en GDD vs **5.0 en código**.
 - Conteos de tipos: doc 62 dice 104/54 (2026-08-30); **el código declara 50 tipos de framework** (+ 54 entidades + 2 de
   colisión = 104 declarables; ver §7.3 y `tests/test_el_inventario_cuenta_bien.py`). *(Nota 2026-08-30: doc 60 actualizado a 104 y 54; la cifra viva es la de `test_el_inventario_cuenta_bien.py`.)*

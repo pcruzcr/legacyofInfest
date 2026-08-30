@@ -1,42 +1,42 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="310" height="24" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="900">
+<?xml version='1.0' encoding='utf-8'?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="310" height="24" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="912">
  <properties>
-  <property name="schema_version" value="1"/>
-  <property name="stage_id" value="stage_mecanicas"/>
-  <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
-  <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="bgm_track" value="bgm_stage0"/>
-  <property name="bpm" type="float" value="120"/>
-  <property name="compas" type="int" value="4"/>
-  <property name="background_zone" value="stage0"/>
-  <property name="climate" value="clear"/>
-  <property name="cielo" type="bool" value="true"/>
-  <property name="time_limit" value="0"/>
-  <property name="zone" type="int" value="0"/>
-  <property name="ambient_light" type="float" value="0.78"/>
-  <property name="bloom" type="float" value="0.15"/>
-  <property name="vignette" type="float" value="0.25"/>
-  <property name="ambient_fx" value="dust"/>
-  <property name="ambient_fx_rate" type="float" value="8"/>
-  <property name="desfase_audio" type="float" value="0.05"/>
-  <property name="water_effect" type="bool" value="true"/>
-  <property name="water_tint" value="#2850a0"/>
-  <property name="water_alpha" type="float" value="120"/>
-  <property name="water_amplitude" type="float" value="6"/>
-  <property name="water_frequency" type="float" value="0.04"/>
-  <property name="water_speed" type="float" value="1.5"/>
-   <property name="estamina" type="float" value="100"/>
-   <property name="tiempo_bala" type="float" value="3"/>
-   <property name="habilidades_libres" type="bool" value="true"/>
-   <property name="profundidad_min" type="float" value="0.85"/>
-   <property name="profundidad_max" type="float" value="1.0"/>
-   <property name="profundidad_curva" type="float" value="1.5"/>
-   <property name="orden_por_y" type="bool" value="true"/>
-   <property name="sombras_proyectadas" type="bool" value="true"/>
-  <property name="god_rays" type="float" value="0.35"/>
+  <property name="schema_version" value="1" />
+  <property name="stage_id" value="stage_mecanicas" />
+  <property name="stage_name" value="LABORATORIO DE MECANICAS" />
+  <property name="author" value="Equipo docente — Legacy of Infest" />
+  <property name="bgm_track" value="bgm_stage0" />
+  <property name="bpm" type="float" value="120" />
+  <property name="compas" type="int" value="4" />
+  <property name="background_zone" value="stage0" />
+  <property name="climate" value="clear" />
+  <property name="cielo" type="bool" value="true" />
+  <property name="time_limit" value="0" />
+  <property name="zone" type="int" value="0" />
+  <property name="ambient_light" type="float" value="0.78" />
+  <property name="bloom" type="float" value="0.15" />
+  <property name="vignette" type="float" value="0.25" />
+  <property name="ambient_fx" value="dust" />
+  <property name="ambient_fx_rate" type="float" value="8" />
+  <property name="desfase_audio" type="float" value="0.05" />
+  <property name="water_effect" type="bool" value="true" />
+  <property name="water_tint" value="#2850a0" />
+  <property name="water_alpha" type="float" value="120" />
+  <property name="water_amplitude" type="float" value="6" />
+  <property name="water_frequency" type="float" value="0.04" />
+  <property name="water_speed" type="float" value="1.5" />
+   <property name="estamina" type="float" value="100" />
+   <property name="tiempo_bala" type="float" value="3" />
+   <property name="habilidades_libres" type="bool" value="true" />
+   <property name="profundidad_min" type="float" value="0.85" />
+   <property name="profundidad_max" type="float" value="1.0" />
+   <property name="profundidad_curva" type="float" value="1.5" />
+   <property name="orden_por_y" type="bool" value="true" />
+   <property name="sombras_proyectadas" type="bool" value="true" />
+  <property name="god_rays" type="float" value="0.35" />
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
-  <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024"/>
+  <image source="../../tilesets/tileset_stage0.png" width="1024" height="1024" />
  </tileset>
  <layer id="1" name="BG_Far" width="310" height="24">
   <data encoding="csv">
@@ -64,527 +64,527 @@
 </data>
  </layer>
  <objectgroup id="7" name="Collision">
-  <object id="2" type="Solid" x="0" y="320" width="1600" height="64"/>
-  <object id="3" type="Solid" x="1648" y="320" width="3312" height="64"/>
-  <object id="4" type="Solid" x="-16" y="0" width="16" height="384"/>
-  <object id="5" type="Solid" x="4960" y="0" width="16" height="384"/>
-  <object id="6" type="Platform" x="416" y="240" width="128" height="8"/>
-  <object id="7" type="Platform" x="896" y="240" width="128" height="8"/>
-  <object id="8" type="Platform" x="1376" y="240" width="128" height="8"/>
-  <object id="9" type="Platform" x="1856" y="240" width="128" height="8"/>
-  <object id="10" type="Platform" x="2336" y="240" width="128" height="8"/>
-  <object id="11" type="Platform" x="2816" y="240" width="128" height="8"/>
-  <object id="12" type="Platform" x="3296" y="240" width="128" height="8"/>
-  <object id="13" type="Platform" x="3776" y="240" width="128" height="8"/>
-  <object id="14" type="Platform" x="4256" y="240" width="128" height="8"/>
-  <object id="15" type="Platform" x="3632" y="208" width="96" height="8"/>
+  <object id="2" type="Solid" x="0" y="320" width="1600" height="64" />
+  <object id="3" type="Solid" x="1648" y="320" width="3312" height="64" />
+  <object id="4" type="Solid" x="-16" y="0" width="16" height="384" />
+  <object id="5" type="Solid" x="4960" y="0" width="16" height="384" />
+  <object id="6" type="Platform" x="416" y="240" width="128" height="8" />
+  <object id="7" type="Platform" x="896" y="240" width="128" height="8" />
+  <object id="8" type="Platform" x="1376" y="240" width="128" height="8" />
+  <object id="9" type="Platform" x="1856" y="240" width="128" height="8" />
+  <object id="10" type="Platform" x="2336" y="240" width="128" height="8" />
+  <object id="11" type="Platform" x="2816" y="240" width="128" height="8" />
+  <object id="12" type="Platform" x="3296" y="240" width="128" height="8" />
+  <object id="13" type="Platform" x="3776" y="240" width="128" height="8" />
+  <object id="14" type="Platform" x="4256" y="240" width="128" height="8" />
+  <object id="15" type="Platform" x="3632" y="208" width="96" height="8" />
  </objectgroup>
  <objectgroup id="8" name="Objects">
   <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="32" y="272" width="16" height="32">
   </object>
   <object id="102" name="MessageTrigger_Once_102" type="MessageTrigger_Once" x="48" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="El viento empuja. Salta cuando amaine."/>
+    <property name="text" value="El viento empuja. Salta cuando amaine." />
    </properties>
   </object>
   <object id="103" name="WindZone_103" type="WindZone" x="96" y="80" width="288" height="240">
    <properties>
-    <property name="fuerza_x" type="float" value="260.0"/>
-    <property name="fuerza_y" type="float" value="0.0"/>
-    <property name="periodo" type="float" value="3.0"/>
+    <property name="fuerza_x" type="float" value="260.0" />
+    <property name="fuerza_y" type="float" value="0.0" />
+    <property name="periodo" type="float" value="3.0" />
    </properties>
   </object>
   <object id="104" name="HazardZone_104" type="HazardZone" x="384" y="304" width="64" height="16">
    <properties>
-    <property name="damage" type="float" value="0.25"/>
+    <property name="damage" type="float" value="0.25" />
    </properties>
   </object>
   <object id="105" name="Checkpoint_105" type="Checkpoint" x="416" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="1"/>
+    <property name="checkpoint_id" type="int" value="1" />
    </properties>
   </object>
   <object id="106" name="Pickup_106" type="Pickup" x="320" y="288" width="16" height="16">
    <properties>
-    <property name="item_id" value="moneda_viento"/>
-    <property name="automatico" type="bool" value="true"/>
-    <property name="mensaje" value="Recompensa por dominar el viento."/>
+    <property name="item_id" value="moneda_viento" />
+    <property name="automatico" type="bool" value="true" />
+    <property name="mensaje" value="Recompensa por dominar el viento." />
    </properties>
   </object>
   <object id="107" name="MessageTrigger_Once_107" type="MessageTrigger_Once" x="512" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="El suelo se mueve. Corre a favor."/>
+    <property name="text" value="El suelo se mueve. Corre a favor." />
    </properties>
   </object>
   <object id="108" name="Conveyor_108" type="Conveyor" x="576" y="304" width="256" height="16">
    <properties>
-    <property name="arrastre" type="float" value="-70.0"/>
+    <property name="arrastre" type="float" value="-70.0" />
    </properties>
   </object>
   <object id="109" name="Conveyor_109" type="Conveyor" x="704" y="304" width="128" height="16">
    <properties>
-    <property name="arrastre" type="float" value="60.0"/>
+    <property name="arrastre" type="float" value="60.0" />
    </properties>
   </object>
   <object id="110" name="Checkpoint_110" type="Checkpoint" x="896" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="2"/>
+    <property name="checkpoint_id" type="int" value="2" />
    </properties>
   </object>
   <object id="111" name="MessageTrigger_Once_111" type="MessageTrigger_Once" x="992" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Sube. La plataforma te lleva."/>
+    <property name="text" value="Sube. La plataforma te lleva." />
    </properties>
   </object>
   <object id="112" name="MovingPlatform_112" type="MovingPlatform" x="1088" y="272" width="48" height="8">
    <properties>
-    <property name="destino_dx" type="float" value="0.0"/>
-    <property name="destino_dy" type="int" value="-96"/>
-    <property name="velocidad" type="float" value="45.0"/>
-    <property name="espera" type="float" value="0.8"/>
+    <property name="destino_dx" type="float" value="0.0" />
+    <property name="destino_dy" type="int" value="-96" />
+    <property name="velocidad" type="float" value="45.0" />
+    <property name="espera" type="float" value="0.8" />
    </properties>
   </object>
   <object id="113" name="MovingPlatform_113" type="MovingPlatform" x="1216" y="192" width="48" height="8">
    <properties>
-    <property name="destino_dx" type="int" value="112"/>
-    <property name="destino_dy" type="float" value="0.0"/>
-    <property name="velocidad" type="float" value="55.0"/>
-    <property name="espera" type="float" value="0.5"/>
+    <property name="destino_dx" type="int" value="112" />
+    <property name="destino_dy" type="float" value="0.0" />
+    <property name="velocidad" type="float" value="55.0" />
+    <property name="espera" type="float" value="0.5" />
    </properties>
   </object>
   <object id="114" name="Walker_114" type="Walker" x="1152" y="292" width="24" height="28">
   </object>
   <object id="115" name="Checkpoint_115" type="Checkpoint" x="1376" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="3"/>
+    <property name="checkpoint_id" type="int" value="3" />
    </properties>
   </object>
   <object id="116" name="MessageTrigger_Once_116" type="MessageTrigger_Once" x="1472" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Aparecen a compas. Cuenta antes de saltar."/>
+    <property name="text" value="Aparecen a compas. Cuenta antes de saltar." />
    </properties>
   </object>
   <object id="117" name="RhythmBlock_117" type="RhythmBlock" x="1600" y="288" width="32" height="16">
    <properties>
-    <property name="visible_seg" type="float" value="1.6"/>
-    <property name="oculto_seg" type="float" value="1.2"/>
-    <property name="desfase" type="float" value="0.0"/>
-    <property name="patron" value="x.x."/>
+    <property name="visible_seg" type="float" value="1.6" />
+    <property name="oculto_seg" type="float" value="1.2" />
+    <property name="desfase" type="float" value="0.0" />
+    <property name="patron" value="x.x." />
    </properties>
   </object>
   <object id="118" name="RhythmBlock_118" type="RhythmBlock" x="1632" y="288" width="32" height="16">
    <properties>
-    <property name="visible_seg" type="float" value="1.6"/>
-    <property name="oculto_seg" type="float" value="1.2"/>
-    <property name="desfase" type="float" value="0.7"/>
-    <property name="patron" value=".x.x"/>
+    <property name="visible_seg" type="float" value="1.6" />
+    <property name="oculto_seg" type="float" value="1.2" />
+    <property name="desfase" type="float" value="0.7" />
+    <property name="patron" value=".x.x" />
    </properties>
   </object>
   <object id="119" name="RhythmBlock_119" type="RhythmBlock" x="1664" y="288" width="32" height="16">
    <properties>
-    <property name="visible_seg" type="float" value="1.6"/>
-    <property name="oculto_seg" type="float" value="1.2"/>
-    <property name="desfase" type="float" value="1.4"/>
-    <property name="patron" value="x.x."/>
+    <property name="visible_seg" type="float" value="1.6" />
+    <property name="oculto_seg" type="float" value="1.2" />
+    <property name="desfase" type="float" value="1.4" />
+    <property name="patron" value="x.x." />
    </properties>
   </object>
   <object id="120" name="RhythmBlock_120" type="RhythmBlock" x="1696" y="288" width="32" height="16">
    <properties>
-    <property name="visible_seg" type="float" value="1.6"/>
-    <property name="oculto_seg" type="float" value="1.2"/>
-    <property name="desfase" type="float" value="2.0999999999999996"/>
-    <property name="patron" value=".x.x"/>
+    <property name="visible_seg" type="float" value="1.6" />
+    <property name="oculto_seg" type="float" value="1.2" />
+    <property name="desfase" type="float" value="2.0999999999999996" />
+    <property name="patron" value=".x.x" />
    </properties>
   </object>
   <object id="121" name="DeathPit_121" type="DeathPit" x="1600" y="368" width="48" height="16">
   </object>
   <object id="122" name="Pickup_122" type="Pickup" x="1696" y="256" width="16" height="16">
    <properties>
-    <property name="item_id" value="moneda_ritmo"/>
-    <property name="automatico" type="bool" value="true"/>
-    <property name="mensaje" value="A tiempo con la musica."/>
+    <property name="item_id" value="moneda_ritmo" />
+    <property name="automatico" type="bool" value="true" />
+    <property name="mensaje" value="A tiempo con la musica." />
    </properties>
   </object>
   <object id="123" name="Checkpoint_123" type="Checkpoint" x="1856" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="4"/>
+    <property name="checkpoint_id" type="int" value="4" />
    </properties>
   </object>
   <object id="124" name="MessageTrigger_Once_124" type="MessageTrigger_Once" x="1952" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Se encienden en cascada. Hay hueco: buscalo."/>
+    <property name="text" value="Se encienden en cascada. Hay hueco: buscalo." />
    </properties>
   </object>
   <object id="125" name="LaserZone_125" type="LaserZone" x="2048" y="80" width="8" height="240">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="1.1"/>
-    <property name="apagado" type="float" value="2.2"/>
-    <property name="desfase" type="float" value="0.0"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="1.1" />
+    <property name="apagado" type="float" value="2.2" />
+    <property name="desfase" type="float" value="0.0" />
    </properties>
   </object>
   <object id="126" name="LaserZone_126" type="LaserZone" x="2112" y="80" width="8" height="240">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="1.1"/>
-    <property name="apagado" type="float" value="2.2"/>
-    <property name="desfase" type="float" value="0.66"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="1.1" />
+    <property name="apagado" type="float" value="2.2" />
+    <property name="desfase" type="float" value="0.66" />
    </properties>
   </object>
   <object id="127" name="LaserZone_127" type="LaserZone" x="2176" y="80" width="8" height="240">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="1.1"/>
-    <property name="apagado" type="float" value="2.2"/>
-    <property name="desfase" type="float" value="1.32"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="1.1" />
+    <property name="apagado" type="float" value="2.2" />
+    <property name="desfase" type="float" value="1.32" />
    </properties>
   </object>
   <object id="128" name="LaserZone_128" type="LaserZone" x="2240" y="80" width="8" height="240">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="1.1"/>
-    <property name="apagado" type="float" value="2.2"/>
-    <property name="desfase" type="float" value="1.98"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="1.1" />
+    <property name="apagado" type="float" value="2.2" />
+    <property name="desfase" type="float" value="1.98" />
    </properties>
   </object>
   <object id="129" name="LaserZone_129" type="LaserZone" x="2304" y="80" width="8" height="240">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="1.1"/>
-    <property name="apagado" type="float" value="2.2"/>
-    <property name="desfase" type="float" value="2.64"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="1.1" />
+    <property name="apagado" type="float" value="2.2" />
+    <property name="desfase" type="float" value="2.64" />
    </properties>
   </object>
   <object id="130" name="SinkingPlatform_130" type="SinkingPlatform" x="2304" y="256" width="48" height="8">
    <properties>
-    <property name="retraso" type="float" value="0.5"/>
-    <property name="reaparece_en" type="float" value="2.5"/>
+    <property name="retraso" type="float" value="0.5" />
+    <property name="reaparece_en" type="float" value="2.5" />
    </properties>
   </object>
   <object id="131" name="Checkpoint_131" type="Checkpoint" x="2336" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="5"/>
+    <property name="checkpoint_id" type="int" value="5" />
    </properties>
   </object>
   <object id="132" name="MessageTrigger_Once_132" type="MessageTrigger_Once" x="2416" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Bajo el agua se acaba el aire. Sal a respirar."/>
+    <property name="text" value="Bajo el agua se acaba el aire. Sal a respirar." />
    </properties>
   </object>
   <object id="133" name="WaterZone_133" type="WaterZone" x="2464" y="256" width="352" height="128">
    <properties>
-    <property name="corriente_x" type="float" value="25.0"/>
-    <property name="corriente_y" type="float" value="0.0"/>
+    <property name="corriente_x" type="float" value="25.0" />
+    <property name="corriente_y" type="float" value="0.0" />
    </properties>
   </object>
   <object id="134" name="Checkpoint_134" type="Checkpoint" x="2816" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="6"/>
+    <property name="checkpoint_id" type="int" value="6" />
    </properties>
   </object>
   <object id="135" name="MessageTrigger_Once_135" type="MessageTrigger_Once" x="2912" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Te estan mirando. Y algo te sigue."/>
+    <property name="text" value="Te estan mirando. Y algo te sigue." />
    </properties>
   </object>
   <object id="136" name="Guard_136" type="Guard" x="3072" y="288" width="16" height="32">
    <properties>
-    <property name="mira_x" type="float" value="-1.0"/>
-    <property name="mira_y" type="float" value="0.0"/>
-    <property name="alcance" type="float" value="180.0"/>
-    <property name="semiangulo" type="float" value="30.0"/>
-    <property name="barrido" type="float" value="60.0"/>
-    <property name="velocidad_barrido" type="float" value="40.0"/>
+    <property name="mira_x" type="float" value="-1.0" />
+    <property name="mira_y" type="float" value="0.0" />
+    <property name="alcance" type="float" value="180.0" />
+    <property name="semiangulo" type="float" value="30.0" />
+    <property name="barrido" type="float" value="60.0" />
+    <property name="velocidad_barrido" type="float" value="40.0" />
    </properties>
   </object>
   <object id="137" name="Guard_137" type="Guard" x="3232" y="288" width="16" height="32">
    <properties>
-    <property name="mira_x" type="float" value="1.0"/>
-    <property name="mira_y" type="float" value="0.0"/>
-    <property name="alcance" type="float" value="180.0"/>
-    <property name="semiangulo" type="float" value="30.0"/>
-    <property name="barrido" type="float" value="60.0"/>
-    <property name="velocidad_barrido" type="float" value="40.0"/>
+    <property name="mira_x" type="float" value="1.0" />
+    <property name="mira_y" type="float" value="0.0" />
+    <property name="alcance" type="float" value="180.0" />
+    <property name="semiangulo" type="float" value="30.0" />
+    <property name="barrido" type="float" value="60.0" />
+    <property name="velocidad_barrido" type="float" value="40.0" />
    </properties>
   </object>
   <object id="138" name="Stalker_138" type="Stalker" x="2944" y="288" width="16" height="32">
    <properties>
-    <property name="velocidad" type="float" value="42.0"/>
-    <property name="distancia_retirada" type="float" value="420.0"/>
-    <property name="reaparicion" type="float" value="7.0"/>
+    <property name="velocidad" type="float" value="42.0" />
+    <property name="distancia_retirada" type="float" value="420.0" />
+    <property name="reaparicion" type="float" value="7.0" />
    </properties>
   </object>
   <object id="139" name="Key_139" type="Key" x="3008" y="288" width="16" height="16">
    <properties>
-    <property name="key_id" value="llave_sigilo"/>
-    <property name="nombre" value="Llave sigilosa"/>
+    <property name="key_id" value="llave_sigilo" />
+    <property name="nombre" value="Llave sigilosa" />
    </properties>
   </object>
   <object id="140" name="LockedDoor_140" type="LockedDoor" x="3424" y="272" width="16" height="48">
    <properties>
-    <property name="key_id" value="llave_sigilo"/>
-    <property name="consume_llave" type="bool" value="true"/>
-    <property name="mensaje" value="Cerrada. Evita los conos para la llave."/>
+    <property name="key_id" value="llave_sigilo" />
+    <property name="consume_llave" type="bool" value="true" />
+    <property name="mensaje" value="Cerrada. Evita los conos para la llave." />
    </properties>
   </object>
   <object id="141" name="MessageTrigger_Once_141" type="MessageTrigger_Once" x="3104" y="256" width="48" height="32">
    <properties>
-    <property name="text" value="Aereo: golpea → persigue → remata. Mira el combo HUD y el destello."/>
+    <property name="text" value="Aereo: golpea → persigue → remata. Mira el combo HUD y el destello." />
    </properties>
   </object>
   <object id="142" name="Checkpoint_142" type="Checkpoint" x="3296" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="7"/>
+    <property name="checkpoint_id" type="int" value="7" />
    </properties>
   </object>
   <object id="143" name="MessageTrigger_Once_143" type="MessageTrigger_Once" x="3280" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Uno se empuja. El otro se rompe a golpes."/>
+    <property name="text" value="Uno se empuja. El otro se rompe a golpes." />
    </properties>
   </object>
   <object id="144" name="PushBlock_144" type="PushBlock" x="3312" y="288" width="32" height="32">
    <properties>
-    <property name="velocidad" type="float" value="45.0"/>
+    <property name="velocidad" type="float" value="45.0" />
    </properties>
   </object>
   <object id="145" name="BreakableBlock_145" type="BreakableBlock" x="3408" y="256" width="16" height="32">
    <properties>
-    <property name="golpes" type="int" value="3"/>
+    <property name="golpes" type="int" value="3" />
    </properties>
   </object>
   <object id="146" name="BreakableBlock_146" type="BreakableBlock" x="3408" y="288" width="16" height="32">
    <properties>
-    <property name="golpes" type="int" value="1"/>
+    <property name="golpes" type="int" value="1" />
    </properties>
   </object>
   <object id="147" name="PressurePlate_147" type="PressurePlate" x="3344" y="304" width="32" height="16">
    <properties>
-    <property name="evento" value="PLACA_LAB"/>
-    <property name="requiere" value="bloque"/>
-    <property name="mantener" type="bool" value="true"/>
+    <property name="evento" value="PLACA_LAB" />
+    <property name="requiere" value="bloque" />
+    <property name="mantener" type="bool" value="true" />
    </properties>
   </object>
   <object id="148" name="Door_148" type="Door" x="3440" y="272" width="16" height="48">
    <properties>
-    <property name="abre_con" value="PLACA_LAB"/>
-    <property name="mensaje" value="La puerta cede mientras el bloque pisa el boton."/>
+    <property name="abre_con" value="PLACA_LAB" />
+    <property name="mensaje" value="La puerta cede mientras el bloque pisa el boton." />
    </properties>
   </object>
   <object id="149" name="MessageTrigger_Once_149" type="MessageTrigger_Once" x="3392" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Coge la llave. La puerta la pide."/>
+    <property name="text" value="Coge la llave. La puerta la pide." />
    </properties>
   </object>
   <object id="150" name="Key_150" type="Key" x="3440" y="288" width="16" height="16">
    <properties>
-    <property name="key_id" value="llave_lab"/>
-    <property name="nombre" value="Llave del laboratorio"/>
+    <property name="key_id" value="llave_lab" />
+    <property name="nombre" value="Llave del laboratorio" />
    </properties>
   </object>
   <object id="151" name="Door_151" type="Door" x="3536" y="272" width="16" height="48">
    <properties>
-    <property name="key_id" value="llave_lab"/>
-    <property name="consume_llave" type="bool" value="true"/>
-    <property name="mensaje" value="Cerrada. Falta la llave."/>
+    <property name="key_id" value="llave_lab" />
+    <property name="consume_llave" type="bool" value="true" />
+    <property name="mensaje" value="Cerrada. Falta la llave." />
    </properties>
   </object>
   <object id="152" name="Spring_152" type="Spring" x="3584" y="304" width="32" height="16">
    <properties>
-    <property name="impulso" type="float" value="-560.0"/>
-    <property name="rearme" type="float" value="0.2"/>
+    <property name="impulso" type="float" value="-560.0" />
+    <property name="rearme" type="float" value="0.2" />
    </properties>
   </object>
   <object id="153" name="EventTrigger_153" type="EventTrigger" x="3664" y="192" width="32" height="16">
    <properties>
-    <property name="evento" value="ABRIR_JAULA"/>
-    <property name="automatico" type="bool" value="true"/>
-    <property name="una_vez" type="bool" value="true"/>
+    <property name="evento" value="ABRIR_JAULA" />
+    <property name="automatico" type="bool" value="true" />
+    <property name="una_vez" type="bool" value="true" />
    </properties>
   </object>
   <object id="154" name="Cage_154" type="Cage" x="3760" y="272" width="32" height="48">
    <properties>
-    <property name="abre_con" value="ABRIR_JAULA"/>
-    <property name="mensaje" value="La jaula no cede a golpes."/>
+    <property name="abre_con" value="ABRIR_JAULA" />
+    <property name="mensaje" value="La jaula no cede a golpes." />
    </properties>
   </object>
   <object id="155" name="FrictionZone_155" type="FrictionZone" x="3440" y="288" width="192" height="32">
    <properties>
-    <property name="multiplicador" type="float" value="0.55"/>
-    <property name="arrastre" type="float" value="0.0"/>
-    <property name="material" value="hielo"/>
+    <property name="multiplicador" type="float" value="0.55" />
+    <property name="arrastre" type="float" value="0.0" />
+    <property name="material" value="hielo" />
    </properties>
   </object>
   <object id="156" name="Pickup_156" type="Pickup" x="3680" y="192" width="16" height="16">
    <properties>
-    <property name="item_id" value="moneda_llave"/>
-    <property name="automatico" type="bool" value="true"/>
-    <property name="mensaje" value="Recompensa tras el resorte."/>
+    <property name="item_id" value="moneda_llave" />
+    <property name="automatico" type="bool" value="true" />
+    <property name="mensaje" value="Recompensa tras el resorte." />
    </properties>
   </object>
   <object id="157" name="Checkpoint_157" type="Checkpoint" x="3776" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="8"/>
+    <property name="checkpoint_id" type="int" value="8" />
    </properties>
   </object>
   <object id="158" name="MessageTrigger_Once_158" type="MessageTrigger_Once" x="3872" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="Aqui no se frena. Y algo golpea el suelo."/>
+    <property name="text" value="Aqui no se frena. Y algo golpea el suelo." />
    </properties>
   </object>
   <object id="159" name="ShockwaveZone_159" type="ShockwaveZone" x="4000" y="304" width="96" height="16">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="0.7"/>
-    <property name="apagado" type="float" value="2.6"/>
-    <property name="desfase" type="float" value="0.0"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="0.7" />
+    <property name="apagado" type="float" value="2.6" />
+    <property name="desfase" type="float" value="0.0" />
    </properties>
   </object>
   <object id="160" name="ShockwaveZone_160" type="ShockwaveZone" x="4096" y="304" width="96" height="16">
    <properties>
-    <property name="dano" type="float" value="99.0"/>
-    <property name="encendido" type="float" value="0.7"/>
-    <property name="apagado" type="float" value="2.6"/>
-    <property name="desfase" type="float" value="1.65"/>
+    <property name="dano" type="float" value="99.0" />
+    <property name="encendido" type="float" value="0.7" />
+    <property name="apagado" type="float" value="2.6" />
+    <property name="desfase" type="float" value="1.65" />
    </properties>
   </object>
   <object id="161" name="Vine_161" type="Vine" x="3920" y="144" width="8" height="80">
    <properties>
-    <property name="velocidad" type="float" value="75.0"/>
-    <property name="ancho_de_agarre" type="float" value="12.0"/>
+    <property name="velocidad" type="float" value="75.0" />
+    <property name="ancho_de_agarre" type="float" value="12.0" />
    </properties>
   </object>
   <object id="162" name="Zipline_162" type="Zipline" x="4192" y="224" width="8" height="8">
    <properties>
-    <property name="destino_dx" type="int" value="80"/>
-    <property name="destino_dy" type="int" value="128"/>
-    <property name="velocidad" type="float" value="200.0"/>
+    <property name="destino_dx" type="int" value="80" />
+    <property name="destino_dy" type="int" value="128" />
+    <property name="velocidad" type="float" value="200.0" />
    </properties>
   </object>
   <object id="163" name="Slope_163" type="Slope" x="3968" y="272" width="48" height="48">
    <properties>
-    <property name="sube" value="derecha"/>
+    <property name="sube" value="derecha" />
    </properties>
   </object>
   <object id="164" name="Slope_164" type="Slope" x="4016" y="272" width="48" height="48">
    <properties>
-    <property name="sube" value="izquierda"/>
+    <property name="sube" value="izquierda" />
    </properties>
   </object>
   <object id="165" name="Slope_165" type="Slope" x="4064" y="296" width="96" height="24">
    <properties>
-    <property name="sube" value="derecha"/>
+    <property name="sube" value="derecha" />
    </properties>
   </object>
   <object id="166" name="Slope_166" type="Slope" x="4112" y="296" width="96" height="24">
    <properties>
-    <property name="sube" value="suave"/>
+    <property name="sube" value="suave" />
    </properties>
   </object>
   <object id="167" name="Cutscene_167" type="Cutscene" x="4256" y="256" width="32" height="64">
    <properties>
-    <property name="guion" value="camara 4400 200 0.8&#10;temblor 0.3 5&#10;+ evento LAB_COMPLETADO"/>
-    <property name="bloquea" type="bool" value="false"/>
-    <property name="saltable" type="bool" value="true"/>
-    <property name="una_vez" type="bool" value="true"/>
+    <property name="guion" value="camara 4400 200 0.8&#10;temblor 0.3 5&#10;+ evento LAB_COMPLETADO" />
+    <property name="bloquea" type="bool" value="false" />
+    <property name="saltable" type="bool" value="true" />
+    <property name="una_vez" type="bool" value="true" />
    </properties>
   </object>
   <object id="168" name="Chest_168" type="Chest" x="4224" y="288" width="16" height="16">
    <properties>
-    <property name="contenido" value="reliquia_lab"/>
-    <property name="mensaje" value="Recompensa del laboratorio."/>
+    <property name="contenido" value="reliquia_lab" />
+    <property name="mensaje" value="Recompensa del laboratorio." />
    </properties>
   </object>
   <object id="169" name="Checkpoint_169" type="Checkpoint" x="4256" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="9"/>
+    <property name="checkpoint_id" type="int" value="9" />
    </properties>
   </object>
   <object id="170" name="MessageTrigger_Once_170" type="MessageTrigger_Once" x="4352" y="256" width="48" height="48">
    <properties>
-    <property name="text" value="La camara arranca sola. No te quedes atras."/>
+    <property name="text" value="La camara arranca sola. No te quedes atras." />
    </properties>
   </object>
   <object id="171" name="ScrollZone_171" type="ScrollZone" x="4416" y="256" width="32" height="64">
    <properties>
-    <property name="velocidad_x" type="float" value="38.0"/>
-    <property name="margen_de_gracia" type="float" value="28.0"/>
-    <property name="parar_en_x" type="float" value="4736.0"/>
+    <property name="velocidad_x" type="float" value="38.0" />
+    <property name="margen_de_gracia" type="float" value="28.0" />
+    <property name="parar_en_x" type="float" value="4736.0" />
    </properties>
   </object>
   <object id="172" name="MovingPlatform_172" type="MovingPlatform" x="4512" y="272" width="48" height="8">
    <properties>
-    <property name="destino_dx" type="float" value="0.0"/>
-    <property name="destino_dy" type="float" value="-48.0"/>
-    <property name="velocidad" type="float" value="34.0"/>
-    <property name="espera" type="float" value="0.4"/>
+    <property name="destino_dx" type="float" value="0.0" />
+    <property name="destino_dy" type="float" value="-48.0" />
+    <property name="velocidad" type="float" value="34.0" />
+    <property name="espera" type="float" value="0.4" />
    </properties>
   </object>
   <object id="173" name="Spring_173" type="Spring" x="4624" y="304" width="32" height="16">
    <properties>
-    <property name="impulso" type="float" value="-520.0"/>
-    <property name="rearme" type="float" value="0.2"/>
+    <property name="impulso" type="float" value="-520.0" />
+    <property name="rearme" type="float" value="0.2" />
    </properties>
   </object>
   <object id="174" name="WindZone_174" type="WindZone" x="4448" y="224" width="128" height="96">
    <properties>
-    <property name="fuerza_x" type="float" value="120.0"/>
-    <property name="fuerza_y" type="float" value="0.0"/>
-    <property name="periodo" type="float" value="2.5"/>
+    <property name="fuerza_x" type="float" value="120.0" />
+    <property name="fuerza_y" type="float" value="0.0" />
+    <property name="periodo" type="float" value="2.5" />
    </properties>
   </object>
   <object id="175" name="LaserZone_175" type="LaserZone" x="4544" y="224" width="8" height="96">
    <properties>
-    <property name="dano" type="float" value="25.0"/>
-    <property name="encendido" type="float" value="1.0"/>
-    <property name="apagado" type="float" value="1.5"/>
-    <property name="desfase" type="float" value="0.5"/>
+    <property name="dano" type="float" value="25.0" />
+    <property name="encendido" type="float" value="1.0" />
+    <property name="apagado" type="float" value="1.5" />
+    <property name="desfase" type="float" value="0.5" />
    </properties>
   </object>
   <object id="176" name="Checkpoint_176" type="Checkpoint" x="4736" y="288" width="16" height="32">
    <properties>
-    <property name="checkpoint_id" type="int" value="10"/>
+    <property name="checkpoint_id" type="int" value="10" />
    </properties>
   </object>
   <object id="177" name="AmbientLightZone_177" type="AmbientLightZone" x="3872" y="224" width="128" height="96">
    <properties>
-    <property name="valor" type="float" value="0.45"/>
-    <property name="fundido" type="int" value="32"/>
+    <property name="valor" type="float" value="0.45" />
+    <property name="fundido" type="int" value="32" />
    </properties>
   </object>
   <object id="178" name="MusicZone_178" type="MusicZone" x="4032" y="224" width="128" height="96">
    <properties>
-    <property name="track" value=""/>
-    <property name="fundido_ms" type="int" value="800"/>
+    <property name="track" value="" />
+    <property name="fundido_ms" type="int" value="800" />
    </properties>
   </object>
   <object id="179" name="CameraZoomZone_179" type="CameraZoomZone" x="4352" y="256" width="96" height="128">
    <properties>
-    <property name="factor" type="float" value="1.4"/>
-    <property name="segundos" type="float" value="0.6"/>
+    <property name="factor" type="float" value="1.4" />
+    <property name="segundos" type="float" value="0.6" />
    </properties>
   </object>
   <object id="180" name="FrictionZone_180" type="FrictionZone" x="3648" y="288" width="96" height="32">
    <properties>
-    <property name="multiplicador" type="float" value="1.0"/>
-    <property name="arrastre" type="float" value="0.0"/>
-    <property name="material" value="hielo"/>
-    <property name="inercia" type="float" value="0.85"/>
+    <property name="multiplicador" type="float" value="1.0" />
+    <property name="arrastre" type="float" value="0.0" />
+    <property name="material" value="hielo" />
+    <property name="inercia" type="float" value="0.85" />
    </properties>
   </object>
   <object id="181" name="WarpZone_181" type="WarpZone" x="4832" y="272" width="32" height="48">
    <properties>
-    <property name="automatico" type="bool" value="false"/>
-    <property name="destino_x" type="float" value="48.0"/>
-    <property name="destino_y" type="float" value="320.0"/>
-    <property name="mensaje" value="De vuelta a la entrada."/>
+    <property name="automatico" type="bool" value="false" />
+    <property name="destino_x" type="float" value="48.0" />
+    <property name="destino_y" type="float" value="320.0" />
+    <property name="mensaje" value="De vuelta a la entrada." />
    </properties>
   </object>
   <object id="182" name="WarpZone_182" type="WarpZone" x="80" y="272" width="32" height="48">
    <properties>
-    <property name="automatico" type="bool" value="false"/>
-    <property name="destino_x" type="float" value="2336.0"/>
-    <property name="destino_y" type="float" value="320.0"/>
-    <property name="mensaje" value="Atajo a la mitad."/>
+    <property name="automatico" type="bool" value="false" />
+    <property name="destino_x" type="float" value="2336.0" />
+    <property name="destino_y" type="float" value="320.0" />
+    <property name="mensaje" value="Atajo a la mitad." />
    </properties>
   </object>
   <object id="183" name="NextTrigger_183" type="NextTrigger" x="4896" y="272" width="32" height="48">
@@ -679,61 +679,61 @@
   </object>
   <object id="228" name="Vine_228" type="Vine" x="2160" y="192" width="8" height="96">
    <properties>
-    <property name="velocidad" type="float" value="70.0"/>
-    <property name="ancho_de_agarre" type="float" value="12.0"/>
-    <property name="amplitud" type="float" value="0.0"/>
-    <property name="periodo" type="float" value="0.0"/>
+    <property name="velocidad" type="float" value="70.0" />
+    <property name="ancho_de_agarre" type="float" value="12.0" />
+    <property name="amplitud" type="float" value="0.0" />
+    <property name="periodo" type="float" value="0.0" />
    </properties>
   </object>
   <object id="229" name="Vine_229" type="Vine" x="4032" y="160" width="8" height="80">
    <properties>
-    <property name="velocidad" type="float" value="75.0"/>
-    <property name="ancho_de_agarre" type="float" value="14.0"/>
-    <property name="amplitud" type="float" value="32.0"/>
-    <property name="periodo" type="float" value="2.0"/>
+    <property name="velocidad" type="float" value="75.0" />
+    <property name="ancho_de_agarre" type="float" value="14.0" />
+    <property name="amplitud" type="float" value="32.0" />
+    <property name="periodo" type="float" value="2.0" />
    </properties>
   </object>
   <object id="230" name="MessageTrigger_Once_230" type="MessageTrigger_Once" x="3968" y="256" width="48" height="32">
    <properties>
-    <property name="text" value="Liana fija y liana que se mueve — agarrate con G y trepa con arriba/abajo"/>
+    <property name="text" value="Liana fija y liana que se mueve — agarrate con G y trepa con arriba/abajo" />
    </properties>
   </object>
   <object id="231" name="VineSwing_231" type="VineSwing" x="4448" y="96" width="16" height="14">
    <properties>
-    <property name="largo" type="int" value="48"/>
-    <property name="amplitud" type="float" value="28.0"/>
-    <property name="periodo" type="float" value="1.6"/>
-    <property name="radio_agarre" type="int" value="20"/>
+    <property name="largo" type="int" value="48" />
+    <property name="amplitud" type="float" value="28.0" />
+    <property name="periodo" type="float" value="1.6" />
+    <property name="radio_agarre" type="int" value="20" />
    </properties>
   </object>
   <object id="232" name="VineSwing_232" type="VineSwing" x="4544" y="96" width="16" height="14">
    <properties>
-    <property name="largo" type="int" value="48"/>
-    <property name="amplitud" type="float" value="28.0"/>
-    <property name="periodo" type="float" value="1.6"/>
-    <property name="radio_agarre" type="int" value="20"/>
+    <property name="largo" type="int" value="48" />
+    <property name="amplitud" type="float" value="28.0" />
+    <property name="periodo" type="float" value="1.6" />
+    <property name="radio_agarre" type="int" value="20" />
    </properties>
   </object>
   <object id="233" name="MessageTrigger_Once_233" type="MessageTrigger_Once" x="4416" y="256" width="64" height="32">
    <properties>
-    <property name="text" value="Lianas de salto — colgate, balanceate y salta a la siguiente"/>
+    <property name="text" value="Lianas de salto — colgate, balanceate y salta a la siguiente" />
    </properties>
   </object>
   <object id="234" name="Light_234" type="Light" x="240" y="224" width="16" height="16">
    <properties>
-    <property name="radius" type="int" value="180"/>
-    <property name="color" value="#ffe9a8"/>
-    <property name="intensity" type="float" value="0.9"/>
+    <property name="radius" type="int" value="180" />
+    <property name="color" value="#ffe9a8" />
+    <property name="intensity" type="float" value="0.9" />
    </properties>
   </object>
   <object id="235" name="Light_235" type="Light" x="384" y="224" width="16" height="16">
    <properties>
-    <property name="radius" type="int" value="150"/>
-    <property name="color" value="#a8d8ff"/>
-    <property name="intensity" type="float" value="0.7"/>
+    <property name="radius" type="int" value="150" />
+    <property name="color" value="#a8d8ff" />
+    <property name="intensity" type="float" value="0.7" />
    </properties>
   </object>
- </objectgroup>
+ <object id="900" name="Boton_900" type="Boton" x="4800" y="320" width="32" height="16" /><object id="901" name="BuddyEnguarde_901" type="BuddyEnguarde" x="4832" y="320" width="16" height="16" /><object id="902" name="BuddyExpresso_902" type="BuddyExpresso" x="4848" y="320" width="16" height="16" /><object id="903" name="BuddyRino_903" type="BuddyRino" x="4864" y="320" width="16" height="16" /><object id="904" name="Ceibo_904" type="Ceibo" x="4800" y="280" width="16" height="16" /><object id="905" name="Cerbatana_905" type="Cerbatana" x="4816" y="280" width="16" height="16" /><object id="906" name="Hormiga_906" type="Hormiga" x="4832" y="280" width="16" height="16" /><object id="907" name="Oropel_907" type="Oropel" x="4848" y="280" width="16" height="16" /><object id="908" name="LianaSalto_908" type="LianaSalto" x="4864" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="909" name="RopeSwing_909" type="RopeSwing" x="4880" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="910" name="PlacaDePresion_910" type="PlacaDePresion" x="4800" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object><object id="911" name="PlacaPresion_911" type="PlacaPresion" x="4832" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE2" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object></objectgroup>
  <layer id="9" name="FG_Overlay" width="310" height="24">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0

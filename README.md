@@ -28,17 +28,17 @@ diseñador es `docs/60_GUIA_COMPLETA_DEL_MOTOR.md`.
 Construido sobre el patrón Estado, el patrón Estrategia e inyección de
 dependencias:
 
-- **Jugador** — máquina de estados con **28** estados: `IDLE` `WALKING` `JUMPING`
+- **Jugador** — máquina de estados con **30** estados: `IDLE` `WALKING` `JUMPING`
   `FALLING` `CROUCHING` `SHORT_ATTACK` `LONG_ATTACK` `HURT` `DYING` `DASHING`
   `PARRY` `CHARGE_ATTACK` `DASH_ATTACK` `WALL_SLIDE` `LEDGE_GRAB` `GRAB`
   `THROW` `SLIDE` `SWIMMING` `SWIM_ATTACK` `CLIMBING` `ZIPLINE` `ULTIMATE` `AERIAL_ATTACK`
-  `AERIAL_SLAM` `GROUND_POUND` `AIR_CHASE` `CHARGE_RELEASE`
+  `AERIAL_SLAM` `GROUND_POUND` `AIR_CHASE` `STAGGER` `POSSESSED` `CHARGE_RELEASE`
 - **Escenarios** — carga de TMX con dibujado por pyscroll, capas de colisión,
   puntos de control, zonas de peligro, fosos, bloqueos de cámara y fondos con
-  parallax. **104 tipos de objeto** aceptados desde Tiled en ejecución (50
-  integrados del framework y 54 del registro una vez descubiertos los
+  parallax. **115 tipos de objeto** aceptados desde Tiled en ejecución (50
+  integrados del framework y 65 del registro una vez descubiertos los
   escenarios, más `Solid` y `Platform` en la capa `Collision`)
-- **Enemigos** — 54 tipos registrados sobre ocho arquetipos base (caminante, volador,
+- **Enemigos** — 65 tipos registrados sobre ocho arquetipos base (caminante, volador,
   tirador, arquero, embestidor, bruto, hechicero, asesino) con una máquina de
   13 estados
 - **Jefes** — fases, telegrafiado, puntos débiles, parry, invocaciones y

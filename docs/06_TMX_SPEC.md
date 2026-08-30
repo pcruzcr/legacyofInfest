@@ -184,9 +184,9 @@ con la base sobre el suelo y el motor lo respeta tal cual (AUD-455).
 
 ### 4.2 Los tipos de objeto
 
-En ejecución el motor acepta **104** en `Objects` (50 integrados del framework y 54 del
+En ejecución el motor acepta **115** en `Objects` (50 integrados del framework y 65 del
 registro de entidades una vez descubiertos los escenarios), más `Solid` y
-`Platform` en la capa `Collision` (106 totales).
+`Platform` en la capa `Collision` (117 totales).
 
 La lista completa, con las propiedades de cada uno, está en
 [[60_GUIA_COMPLETA_DEL_MOTOR.md]]. Los imprescindibles para que un mapa cargue:

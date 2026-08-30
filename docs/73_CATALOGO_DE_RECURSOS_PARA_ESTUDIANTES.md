@@ -20,17 +20,17 @@ se pudo medir, no se escribe.
 
 ## 0. Índice de números verificados
 
-`28` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
+`30` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
 `8` arquetipos de enemigo · `35` especies del bestiario · `50` tipos de objeto
 TMX (AUD-455: eran 34 el 2026-08-02, ver §3.1; actualizado 2026-08-30: 50) · `2` tipos de capa `Collision`
 · `18` componentes ECS · `60` eventos en el enum `Events` + `5` de interacción
-(`INTERACT_*`). Total `Objects` en runtime **104** (50+54), **106** con `Collision`.
+(`INTERACT_*`). Total `Objects` en runtime **115** (50+54), **117** con `Collision`.
 
 ---
 
 ## 1. El jugador
 
-### 1.1. Los 28 estados (verificado en `src/framework/entities/player.py:171`)
+### 1.1. Los 30 estados (verificado en `src/framework/entities/player.py:171`)
 
 Todas las mecánicas del personaje son estados de una máquina. El API pública es
 el enum `PlayerState`:

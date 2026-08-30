@@ -56,7 +56,7 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Jugador
 
-27 estados: suelo, aire, ataque, defensa, agarre, nado y daño. Salto medido en
+30 estados: suelo, aire, ataque, defensa, agarre, nado y daño. Salto medido en
 **72 px**, que es el número con el que se decide si un obstáculo cabe.
 
 ### Enemigos y jefes
@@ -328,7 +328,7 @@ ningún software vivo. El techo realista por categoría está en
 | Área | Hay | Mejorable | Falta |
 |---|---|---|---|
 | Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.277 líneas | — |
-| Jugador | 28 estados | — | — |
+| Jugador | 30 estados | — | — |
 | Enemigos | 65 tipos, 13 estados, IA por lote | tipos sin usar en ningún mapa: 13 (BossSpawn indirecto + 10 especies nuevas sin mapa) | — |
 | Jefes | fases, telegrafiado, puntos débiles | variedad entre jefes | — |
 | Escenarios | 115 tipos TMX en runtime (101 base), 11 mecánicas | stage 0 usa 4 de 11 | — |

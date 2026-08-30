@@ -28,9 +28,9 @@ date_processed: "2026-07-31"
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
 3. [Propiedades del mapa — las 17](#3)
-4. [Los 104 tipos de objeto, uno por uno](#4)
-5. [El jugador: 28 estados y qué los provoca](#5)
-6. [Enemigos: 54 tipos y 13 estados](#6)
+4. [Los 115 tipos de objeto, uno por uno](#4)
+5. [El jugador: 30 estados y qué los provoca](#5)
+6. [Enemigos: 65 tipos y 15 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -246,7 +246,7 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 104 tipos de objeto, uno por uno
+## 4. Los 115 tipos de objeto, uno por uno
 
 > **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
 > Esta nota decía primero que la cuenta correcta era 76, contando sólo la capa
@@ -258,14 +258,14 @@ efecto, mira la consola antes que el código.
 > `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
 > (`Objective`); ésa era la única corrección real. Revertido a 78.
 >
-> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 54 (enemigos, §6)
-> + 2 (`Solid`/`Platform`) = **104**. La lista de abajo es ilustrativa; la cifra
+> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 65 (enemigos, §6)
+> + 2 (`Solid`/`Platform`) = **117**. La lista de abajo es ilustrativa; la cifra
 > viva la guarda `tests/test_el_inventario_cuenta_bien.py`.
 
-El motor acepta **106 tipos** en total: 50 integrados del framework y 54 enemigos del
-registro en la capa `Objects` (104), más `Solid` y `Platform` en `Collision` (2).
-Todos los números se convierten a `float` automáticamente. La cifra **104**
-es la de `Objects`; **106** es el total que comprueba `tests/test_guia_del_motor.py::TestLasCifrasDelIndice::test_los_tipos_de_objeto`.
+El motor acepta **117 tipos** en total: 50 integrados del framework y 65 enemigos del
+registro en la capa `Objects` (115), más `Solid` y `Platform` en `Collision` (2).
+Todos los números se convierten a `float` automáticamente. La cifra **115**
+es la de `Objects`; **117** es el total que comprueba `tests/test_guia_del_motor.py::TestLasCifrasDelIndice::test_los_tipos_de_objeto`.
 
 > Los tres tipos de zona nuevos de AUD-598/600/601 (GAP-072) están en §4:
 > `AmbientLightZone` — brillo ambiental por tramo; `MusicZone` — música por
@@ -719,7 +719,7 @@ que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas` los encuentre.
 ---
 
 <a id="5"></a>
-## 5. El jugador: 28 estados y qué los provoca
+## 5. El jugador: 30 estados y qué los provoca
 
 ### Controles por defecto
 
@@ -787,7 +787,7 @@ vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
 domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
 principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
-### Los 28 estados
+### Los 30 estados
 
 | Grupo | Estados |
 |---|---|
@@ -797,7 +797,7 @@ principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 | Defensa | `PARRY` |
 | Agarre | `GRAB` `THROW` `CLIMBING` `ZIPLINE` |
 | Medio | `SWIMMING` `SWIM_ATTACK` |
-| Daño | `HURT` `DYING` |
+| Daño | `HURT` `DYING` `STAGGER` `POSSESSED` |
 
 Como diseñador no invocas estados: colocas el objeto y el estado ocurre.
 `CLIMBING` necesita una `Vine`, `ZIPLINE` una `Zipline`, `SWIMMING` una
@@ -821,11 +821,11 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 54 tipos y 13 estados
+## 6. Enemigos: 65 tipos y 13 estados
 
 ### Los ocho arquetipos base
 
-Son la base; los 46 restantes son variantes y jefes con otro aspecto y otros
+Son la base; los 57 restantes son variantes y jefes con otro aspecto y otros
 números (35 especies del bestiario + 7 de entregas + buddies y especializados).
 
 | Tipo | Cómo se comporta | Propiedades |
@@ -883,8 +883,8 @@ el validador.
 
 ### Tipos especializados adicionales
 
-Los siguientes 14 tipos están registrados por `entity_factory` y cuentan para el
-total de 54, aunque no aparecen en la lista corta de 22 variantes arriba
+Los siguientes 25 tipos están registrados por `entity_factory` y cuentan para el
+total de 65, aunque no aparecen en la lista corta de 22 variantes arriba
 (ver `tests/test_guia_del_motor.py`):
 
 `ArcherQuetzal` · `AssassinSombra` · `BruteGolemHielo` · `BuddyEnguarde` ·
@@ -895,10 +895,10 @@ Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.)
 y buddies montables; se documentan aquí para que la lista sea exhaustiva sin
 repetir la tabla completa de 35 especies.
 
-### Los 13 estados de enemigo
+### Los 15 estados de enemigo
 
-`IDLE` → `PATROL` → `SEARCH` → `ALERT` → `CHASE` → `TELEGRAPHING` → `FIRING`
-→ `RECOVER`, más `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
+`IDLE` → `PATROL` → `SEARCH` → `ALERT` → `CHASE` → `TELEGRAPHING` → `FIRING` → `CHANNELING`
+→ `RECOVER`, más `RETREAT`, `FLEEING`, `CHANNELING`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
 
 El que importa al diseñar es **`TELEGRAPHING`**: el aviso antes del golpe. Un
 enemigo sin telegrafiado no es difícil, es injusto, y el jugador culpa al
