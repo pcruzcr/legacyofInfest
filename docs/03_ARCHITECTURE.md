@@ -233,9 +233,10 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── audio_pipeline.py          # Tubería de procesamiento de audio
 │   │   │   ├── music_clock.py            # RelojMusical: pulsos, compases y latencia (F6)
 │   │   │   ├── mixer_buses.py           # Mezclador: buses y ducking (AUD-144)
-│   │   │   └── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
-?   ?   ?   ??? music_stems.py            # MusicStemManager: stems dinamicos con crossfade
-?   ?   ?   ??? reverb_zones.py          # ReverbZoneManager: reverb por zona pre-bakeado
+│   │   │   ├── polifonia.py             # AUD-280: cuántas veces suena a la vez el mismo efecto
+│   │   │   ├── music_stems.py           # MusicStemManager: stems dinámicos con crossfade
+│   │   │   ├── reverb_zones.py          # ReverbZoneManager: reverb por zona pre-bakeado
+│   │   │   └── audio_bus.py             # AudioBus: bus de audio del motor (AUD-387)
 │   │   ├── render/
 │   │   │   ├── __init__.py
 │   │   │   ├── gl_pipeline.py             # GLRenderer, GLRenderConfig: tubería de ModernGL
@@ -278,15 +279,15 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── enemy_flying.py            # EnemyFlying: vuelo en senoide o por waypoints
 │   │   │   ├── enemy_shooter.py           # EnemyShooter: emisión de proyectiles, disparador de rango
 │   │   │   ├── boss_base.py               # BossBase: gestor de fases, evento de barra de vida del jefe
-?   ?   ?   ??? enemy_buddies.py           # Buddy system: Rino, Expresso, Enguarde
-?   ?   ?   ??? enemy_climber.py           # Climber enemy: wall climbing behavior
-?   ?   ?   ??? enemy_flying_bomber.py     # Flying bomber: aerial attack pattern
-?   ?   ?   ??? enemy_ice_skater.py        # Ice skater: sliding movement on ice
-?   ?   ?   ??? enemy_parry_teacher.py     # Parry teacher: teaches parry mechanic
-?   ?   ?   ??? enemy_shielded.py          # Shielded enemy: block and counter attacks
-?   ?   ?   ??? enemy_summoner.py          # Summoner: spawns minions
-?   ?   ?   ??? enemy_swimmer.py           # Swimmer: underwater movement
-?   ?   ?   ??? enemy_terrain_shaper.py    # Terrain shaper: creates/destroys blocks
+│   │   │   ├── enemy_buddies.py           # Buddy system: Rino, Expresso, Enguarde
+│   │   │   ├── enemy_climber.py           # Climber: trepa lianas (AUD-630)
+│   │   │   ├── enemy_flying_bomber.py     # FlyingBomber: bombardero aéreo
+│   │   │   ├── enemy_ice_skater.py        # IceSkater: desliza en hielo
+│   │   │   ├── enemy_parry_teacher.py     # ParryTeacher: enseña parry
+│   │   │   ├── enemy_shielded.py          # Shielded: escudo frontal (AUD-630)
+│   │   │   ├── enemy_summoner.py          # Summoner: invoca súbditos
+│   │   │   ├── enemy_swimmer.py           # Swimmer: nada bajo el agua
+│   │   │   ├── enemy_terrain_shaper.py    # TerrainShaper: modela terreno
 │   │   │   ├── boss_kit.py                # BossKit: componentes reutilizables de jefe
 │   │   │   ├── enemy_charger.py           # EnemyCharger: preparación + ataque de embestida
 │   │   │   ├── enemy_archer.py            # EnemyArcher: a distancia, disparo en arco
@@ -333,6 +334,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │
 │   │   ├── stage/
 │   │   │   ├── __init__.py
+│   │   │   ├── object_handler_registry.py # Registry Factory para objetos Tiled (AUD-724)
 │   │   │   ├── profundidad.py             # AUD-277: escala 2.5D por altura (apagada por defecto)
 │   │   │   ├── rejilla.py                 # AUD-276: rejilla espacial + raycast (línea de visión)
 │   │   │   ├── culling.py                 # AUD-279: qué se simula y qué se dibuja cerca de la cámara
@@ -358,9 +360,9 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── cutscene_guion.py          # analizar_guion: texto de guion a acciones (AUD-136)
 │   │   │   ├── speedrun_mode.py           # SpeedrunTimer: cronómetro global + datos del fantasma
 │   │   │   ├── boss_rush_mode.py          # BossRushMode: enfrentamiento consecutivo de jefes
- │   │   │   ├── combat_manager.py          # CombatManager: reglas de daño, hitstop y efectos de combate
- │   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
-?   ?   ?   ??? prefab_loader.py           # PrefabLoader: carga prefabs declarados en TMX
+  │   │   │   ├── combat_manager.py          # CombatManager: reglas de daño, hitstop y efectos de combate
+  │   │   │   ├── day_night.py               # DayNight: sistema de ciclo día/noche
+  │   │   │   ├── prefab_loader.py           # PrefabLoader: carga prefabs declarados en TMX
 │   │   │   ├── level_metrics.py           # LevelMetrics: métricas de análisis de escenario
 │   │   │   ├── seasons.py                 # Seasons: efectos visuales estacionales
 │   │   │   └── tmx_diagnostics.py         # TmxDiagnostics: utilidades de validación de TMX
@@ -386,6 +388,8 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   ├── scenes/
 │   │   │   ├── __init__.py
 │   │   │   ├── stage_scene.py             # StageScene: la escena principal jugable
+│   │   │   ├── stage_builder.py           # StageBuilder: Builder creacional para StageScene (AUD-724)
+│   │   │   ├── stage_facade.py            # StageFacade: Fachada/Mediator para StageScene (AUD-724)
 │   │   │   └── stage_parts/               # AUD-152: mixins de lectura de StageScene
 │   │   │       ├── __init__.py            #   por qué son mixins y no colaboradores
 │   │   │       ├── ambiente.py            #   luz, bloom, viñeta y partículas: la precedencia del TMX

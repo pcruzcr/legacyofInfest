@@ -30,7 +30,8 @@ from src.framework.entities.boss_base import BossBase
 from src.framework.entities.enemy_base import EnemyBase
 from src.framework.entities.player import Player
 from src.framework.entities.squad_brain import SquadBrain
-from src.framework.physics.capas import MASCARA_POR_DEFECTO, Capa
+from src.framework.scenes.stage_builder import StageBuilder
+from src.framework.scenes.stage_facade import StageFacade
 from src.framework.scenes.stage_parts.actualizaciones import ActualizacionesDeEscenario
 from src.framework.scenes.stage_parts.ambiente import MezclaDeAmbiente
 from src.framework.scenes.stage_parts.arco import ArcoDelJugador
@@ -120,6 +121,11 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._tutorial_shown: set[str] = set()
         super().__init__(context)
         self._tmx_path = resolved
+        # Facade para clientes que no necesitan conocer la red interna (Facade)
+        self.facade = StageFacade(self)
+        # Builder para construcción por pasos (Builder)
+        self._builder = StageBuilder(context, resolved)
+        self._builder.attach_scene(self)
         self._stage_data: StageData | None = None
         self._player: Player | None = None
         self._camera: Camera = Camera()
@@ -462,60 +468,8 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         self._camera.follow(self._player)
         self._camera.set_map_size(*self._stage_data.map_pixel_size)
 
-        for enemy in self._stage_data.entity_list:
-            if hasattr(enemy, "set_event_bus"):
-                enemy.set_event_bus(self.context.event_bus)
-            elif not getattr(enemy, "_event_bus", None):
-                enemy._event_bus = self.context.event_bus
-            if hasattr(enemy, "set_player_ref"):
-                enemy.set_player_ref(self._player.rect)
-            if hasattr(enemy, "set_collision_rects"):
-                # AUD-395 — lo que frena a este enemigo lo decide su máscara
-                # (GAP-038). Antes se le pasaban las dos listas del escenario
-                # y punto: si un enemigo tenía que ignorar algo, se lo filtraba
-                # él por dentro, a mano, y cada uno a su manera.
-                #
-                # `Capa.SOLIDO` y `Capa.PLATAFORMA` se pasan por separado y no
-                # sumadas porque `set_collision_rects` distingue las dos —las
-                # plataformas se atraviesan desde abajo y los sólidos no—, así
-                # que fundirlas aquí perdería justo la diferencia que el
-                # resolutor necesita.
-                mascara = getattr(enemy, "mascara_de_colision", MASCARA_POR_DEFECTO)
-                enemy.set_collision_rects(
-                    self._stage_data.capas.solidos_para(mascara & Capa.SOLIDO),
-                    one_way=self._stage_data.capas.solidos_para(
-                        mascara & Capa.PLATAFORMA),
-                )
-            # AUD-325 — los enemigos comparten el suelo inclinado del
-            # escenario: sin esto, un caminante atravesaría la cara de una
-            # rampa, que el jugador ya respeta desde AUD-323.
-            if hasattr(enemy, "set_pendientes"):
-                enemy.set_pendientes(self._stage_data.pendientes)
-            if isinstance(enemy, BossBase):
-                # AUD-061: el jefe necesita saber dónde acaba su arena, y la
-                # escena es quien conoce el tamaño del mapa. `BossVenado` la
-                # tenía escrita a mano como ARENA_W = 320 mientras su mapa mide
-                # 640: peleaba en la mitad izquierda y una embestida podía
-                # sacarlo del escenario, dejando el combate sin poder ganarse.
-                #
-                # AUD-605 — y el mapa entero tampoco era la respuesta: pasar
-                # `Rect(0, 0, ancho_mapa, alto_mapa)` hacía que cualquier
-                # lógica que usara el centro de los límites —el teletransporte
-                # de fase— cayera en medio del nivel. Un `ArenaZone` en el TMX
-                # declara el cuadrilátero real; ver `_arena_del_jefe`.
-                enemy.set_arena_bounds(_arena_del_jefe(self._stage_data,
-                                                       enemy.rect))
-            elif isinstance(enemy, EnemyBase):
-                # AUD-721 — los enemigos comunes no tenían límites de arena y
-                # podían salirse del stage si el patrullaje empujaba fuera del
-                # mapa o si un knockback los lanzaba al vacío. La escena fija
-                # el mapa completo como arena por defecto — barato, seguro y
-                # compatible: ningún mapa existente declaró ArenaZone para
-                # enemigos normales, así que no pisa nada.
-                if enemy.arena_bounds is None:
-                    enemy.set_arena_bounds(
-                        pygame.Rect(0, 0, *self._stage_data.map_pixel_size))
-            self._bestiary.record_encounter(Bestiary.id_de(enemy))
+        # Builder delega el cableado de enemigos (Builder + Facade)
+        self._builder.build_enemies(self._stage_data, self._player)
 
         self._checkpoints = list(self._stage_data.checkpoints)
         for cp in self._checkpoints:

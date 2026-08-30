@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 20 de agosto de 2026 · **Documentos:** 74 en `docs/` (71 indexados abajo + este índice), más 5 ficheros de la raíz
+**Fecha:** 30 de agosto de 2026 · **Documentos:** 75 en `docs/` (72 indexados abajo + este índice + 2 de informe no indexados antes), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -162,6 +162,7 @@ git si hace falta consultarlos.
 | [`94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md`](94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md) | Cierre de gaps y plan por fases — estado verificado del árbol: qué hallazgo ya está resuelto, qué GAP sigue abierto, qué decisión espera al dueño, y el orden de cierre |
 | [`50_IMPROVEMENT_ROADMAP.md`](50_IMPROVEMENT_ROADMAP.md) | Roadmap M1-M8 — hitos verificables con criterios de aceptación medibles (comandos) |
 | [`PLAN_PENDIENTE_2026_08_26.md`](PLAN_PENDIENTE_2026_08_26.md) | Plan de trabajo pendiente — 15 tareas en 5 fases (A-E): pre-commit, import-linter, perf gate, scripts verificación, assist mode, playtest bot, docs, gráficos/audio |
+| [`informe_stage4_1b_gates_8_9_10.md`](informe_stage4_1b_gates_8_9_10.md) | Informe stage4_1b gates 8-10 — validación de arte/QA/polish |
 
 ---
 
