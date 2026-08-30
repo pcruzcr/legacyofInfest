@@ -90,29 +90,42 @@ class ObjetosDeTiled:
             props = dict(obj.properties) if obj.properties else {}
 
             # 1. Registry para tipos simples (24 handlers)
+            # AUD-729: el registro guarda la función sin envolver (antes de
+            # @classmethod), así que hay que pasar `cls` explícitamente. La
+            # firma más común es (cls, stage, obj, props); algunas como
+            # PlayerSpawn son (cls, stage, obj) y otras como Door/Buddy
+            # llevan `obj_type` extra. Se intenta en orden y el valor de
+            # retorno (TmxObjectProblem) de BossSpawn se recoge.
             handler = get_handler(obj_type)
             if handler is not None:
+                # AUD-729: la firma varía (3, 4 o 5 args con `cls`). Se
+                # intenta en orden de más común a menos común y se acepta
+                # la primera que no lance TypeError. Cualquier éxito se
+                # considera manejado y no cae al fallback.
+                resultado: Any = None
+                manejado = False
+                # B023 — los lambdas en bucle capturarian la variable del ciclo;
+                # se evita con intentos directos sin closure.
                 try:
-                    # La mayoría: (stage, obj, props)
-                    handler(stage, obj, props)
+                    resultado = handler(cls, stage, obj, props)
+                    manejado = True
                 except TypeError:
-                    # Cerradura/Buddy necesitan obj_type extra
                     try:
-                        handler(stage, obj, props, obj_type)
+                        resultado = handler(cls, stage, obj, props, obj_type)
+                        manejado = True
                     except TypeError:
-                        # BossSpawn con report, etc. — fallback al if/elif
-                        pass
-                    else:
-                        if obj_type == "PlayerSpawn":
-                            if player_spawn_found:
-                                raise FrameworkUsageError("More than one PlayerSpawn object found")
-                            player_spawn_found = True
-                        continue
-                else:
+                        try:
+                            resultado = handler(cls, stage, obj)  # type: ignore[call-arg]
+                            manejado = True
+                        except TypeError:
+                            manejado = False
+                if manejado:
                     if obj_type == "PlayerSpawn":
                         if player_spawn_found:
                             raise FrameworkUsageError("More than one PlayerSpawn object found")
                         player_spawn_found = True
+                    if resultado is not None and hasattr(resultado, "reason"):
+                        report.add(resultado)
                     continue
 
             # 2. Fallback para tipos no registrados o que necesitan contexto extra

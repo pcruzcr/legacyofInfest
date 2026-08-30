@@ -57,9 +57,77 @@ class HUDBuilder:
         return self
 
     def build_assets(self) -> HUDBuilder:
-        # Nota: los retratos y la fuente siguen cargándose en HUD.__init__
-        # directamente; este método es el punto de extensión para cuando
-        # se extraiga toda la carga de assets a Builder (siguiente paso).
+        h = self.hud
+        from src.engine.core import settings
+        from src.engine.ui.hud import _e, _recortar_circular
+        from src.engine.ui.theme import font
+        from src.engine.utils.asset_loader import AssetLoader
+
+        # 9-slice frame
+        h._timer_fill = None  # type: ignore[attr-defined]
+        h._timer_edges = {}  # type: ignore[attr-defined]
+        try:
+            raw_frame = AssetLoader.load_image(settings.ASSETS_DIR / "ui" / "hud_frame.png")
+            fw, fh = raw_frame.get_size()
+            if fw >= 6 and fh >= 6:
+                c = 2
+                esquinas = {
+                    "tl": raw_frame.subsurface((0, 0, c, c)),
+                    "tr": raw_frame.subsurface((fw - c, 0, c, c)),
+                    "bl": raw_frame.subsurface((0, fh - c, c, c)),
+                    "br": raw_frame.subsurface((fw - c, fh - c, c, c)),
+                }
+                src_edges = {
+                    "top": raw_frame.subsurface((c, 0, fw - 2 * c, c)),
+                    "bottom": raw_frame.subsurface((c, fh - c, fw - 2 * c, c)),
+                    "left": raw_frame.subsurface((0, c, c, fh - 2 * c)),
+                    "right": raw_frame.subsurface((fw - c, c, c, fh - 2 * c)),
+                }
+                ce = _e(c)
+                h._frame_corners = {k: pygame.transform.scale(v, (ce, ce)) for k, v in esquinas.items()}  # type: ignore[attr-defined]
+                h._frame_edges = src_edges  # type: ignore[attr-defined]
+                src_fill = raw_frame.subsurface((c, c, fw - 2 * c, fh - 2 * c))
+                h._frame_fill = src_fill  # type: ignore[attr-defined]
+            else:
+                h._frame_corners = {}  # type: ignore[attr-defined]
+                h._frame_edges = {}  # type: ignore[attr-defined]
+                h._frame_fill = None  # type: ignore[attr-defined]
+        except Exception:
+            logger.warning("hud: failed to load hud_frame.png")
+            h._frame_corners = {}  # type: ignore[attr-defined]
+            h._frame_edges = {}  # type: ignore[attr-defined]
+            h._frame_fill = None  # type: ignore[attr-defined]
+        # timer fill pre-scale
+        try:
+            h._timer_fill = pygame.transform.scale(
+                h._frame_fill, (h._timer_bg_rect.width, h._timer_bg_rect.height)  # type: ignore[attr-defined]
+            ) if isinstance(h._frame_fill, pygame.Surface) else None  # type: ignore[attr-defined]
+        except Exception:
+            h._timer_fill = None  # type: ignore[attr-defined]
+        if getattr(h, "_frame_edges", None):
+            tr = h._timer_bg_rect  # type: ignore[attr-defined]
+            ce = _e(2)
+            try:
+                h._timer_edges = {  # type: ignore[attr-defined]
+                    "top": pygame.transform.scale(h._frame_edges["top"], (tr.width - 2 * ce, ce)),
+                    "bottom": pygame.transform.scale(h._frame_edges["bottom"], (tr.width - 2 * ce, ce)),
+                    "left": pygame.transform.scale(h._frame_edges["left"], (ce, tr.height - 2 * ce)),
+                    "right": pygame.transform.scale(h._frame_edges["right"], (ce, tr.height - 2 * ce)),
+                }
+            except Exception:
+                h._timer_edges = {}  # type: ignore[attr-defined]
+        # portraits
+        h._portraits = {}  # type: ignore[attr-defined]
+        for state in ("normal", "hurt", "critical", "dead"):
+            path = settings.ASSETS_DIR / "ui" / f"portrait_{state}.png"
+            try:
+                destino = h._portrait_sprite_rect.size  # type: ignore[attr-defined]
+                surf = AssetLoader.load_image(path, size=destino)
+                h._portraits[state] = _recortar_circular(surf)  # type: ignore[attr-defined]
+            except Exception:
+                logger.warning("hud: failed to load portrait %s", state)
+        h._font = font(_e(12))  # type: ignore[attr-defined]
+        h._timer_digit_font = font(_e(12))  # type: ignore[attr-defined]
         return self
 
     def build(self) -> HUD:
