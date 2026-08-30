@@ -80,8 +80,9 @@ class EnemyIceSkater(EnemyBase):
     def _patrol_behavior(self, dt: float) -> None:
         if self._on_ice:
             # En hielo: mantener inercia, cambiar dirección raramente
-            self._slide_velocity *= self._slide_deceleration
-            self.position += self._slide_velocity
+            # AUD-729: escalar por dt para independencia de framerate
+            self._slide_velocity *= self._slide_deceleration ** (dt * 60.0)
+            self.position += self._slide_velocity * dt
         else:
             # Suelo normal: patrulla normal
             super()._patrol_behavior(dt)
@@ -131,6 +132,7 @@ class EnemyIceSkater(EnemyBase):
 
     def _post_update(self, dt: float) -> None:
         if self._on_ice:
-            # Aplicar deslizamiento continuo
-            self.position += self._slide_velocity * 0.1
-            self._slide_velocity *= 0.98
+            # Aplicar deslizamiento continuo — escalado por dt
+            self.position += self._slide_velocity * dt * 0.5
+            # Deceleración exponencial con dt
+            self._slide_velocity *= 0.98 ** (dt * 60.0)
