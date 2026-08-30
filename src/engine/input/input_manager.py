@@ -207,7 +207,12 @@ class InputManager:
         # no entraría en el buffer.
         self._fotograma += 1
         for accion in self._bindings:
-            if self.is_action_just_pressed(accion):
+            # No usar is_action_just_pressed aquí — consumiría el press y nadie
+            # más lo vería. Se comprueba el raw press del fotograma.
+            keys = self._bindings.get(accion, [])
+            pressed = any(k in self._pressed_this_frame for k in keys)
+            pressed = pressed or self._mouse_action_pressed(accion) or self._action_from_controller(accion)
+            if pressed:
                 self._pulsada_en_fotograma[accion] = self._fotograma
 
     def is_action_just_pressed(self, action: Action) -> bool:
@@ -216,10 +221,17 @@ class InputManager:
             return False
         keys = self._bindings.get(action, [])
         if any(k in self._pressed_this_frame for k in keys):
+            # AUD-732 — consumir para que 60 frames sin pump no repitan 60 veces
+            # y el test de navegación no dé la vuelta completa al menú.
+            self._consumed_actions.add(action)
             return True
         if self._mouse_action_pressed(action):
+            self._consumed_actions.add(action)
             return True
-        return self._action_from_controller(action)
+        if self._action_from_controller(action):
+            self._consumed_actions.add(action)
+            return True
+        return False
 
     def _mouse_action_pressed(self, action: Action) -> bool:
         for btn, act in self._mouse_map.items():

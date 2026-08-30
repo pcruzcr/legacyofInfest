@@ -27,7 +27,9 @@ class EnemyCerbatana(EnemyShooter):
             self._telegraph_timer = 0.5
             # VFX: emitir evento de carga
             try:
-                self._event_bus.emit("VFX_CHARGE", pos=(self.position.x, self.position.y))
+                from src.engine.core.events import Events
+
+                self._event_bus.emit(Events.VFX_CHARGE, pos=(self.position.x, self.position.y))
             except Exception:
                 pass
             return

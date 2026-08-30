@@ -151,7 +151,7 @@ Colisión **axis-separada**: resolución en X seguida de resolución en Y. Plata
 
 ### 5.3 Estados del jugador
 
-El jugador implementa una máquina de estados de 26 estados (ver `04_PLAYER_SPEC.md` §8.1 para la tabla completa): IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, CHARGE_RELEASE, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING, CLIMBING, ZIPLINE, ULTIMATE, AERIAL_ATTACK, AERIAL_SLAM, AIR_CHASE. El estado SWIMMING se introduce cuando el jugador entra en agua.
+El jugador implementa una máquina de estados de 28 estados (ver `04_PLAYER_SPEC.md` §8.1 para la tabla completa): IDLE, WALKING, JUMPING, FALLING, CROUCHING, SHORT_ATTACK, LONG_ATTACK, HURT, DYING, DASHING, PARRY, CHARGE_ATTACK, CHARGE_RELEASE, DASH_ATTACK, WALL_SLIDE, LEDGE_GRAB, GRAB, THROW, SLIDE, SWIMMING, SWIM_ATTACK, CLIMBING, ZIPLINE, ULTIMATE, AERIAL_ATTACK, AERIAL_SLAM, GROUND_POUND, AIR_CHASE. El estado SWIMMING se introduce cuando el jugador entra en agua.
 
 ### 5.4 Combate
 

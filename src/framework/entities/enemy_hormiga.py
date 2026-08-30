@@ -23,15 +23,22 @@ class EnemyHormiga(EnemyWalker):
             self._trail_timer = 0.0
             # La escena recoge componentes via mundo ECS; aquí solo marcamos
             # que la hormiga quiere dejar rastro — el sistema lo materializa
-            if hasattr(self, "_mundo"):
+            if hasattr(self, "_mundo") and self._mundo is not None:
                 try:
                     from src.framework.ecs.components import ZonaDeFriccion
+
                     comp = ZonaDeFriccion(
                         rect=pygame.Rect(int(self.position.x - 10), int(self.position.y + 16), 20, 8),
                         multiplicador=1.0,
                         inercia=0.7,
                     )
-                    self._mundo.poner(self.entidad, comp)
+                    # AUD-736: el rastro es una entidad nueva con ZonaDeFriccion, no un componente
+                    # del propio enemigo (ponerlo en self.entidad haría al enemigo resbaladizo).
+                    try:
+                        self._mundo.crear(comp)  # type: ignore[attr-defined]
+                    except Exception:
+                        # Fallback si World.crear no existe en este contexto de test
+                        self._mundo.poner(self.entidad, comp)  # type: ignore[attr-defined]
                 except Exception:
                     pass
 

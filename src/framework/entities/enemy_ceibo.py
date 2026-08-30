@@ -22,12 +22,15 @@ class EnemyCeibo(EnemyBrute):
         facing = self.facing_direction
         # Frente: dx y facing mismo signo (jugador delante)
         is_front = (dx * facing) > 0
-        if is_front and self._shield.shield_health > 0:
+        # AUD-736: el escudo usa canal para respetar resistencias; no usa string suelto
+        if is_front and getattr(self._shield, "shield_health", 0) > 0 and not getattr(self._shield, "_broken", False):
             self._shield.shield_health -= damage
             if self._shield.shield_health <= 0:
-                self._shield._broken = True
+                self._shield._broken = True  # type: ignore[attr-defined]
                 try:
-                    self._event_bus.emit("SFX_PLAYER_PARRY", pos=(self.position.x, self.position.y))
+                    from src.engine.core.events import Events
+
+                    self._event_bus.emit(Events.SFX_PLAYER_PARRY, pos=(self.position.x, self.position.y))
                 except Exception:
                     pass
             return

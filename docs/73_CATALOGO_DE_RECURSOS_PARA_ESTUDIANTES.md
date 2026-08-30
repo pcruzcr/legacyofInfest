@@ -20,17 +20,17 @@ se pudo medir, no se escribe.
 
 ## 0. Índice de números verificados
 
-`26` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
-`8` arquetipos de enemigo · `21` especies del bestiario · `39` tipos de objeto
-TMX (AUD-455: eran 34 el 2026-08-02, ver §3.1) · `2` tipos de capa `Collision`
+`28` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
+`8` arquetipos de enemigo · `35` especies del bestiario · `50` tipos de objeto
+TMX (AUD-455: eran 34 el 2026-08-02, ver §3.1; actualizado 2026-08-30: 50) · `2` tipos de capa `Collision`
 · `18` componentes ECS · `60` eventos en el enum `Events` + `5` de interacción
-(`INTERACT_*`).
+(`INTERACT_*`). Total `Objects` en runtime **104** (50+54), **106** con `Collision`.
 
 ---
 
 ## 1. El jugador
 
-### 1.1. Los 26 estados (verificado en `src/framework/entities/player.py:109`)
+### 1.1. Los 28 estados (verificado en `src/framework/entities/player.py:171`)
 
 Todas las mecánicas del personaje son estados de una máquina. El API pública es
 el enum `PlayerState`:
@@ -38,17 +38,17 @@ el enum `PlayerState`:
 | Grupo | Estados |
 |---|---|
 | Suelo | `IDLE`, `WALKING`, `CROUCHING`, `SLIDE` |
-| Aire | `JUMPING`, `FALLING`, `AIR_CHASE`, `AERIAL_ATTACK`, `AERIAL_SLAM` |
+| Aire | `JUMPING`, `FALLING`, `AIR_CHASE`, `AERIAL_ATTACK`, `AERIAL_SLAM`, `GROUND_POUND` |
 | Pared / bordes | `WALL_SLIDE`, `LEDGE_GRAB` |
 | Cuerda / tirolesa | `CLIMBING`, `ZIPLINE` |
-| Agua | `SWIMMING` |
+| Agua | `SWIMMING`, `SWIM_ATTACK` |
 | Habilidades | `DASHING`, `PARRY`, `CHARGE_ATTACK`, `CHARGE_RELEASE`, `ULTIMATE`, `GRAB`, `THROW` |
 | Ataque | `SHORT_ATTACK`, `LONG_ATTACK`, `DASH_ATTACK` |
 | Daño | `HURT`, `DYING` |
 
-> **Nota de coherencia:** los doc `04` y `60` mencionan 19/25/26 según la
-> edición. El código tiene **26** y es la fuente de verdad. `docs/71` dice «25
-> concretos (+3 clases base)».
+> **Nota de coherencia:** los doc `04` y `60` mencionaban 19/25/26 según la
+> edición. El código tiene **28** y es la fuente de verdad. `docs/71` decía «25
+> concretos (+3 clases base)» antes de añadir `SWIM_ATTACK` y `GROUND_POUND`.
 
 ### 1.2. Física (en `src/engine/core/settings.py`)
 
@@ -112,18 +112,23 @@ Registro en `entity_factory.py:61-71` (`_ENTITY_REGISTRY`):
 | `EnemyCaster` | `(spawn, max_health=2, damage_on_contact=0.25, zone)` — `HomingOrb` |
 | `EnemyAssassin` | `(spawn, max_health=1.5, damage_on_contact=0.25, zone)` — cloaking α, lunge 200px/s (dmg 1,0), retira 2 s |
 
-### 2.3. Las 21 especies del bestiario (`bestiary_registry.py:175-177`)
+### 2.3. Las 35 especies del bestiario (`bestiary_registry.py`)
 
 Zona 1 (9): `WalkerInsect`, `FlyingBird`, `ShooterFrog`, `WalkerRaton`,
 `FlyingCucaracha`, `ShooterCocinero`, `WalkerEstudiante`, `FlyingNotebook`,
 `ShooterTiza`.
 
-Zona 2 (7): `WalkerSerpientePequena`, `FlyingBoa`, `ShooterSerpienteArbol`,
+Zona 2 (13): `WalkerSerpientePequena`, `FlyingBoa`, `ShooterSerpienteArbol`,
 `WalkerTerciopelo`, `ShooterVenomoLargo`, `FlyingTerciovolador`,
-`WalkerGuardia`.
+`WalkerGuardia`, `Cangrejo`, `Climber`, `FlyingBomber`, `Shielded`, `Swimmer`,
+`TerrainShaper`.
 
-Zona 3 (5): `WalkerGarza`, `FlyingHalcon`, `ShooterQuetzal`, `WalkerPalom`,
-`ShooterBuitre`.
+Zona 3 (7): `WalkerGarza`, `FlyingHalcon`, `ShooterQuetzal`, `WalkerPalom`,
+`ShooterBuitre`, `ArcherQuetzal`, `AssassinSombra`.
+
+Zona 4 y buddies (6): `BruteGolemHielo`, `CasterHealer`, `ChargerWolf`,
+`BuddyRino`, `BuddyExpresso`, `BuddyEnguarde` — más `Medusa`, `PezAbismal`,
+`Summoner` distribuidos (ver `18_ENEMY_ROSTER.md` para asignación por zona).
 
 Cada `SpeciesSpec` expone `build(spawn_position, **overrides)`; los overrides
 del TMX ganan (`bestiary_registry.py:50-56`). El test `test_bestiary_roster.py`
@@ -140,21 +145,24 @@ comprueba doc ↔ código.
 
 ## 3. Los objetos que el mapa TMX puede declarar
 
-### 3.1. Tipos de capa «Objects» — **39 tipos** (AUD-455: eran 34 el 2026-08-02, faltan 5)
+### 3.1. Tipos de capa «Objects» — **50 tipos** (AUD-455: eran 34 el 2026-08-02; 50 en 2026-08-30)
 
 `PlayerSpawn`, `Checkpoint`, `NextTrigger`, `MessageTrigger`,
 `MessageTrigger_Once`, `HazardZone`, `DeathPit`, `CameraLock`, `Waypoint`,
-`Light`, `Cutscene`, `PushBlock`, `BreakableBlock`, `Pickup`, `Key`, `Door`,
+`Light`, `AmbientLightZone`, `MusicZone`, `CameraZoomZone`, `Cutscene`, `PushBlock`, `BreakableBlock`, `Pickup`, `Key`, `Door`,
 `LockedDoor`, `Cage`, `Chest`, `EventTrigger`, `Objective`, `WindZone`,
 `FrictionZone`, `Conveyor`, `LaserZone`, `ShockwaveZone`, `WaterZone`,
 `MovingPlatform`, `RhythmBlock`, `SinkingPlatform`, `Spring`, `Guard`,
-`Stalker`, `ScrollZone`, `WarpZone`, `Slope`, `Vine`, `Zipline`, `BossSpawn`.
+`Stalker`, `ScrollZone`, `WarpZone`, `Slope`, `Vine`, `VineSwing`, `LianaSalto`, `RopeSwing`, `Zipline`, `BossSpawn`, `ArenaZone`,
+`PressurePlate`, `PlacaDePresion`, `PlacaPresion`, `Boton`, `SecretRoom`, `SecretExit`.
 
 > **AUD-455 (2026-08-13).** Esta lista y su cuenta («34 tipos») son del
 > 2026-08-02 y no incluían `Objective` (AUD-400), `ScrollZone` (AUD-249),
 > `WarpZone`, `Slope` (AUD-297) ni `BossSpawn` (AUD-259) — los cinco añadidos
 > después de esa fecha. La lista viva y verificada por CI es el bloque
-> `GENERATED` de `STAGE_CREATION.md` §«Tipos estructurales» (39 tipos), que es
+> `GENERATED` de `STAGE_CREATION.md` §«Tipos estructurales» (50 tipos en 2026-08-30:
+> `AmbientLightZone`, `MusicZone`, `CameraZoomZone`, `ArenaZone`, `VineSwing`/`LianaSalto`/`RopeSwing`,
+> `PressurePlate`/`PlacaDePresion`/`PlacaPresion`/`Boton`, `SecretRoom`/`SecretExit`), que es
 > de donde sale la corrección de arriba.
 
 Propiedades por tipo (default) — ver tabla completa de `STAGE_CREATION.md`:
@@ -269,7 +277,7 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
 
 ## 9. Advertencias de coherencia (doc ↔ código) para el estudiante
 
-1. **Estados del jugador**: el código tiene **26**, los docs varían 19/25/26.
+1. **Estados del jugador**: el código tiene **28**, los docs variaban 19/25/26/28 (actualizado 2026-08-30).
 2. **Doble salto**: el código lo permite (1), el doc `04 §3` lo prohíbe.
 3. **`detection_range_x` por especie no se aplica** — se usa la del arquetipo.
 4. **`patrol_speed`/`alert_speed`/`fire_rate`** documentados para
@@ -279,10 +287,8 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
 6. **`Message` vs `MessageTrigger`**: el TMX solo acepta
    `MessageTrigger`(_Once); usar `Message` produce un error.
 <!-- /cita-historica -->
-7. **Conteos de la doc inconciliables**: `60` dice 73 tipos / 37 enemigos,
-   `62` dice 62/30; el código tiene **70 tipos declarables** (39 + 2 collision +
-   8 arquetipos + 21 especies, AUD-455 — eran 65/34 el 2026-08-02, ver §3.1) y
-   los 26 ctas de jugador.
+7. **Conteos de la doc inconciliables**: `60` decía 78/37, `62` decía 104/54 (2026-08-30); el código tiene **106 tipos declarables** (50 + 54 + 2 collision, ver §3.1) y
+   28 estados de jugador (ver §1.1).
 
 ---
 

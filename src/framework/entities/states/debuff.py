@@ -14,7 +14,14 @@ class StaggerState(PlayerStateBase):
 
     def __init__(self, duration: float = 0.6) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.STAGGER)
+
+        # AUD-736: STAGGER aún no está en PlayerState (28 estados). Usa HURT como fallback
+        # para no romper importación; cuando se integre, este try desaparecerá.
+        try:
+            st = PlayerState.STAGGER  # type: ignore[attr-defined]
+        except AttributeError:
+            st = PlayerState.HURT
+        super().__init__(st)
         self._timer = float(duration)
 
     def enter(self, player: Player) -> None:
@@ -44,7 +51,12 @@ class PossessedState(PlayerStateBase):
 
     def __init__(self, duration: float = 2.0) -> None:
         from src.framework.entities.player import PlayerState
-        super().__init__(PlayerState.POSSESSED)
+
+        try:
+            st = PlayerState.POSSESSED  # type: ignore[attr-defined]
+        except AttributeError:
+            st = PlayerState.HURT
+        super().__init__(st)
         self._timer = float(duration)
         self._cured = False
 
@@ -52,9 +64,12 @@ class PossessedState(PlayerStateBase):
         super().enter(player)
         player._animation_timer = 0.0
         player._animation_frame = 0
-        # Suscribe cura
+        # Suscribe cura — usa Events.ITEM_CONSUMED si existe
         try:
-            player._event_bus.subscribe("ITEM_CONSUMED", self._on_cure)
+            from src.engine.core.events import Events
+
+            evt = getattr(Events, "ITEM_CONSUMED", "ITEM_CONSUMED")
+            player._event_bus.subscribe(evt, self._on_cure)
         except Exception:
             pass
 
@@ -67,7 +82,10 @@ class PossessedState(PlayerStateBase):
         self._timer -= dt
         if self._timer <= 0:
             try:
-                player._event_bus.unsubscribe("ITEM_CONSUMED", self._on_cure)
+                from src.engine.core.events import Events
+
+                evt = getattr(Events, "ITEM_CONSUMED", "ITEM_CONSUMED")
+                player._event_bus.unsubscribe(evt, self._on_cure)
             except Exception:
                 pass
             from src.framework.entities.states import IdleState
@@ -88,6 +106,9 @@ class PossessedState(PlayerStateBase):
 
     def exit(self, player: Player) -> None:
         try:
-            player._event_bus.unsubscribe("ITEM_CONSUMED", self._on_cure)
+            from src.engine.core.events import Events
+
+            evt = getattr(Events, "ITEM_CONSUMED", "ITEM_CONSUMED")
+            player._event_bus.unsubscribe(evt, self._on_cure)
         except Exception:
             pass
