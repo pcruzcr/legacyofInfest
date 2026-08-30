@@ -23,9 +23,14 @@ from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.player_components import (
+    PlayerAnimationComponent,
+    PlayerCombatComponent,
+    PlayerPhysicsComponent,
+)
 from src.framework.entities.player_state import PlayerStateData
 from src.framework.entities.ranged_weapon import ArcoDelJugador
-from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, Material, PhysicsProfile
+from src.framework.physics.perfil import CENITAL, PLATAFORMAS, VUELO, Material
 from src.framework.physics.resolucion import (
     EstadoDeMovimiento,
     acercarse_a,
@@ -248,11 +253,18 @@ class Player(BaseEntity):
         """Initialize the player at the given spawn position."""
         super().__init__(spawn_position, event_bus)
 
+        # ── Componentes extraídos (Facade + Strategy) — AUD-724/725
+        # Player sigue exponiendo la misma API pública para las 26 entregas,
+        # pero internamente delega a componentes testeables por separado.
+        self._physics_comp = PlayerPhysicsComponent()
+        self._combat_comp = PlayerCombatComponent()
+        self._anim_comp = PlayerAnimationComponent()
+
         # ── Canonical state dataclass ──────────────────────────
         # AUD-333 — el perfil de física se crea antes que cualquier dato que
         # lo lea: el estado canónico arranca con el coyote del perfil, que
         # por defecto vale exactamente lo de `settings`.
-        self.perfil = PhysicsProfile.plataformas()
+        self.perfil = self._physics_comp.perfil
         #: AUD-490 — GAP-039, la mitad que faltaba: la restitución del perfil
         #: es una constante para todo el nivel; esto es lo que una
         #: `ZonaDeFriccion` con `material` puede sobreescribir por región,
@@ -786,6 +798,11 @@ class Player(BaseEntity):
         )
         self._invincibility_timer = cfg.invincibility_duration + extra_titan
         self._flash_timer = 0.0
+        # AUD-COMBO: recibir daño rompe el combo
+        self.combo_count = 0
+        self.combo_timer = 0.0
+        self.combo_active = False
+        self.last_attack_type = ""
 
         # Knockback away from source
         dx = self.position.x - source_position[0]
@@ -1112,6 +1129,7 @@ class Player(BaseEntity):
             if self.combo_timer <= 0:
                 self.combo_active = False
                 self.combo_count = 0
+                self.last_attack_type = ""
         self._animation_timer += dt
 
     def _advance_animation(self, dt: float) -> None:

@@ -21,6 +21,7 @@ from src.engine.utils.asset_loader import AssetLoader
 from src.engine.utils.surface_pool import get_pool
 from src.framework.combate import dano as combate_dano
 from src.framework.entities.base_entity import BaseEntity
+from src.framework.entities.enemy_components import EnemyStateMachine
 from src.framework.vfx.contorno import COLOR_ENEMIGO, dibujar_con_contorno
 
 if TYPE_CHECKING:
@@ -169,6 +170,8 @@ class EnemyBase(BaseEntity):
         # --- State ---
         self.state: EnemyState = EnemyState.PATROL
         self.facing_direction: int = 1  # -1 left, 1 right
+        # Facade + State Machine — desmonolitización AUD-725
+        self._state_machine = EnemyStateMachine(self)
 
         # --- Hitbox / Hurtbox (world-space, recomputed each frame) ---
         self.hitbox: pygame.Rect = pygame.Rect(0, 0, 0, 0)
@@ -410,6 +413,8 @@ class EnemyBase(BaseEntity):
     _ANIM_FPS: dict[str, float] = {
         "walk": 10.0, "fly": 12.0, "shoot": 16.0,
         "hurt": 12.0, "die": 10.0,
+        "drift": 8.0, "death": 8.0, "stomp": 12.0, "charge": 14.0,
+        "vine": 12.0, "spit": 12.0,
     }
     # Alert-mode FPS override (same animation keys, faster playback)
     _ALERT_ANIM_FPS: dict[str, float] = {
@@ -419,6 +424,11 @@ class EnemyBase(BaseEntity):
     def _advance_animation(self, dt: float) -> None:
         """Advance the sprite animation frame at state-specific FPS."""
         anim_key = self._get_animation_state()
+        last = getattr(self, "_last_anim_key", None)
+        if last != anim_key:
+            self._animation_frame = 0
+            self._animation_timer = 0.0
+            self._last_anim_key = anim_key  # type: ignore[attr-defined]
         fps = self._ANIM_FPS.get(anim_key, 10.0)
         if self.state == EnemyState.ALERT and anim_key in self._ALERT_ANIM_FPS:
             fps = self._ALERT_ANIM_FPS[anim_key]
@@ -429,7 +439,11 @@ class EnemyBase(BaseEntity):
             return
         if self._animation_timer >= frame_duration:
             self._animation_timer -= frame_duration
-            self._animation_frame = (self._animation_frame + 1) % len(frames)
+            if self.state == EnemyState.DYING:
+                if self._animation_frame < len(frames) - 1:
+                    self._animation_frame += 1
+            else:
+                self._animation_frame = (self._animation_frame + 1) % len(frames)
 
     def draw(
         self,
