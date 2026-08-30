@@ -23,25 +23,26 @@ _TUTORIAL_STEPS: list[_TutorialStep] = [
     {
         "title": "MOVEMENT",
         "lines": [
-            "LEFT/RIGHT or A/D to move",
+            "LEFT/RIGHT or A/D to move (flechas o WASD)",
             "UP or W or SPACE to jump",
             "DOWN or S to crouch",
+            "Stick izq / ratón: alternativo",
         ],
     },
     {
         "title": "COMBAT",
         "lines": [
-            "Z or J for short attack",
-            "X or K for long attack",
+            "Z/J or MOUSE LEFT for short attack",
+            "X/K or MOUSE RIGHT for long attack",
             "Hold X to charge attack",
-            "SHIFT to dash",
+            "SHIFT / MIDDLE-CLICK / LT to dash",
         ],
     },
     {
         "title": "ADVANCED",
         "lines": [
-            "CROUCH + Z to parry",
-            "CROUCH + X or G to grab",
+            "CROUCH + Z to parry (mando Y+B)",
+            "CROUCH + X or G to grab (mando LB)",
             "Z+X with full meter = ULTIMATE",
             "Attack in air for aerial combo",
         ],
@@ -53,6 +54,15 @@ _TUTORIAL_STEPS: list[_TutorialStep] = [
             "Purple telegraphs = incoming",
             "Gold checkpoints save progress",
             "Collect items for permanent upgrades",
+        ],
+    },
+    {
+        "title": "INTERACTIVE",
+        "lines": [
+            "Pulsa T para tutorial GUIADO",
+            "5 salas con práctica + moneda + XP",
+            "Flechas/WASD/stick/ratón: todos sirven",
+            "Enter = texto, T = jugable",
         ],
     },
 ]
@@ -114,6 +124,15 @@ class TutorialScene(BaseScene):
             self._exit_requested = True
             self._exit_target = "title"
             return
+        # AUD-721 — T lanza el hub guiado desde cualquier paso
+        if im.is_raw_key_pressed(pygame.K_t):
+            try:
+                from src.stages.tutorial_hub.tutorial_hub import TutorialHub
+                self.context.scene_manager.transition.start_fade_out(0.3)
+                self.context.scene_manager.push(TutorialHub(self.context))
+                return
+            except Exception:
+                pass
         if im.is_action_just_pressed(Action.CONFIRM) or \
                 im.is_action_just_pressed(Action.SHORT_ATTACK) or \
                 im.is_action_just_pressed(Action.JUMP):

@@ -85,6 +85,19 @@ class EnemyWalker(EnemyBase):
     def _all_ground_rects(self) -> list[pygame.Rect]:
         return self._collision_rects + self._one_way_rects
 
+    def _resolver_colision_x(self) -> bool:
+        if not self._collision_rects:
+            return False
+        rect = pygame.Rect(int(self.position.x), int(self.position.y), self.rect.width, self.rect.height)
+        for tile in self._collision_rects:
+            if rect.colliderect(tile):
+                if rect.centerx < tile.centerx:
+                    self.position.x = float(tile.left - self.rect.width)
+                else:
+                    self.position.x = float(tile.right)
+                return True
+        return False
+
     # ──────────────────────────────────────────────
     # Behavior implementations
     # ──────────────────────────────────────────────
@@ -96,7 +109,8 @@ class EnemyWalker(EnemyBase):
         all_ground = self._all_ground_rects
 
         # Ledge detection: probe ahead and below before moving
-        if all_ground:
+        # AUD-721 — en cenital no hay suelo que probar: movimiento libre 2D
+        if all_ground and not self.vista_cenital:
             probe_x = self.position.x + (
                 self.facing_direction * (self.rect.width // 2 + 2)
             )
@@ -117,6 +131,14 @@ class EnemyWalker(EnemyBase):
 
         # Move
         self.position.x += self.facing_direction * self.patrol_speed * dt
+        if self._resolver_colision_x():
+            self.facing_direction *= -1
+        # AUD-721 — clamp a arena/mapa si existe, y rebote si toca borde
+        if self.arena_bounds is not None:
+            antes = self.position.x
+            self.clamp_to_arena(margin=0)
+            if self.position.x != antes:
+                self.facing_direction *= -1
 
     def _post_update(self, dt: float) -> None:
         all_rects = self._all_ground_rects
@@ -155,6 +177,10 @@ class EnemyWalker(EnemyBase):
                 self.damage_on_contact = 0.5
             else:
                 self.position.x += self.facing_direction * self._charge_speed * dt
+                if self._resolver_colision_x():
+                    self._is_charging = False
+                    self._charge_cooldown = 2.0
+                    self.damage_on_contact = 0.5
                 return
 
         # Start charge when at medium range and cooldown ready
@@ -189,7 +215,7 @@ class EnemyWalker(EnemyBase):
             speed = self.alert_speed * 1.35
 
         all_ground = self._all_ground_rects
-        if all_ground and speed > 0.0:
+        if all_ground and speed > 0.0 and not self.vista_cenital:
             probe_x = self.position.x + (
                 direction * (self.rect.width // 2 + 2)
             )
@@ -209,6 +235,17 @@ class EnemyWalker(EnemyBase):
                     direction = self.facing_direction
 
         self.position.x += direction * speed * dt
+        if self._resolver_colision_x():
+            if self.tactic in ("retreat", "evade"):
+                pass
+            else:
+                self.facing_direction *= -1
+        # AUD-721 — no salirse del stage; si el clamp corrige, rebota salvo retirada
+        if self.arena_bounds is not None:
+            antes = self.position.x
+            self.clamp_to_arena(margin=0)
+            if self.position.x != antes and self.tactic not in ("retreat", "evade"):
+                self.facing_direction *= -1
 
     def _get_animation_key(self) -> str:
         return "walk"

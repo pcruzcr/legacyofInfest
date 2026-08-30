@@ -505,6 +505,16 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 # declara el cuadrilátero real; ver `_arena_del_jefe`.
                 enemy.set_arena_bounds(_arena_del_jefe(self._stage_data,
                                                        enemy.rect))
+            elif isinstance(enemy, EnemyBase):
+                # AUD-721 — los enemigos comunes no tenían límites de arena y
+                # podían salirse del stage si el patrullaje empujaba fuera del
+                # mapa o si un knockback los lanzaba al vacío. La escena fija
+                # el mapa completo como arena por defecto — barato, seguro y
+                # compatible: ningún mapa existente declaró ArenaZone para
+                # enemigos normales, así que no pisa nada.
+                if enemy.arena_bounds is None:
+                    enemy.set_arena_bounds(
+                        pygame.Rect(0, 0, *self._stage_data.map_pixel_size))
             self._bestiary.record_encounter(Bestiary.id_de(enemy))
 
         self._checkpoints = list(self._stage_data.checkpoints)

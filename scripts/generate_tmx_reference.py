@@ -227,6 +227,11 @@ def build_table() -> str:
         "Vine": ("Rectángulo (alto = lo que se trepa)",
                  "`ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, "
                  "70)"),
+        "VineSwing": ("Rectángulo (pareja de lianas para saltar)",
+                      "`largo` (px, 48) · `amplitud` (px, 28) · `periodo` "
+                      "(s, 1.6) · `radio_agarre` (px, 20)"),
+        "LianaSalto": ("Rectángulo", "Alias de `VineSwing`, mismas propiedades"),
+        "RopeSwing": ("Rectángulo", "Alias de `VineSwing`, mismas propiedades"),
         "Zipline": ("Rectángulo (la esquina es el enganche)",
                     "`destino_dx` (px, 96), `destino_dy` (px, 64) "
                     "**relativos** · `velocidad` (px/s, 190) · "

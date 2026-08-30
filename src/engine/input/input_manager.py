@@ -63,6 +63,20 @@ class InputManager:
         #: Acciones que el jugador dejó conmutadas a «activa» (AUD-126).
         self._conmutadas: set[Action] = set()
 
+        # Mouse state — AUD-720: el ratón como alternativa a teclado/mando
+        self._mouse_held: set[int] = set()
+        self._mouse_pressed: set[int] = set()
+        self._mouse_released: set[int] = set()
+        self._mouse_pos: tuple[int, int] = (0, 0)
+        # Botón -> Action (izq=ataque corto, der=ataque largo, medio=dash, 4=distancia)
+        self._mouse_map: dict[int, Action] = {
+            1: Action.SHORT_ATTACK,
+            3: Action.LONG_ATTACK,
+            2: Action.DASH,
+            4: Action.RANGED_ATTACK,
+            5: Action.GRAB,
+        }
+
         # Controller state
         self._joystick: Any | None = None
         self._init_joystick()
@@ -135,6 +149,8 @@ class InputManager:
         self._raw_keys_pressed.clear()
         self._controller_buttons_pressed.clear()
         self._controller_buttons_released.clear()
+        self._mouse_pressed.clear()
+        self._mouse_released.clear()
         self._hat_edge_up = self._hat_edge_down = False
         self._hat_edge_left = self._hat_edge_right = False
         self._axis_edge_up = self._axis_edge_down = False
@@ -149,6 +165,22 @@ class InputManager:
             elif e.type == pygame.KEYUP:
                 self._held.discard(e.key)
                 self._released_this_frame.add(e.key)
+            elif e.type == pygame.MOUSEBUTTONDOWN:
+                if e.button not in self._mouse_held:
+                    self._mouse_pressed.add(e.button)
+                self._mouse_held.add(e.button)
+                try:
+                    self._mouse_pos = (int(e.pos[0]), int(e.pos[1]))
+                except Exception:
+                    pass
+            elif e.type == pygame.MOUSEBUTTONUP:
+                self._mouse_held.discard(e.button)
+                self._mouse_released.add(e.button)
+            elif e.type == pygame.MOUSEMOTION:
+                try:
+                    self._mouse_pos = (int(e.pos[0]), int(e.pos[1]))
+                except Exception:
+                    pass
             elif e.type == pygame.JOYBUTTONDOWN:
                 if e.button not in self._controller_buttons_held:
                     self._controller_buttons_pressed.add(e.button)
@@ -185,7 +217,33 @@ class InputManager:
         keys = self._bindings.get(action, [])
         if any(k in self._pressed_this_frame for k in keys):
             return True
+        if self._mouse_action_pressed(action):
+            return True
         return self._action_from_controller(action)
+
+    def _mouse_action_pressed(self, action: Action) -> bool:
+        for btn, act in self._mouse_map.items():
+            if act == action and btn in self._mouse_pressed:
+                return True
+        # Movimiento con ratón: mantener pulsado botón izq + drag mueve?
+        # No: movimiento sólo por teclado/flechas/stick
+        return False
+
+    def _mouse_action_held(self, action: Action) -> bool:
+        for btn, act in self._mouse_map.items():
+            if act == action and btn in self._mouse_held:
+                return True
+        return False
+
+    def _mouse_action_released(self, action: Action) -> bool:
+        for btn, act in self._mouse_map.items():
+            if act == action and btn in self._mouse_released:
+                return True
+        return False
+
+    @property
+    def mouse_pos(self) -> tuple[int, int]:
+        return self._mouse_pos
 
     def is_action_pressed(self, action: Action) -> bool:
         return self.is_action_just_pressed(action)
@@ -214,6 +272,8 @@ class InputManager:
             return action in self._conmutadas
         keys = self._bindings.get(action, [])
         if any(k in self._held for k in keys):
+            return True
+        if self._mouse_action_held(action):
             return True
         return self._action_held_from_controller(action)
 
@@ -252,6 +312,8 @@ class InputManager:
         """True only on the frame the action's key was released."""
         keys = self._bindings.get(action, [])
         if any(k in self._released_this_frame for k in keys):
+            return True
+        if self._mouse_action_released(action):
             return True
         return self._action_released_from_controller(action)
 
@@ -367,6 +429,13 @@ class InputManager:
             return self._axis_edge_up or self._hat_edge_up
         if action == Action.MOVE_DOWN:
             return self._axis_edge_down or self._hat_edge_down
+        # Triggers como DASH/BULLET_TIME también como just_pressed si cruzan 0.5
+        if action == Action.DASH and self._joystick is not None:
+            try:
+                if self._joystick.get_axis(4) > 0.5 or self._joystick.get_axis(5) > 0.5:
+                    return True
+            except Exception:
+                pass
         if action == Action.JUMP:
             btn = next((b for b, a in _CONTROLLER_BUTTON_MAP.items() if a == Action.JUMP), None)
             return btn is not None and (btn in self._controller_buttons_pressed or self._controller_axis_up)
@@ -390,6 +459,18 @@ class InputManager:
             return self._controller_axis_down or self._hat_held_down
         if action == Action.CROUCH:
             return self._controller_axis_down
+        if action == Action.DASH and self._joystick is not None:
+            try:
+                if self._joystick.get_axis(4) > 0.5 or self._joystick.get_axis(5) > 0.5:
+                    return True
+            except Exception:
+                pass
+        if action == Action.BULLET_TIME and self._joystick is not None:
+            try:
+                if self._joystick.get_axis(4) > 0.5 or self._joystick.get_axis(5) > 0.5:
+                    return True
+            except Exception:
+                pass
         btn = next((b for b, a in _CONTROLLER_BUTTON_MAP.items() if a == action), None)
         if btn is not None:
             return btn in self._controller_buttons_held
