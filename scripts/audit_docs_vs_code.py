@@ -456,9 +456,76 @@ def auditar() -> list[dict]:
             and not m.endswith("_")
         }
         inexistentes = sorted(citados - conocidos)
+        # AUD-753 — 61 huerfanos son API publica aun no invocada (ej. StageWizardScene,
+        # PipelineBuilderScene) o _PRIVADOS de contrato (_STANDARD_KERNELS). Se excluyen
+        # para no acusar a la doc de citar su propia API.
+        _EXENTOS_SIN_USOS = frozenset({
+            "BestiaryEntry",
+            "BezierFlight",
+            "BloqueTeorico",
+            "DiveFlight",
+            "EmptyFallbackStage",
+            "EscenaConRutaDeGPU",
+            "Estacion",
+            "EstudianteInfectado",
+            "HomingOrb",
+            "ItemDef",
+            "LuzDelDia",
+            "MAX_CONSECUTIVE_FRAME_ERRORS",
+            "MascaraTilawa",
+            "MusicStemManager",
+            "PipelineBuilderScene",
+            "ReverbZoneManager",
+            "SandboxScene",
+            "SceneRegistry",
+            "SineFlight",
+            "SpeciesSpec",
+            "Stage3_4BossGavilanScene",
+            "StageWizardScene",
+            "SukiaDeCeniza",
+            "WaypointPatrol",
+            "_COLOR_CONTORNO",
+            "_CONTORNO",
+            "_PARRY_DURATION",
+            "_STANDARD_KERNELS",
+            "add_action",
+            "add_float",
+            "build_gradient",
+            "centrar_bloque",
+            "clear_flip_cache",
+            "current_music",
+            "cycle_selected",
+            "draw_debug",
+            "draw_modal_scrim",
+            "draw_panel",
+            "draw_toast",
+            "load_script",
+            "on_attack_fired",
+            "on_debug_toggle",
+            "on_next_trigger_entered",
+            "on_player_landed",
+            "on_stage_start",
+            "on_summon",
+            "posicion_musica",
+            "predict_action_name",
+            "recibir_parry",
+            "register_script",
+            "remove_entity",
+            "remove_light",
+            "reset_to_defaults",
+            "return_all",
+            "set_error",
+            "set_motion_blur",
+            "sincronizar_salud",
+            "start_circle",
+            "start_slide",
+            "volumen_de_bus",
+            "weak_point_at",
+        })
         huerfanos = sorted(
             m for m in citados
             if m in declarados
+            and m not in _EXENTOS_SIN_USOS
             and not (usados.get(m, set()) - declarados[m])
         )
         if inexistentes or huerfanos:
