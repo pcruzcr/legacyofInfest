@@ -24,6 +24,7 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 import pytest
 
+from src.engine.core import settings as _settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.game_context import GameContext
 from src.engine.core.save_manager import SaveManager
@@ -31,7 +32,6 @@ from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework.entities import entity_factory
 
-from src.engine.core import settings as _settings
 INTERNAL_SIZE = (_settings.INTERNAL_WIDTH, _settings.INTERNAL_HEIGHT)
 FRAMES = 10
 DT = 1.0 / 60.0

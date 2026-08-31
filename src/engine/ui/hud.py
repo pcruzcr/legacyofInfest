@@ -1107,7 +1107,9 @@ class HUD:
                 # Centrar
                 off_x = (aw - pw) // 2
                 off_y = (ah - ph) // 2
-                surface.blit(anim_portrait, (self._portrait_sprite_rect.x - off_x, self._portrait_sprite_rect.y - off_y))
+                px = self._portrait_sprite_rect.x - off_x
+                py = self._portrait_sprite_rect.y - off_y
+                surface.blit(anim_portrait, (px, py))
             else:
                 surface.blit(portrait, self._portrait_sprite_rect)
         else:

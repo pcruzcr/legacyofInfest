@@ -421,6 +421,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **101** tipos.
+Total aceptado en `Objects`: **104** tipos.
 
 <!-- END GENERATED: tipos de objeto -->
