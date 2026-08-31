@@ -905,8 +905,8 @@ de la cola de eventos pygame antes de cada test.
 |---|---|
 | Núcleo | 800×600 @60 FPS; 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
 | ECS | Bajo la herencia; 20 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
-| Jugador | 28 estados; 5.0 HP; combate completo; arco; estamina opt-in |
-| Enemigos | 65 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
+| Jugador | 30 estados; 5.0 HP; combate completo; arco; estamina opt-in |
+| Enemigos | 65 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 15 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |
 | TMX | 50 tipos del framework + 65 de entidades, más `Solid`/`Platform` en `Collision` (115 declarables; ver §7.3); 18 propiedades; 8 capas |
 | Mecánicas F5 | 11/11 en el motor (stage_mecanicas las enseña) |

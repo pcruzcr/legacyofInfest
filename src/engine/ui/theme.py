@@ -122,10 +122,18 @@ class Theme:
 #: y los espaciados: la relación entre la maqueta y la pantalla es de todos, y
 #: tenerla en el HUD obligaba a los demás a importar del HUD para colocarse.
 ANCHO_DE_DISENO: Final[int] = 320
+ALTO_DE_DISENO: Final[int] = 240  # 4:3 base (320×240) — para 16:9 se usa min()
 
 #: La escala vigente. Se resuelve al importar porque la resolución interna es
 #: una constante del motor, no una preferencia que cambie en caliente.
-ESCALA_DE_INTERFAZ: Final[float] = settings.INTERNAL_WIDTH / ANCHO_DE_DISENO
+#: AUD 1280×720 — proporcional: usar min(width_scale, height_scale) para no
+#: estirar el HUD en pantallas anchas (16:9). Antes solo width → HUD se veía
+#: "sanchado" (ancho 4.0 vs alto 3.0). Con min, HUD es cuadrado y cabe en ambas
+#: dimensiones; a 800×600 da 2.5× (igual que antes), a 1280×720 da 3.0×.
+ESCALA_DE_INTERFAZ: Final[float] = min(
+    settings.INTERNAL_WIDTH / ANCHO_DE_DISENO,
+    settings.INTERNAL_HEIGHT / ALTO_DE_DISENO,
+)
 
 
 def escalar(valor: int | float) -> int:

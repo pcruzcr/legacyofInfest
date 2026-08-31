@@ -318,7 +318,7 @@ Medido ejecutando el motor, no leyendo documentación.
 
 ### 9.1 Jugador — completo
 
-**28 estados en el enum, 28 con clase instanciable.** Ninguno huérfano.
+**30 estados en el enum, 28 con clase instanciable.** Ninguno huérfano.
 
 > **Corrección de método.** La primera pasada de esta auditoría dio tres
 > estados «sin clase» —`CHARGE_ATTACK`, `CLIMBING`, `ZIPLINE`— y era **falso**:
@@ -330,7 +330,7 @@ Medido ejecutando el motor, no leyendo documentación.
 
 ### 9.2 Enemigos — completo
 
-13 estados de IA, 8 arquetipos, 21 especies con nombre. Sprites por **zona**
+15 estados de IA, 8 arquetipos, 21 especies con nombre. Sprites por **zona**
 —`enemy_zone{N}_walk/hurt/die/fly/shoot/aim/fire`, 7 ficheros por zona × 3
 zonas— que es como los carga `_load_zone_sprites`. IA de pelotón con
 scikit-learn y predictor de trayectoria, los dos presentes.
@@ -2032,7 +2032,7 @@ abrirlas exige volver a medir, no volver a opinar.
   concreta, esto es refactor por refactor. De paso, la cifra: son **27 clases**
   en `entities/states/`, y `AirborneState` es base de `JumpingState` y
   `FallingState` en vez de un estado en el que se pueda estar — de ahí los
-  **28 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
+  **30 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
   son correctos y cuentan cosas distintas; la lista del dueño dice 29, que no
   sale de ninguna de las dos cuentas.
 * **«Definir arquitectura definitiva, límites entre módulos»** — definir

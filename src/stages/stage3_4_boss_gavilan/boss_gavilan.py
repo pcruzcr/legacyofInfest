@@ -12,6 +12,7 @@ import math
 
 import pygame
 
+from src.engine.core.events import Events
 from src.engine.utils.math_utils import vec2_distance, vec2_normalize
 from src.framework.entities.boss_base import BossBase, BossPhase
 
@@ -19,6 +20,10 @@ from src.framework.entities.boss_base import BossBase, BossPhase
 class BossGavilan(BossBase):
     ORBIT_RADIUS = 80.0
     ORBIT_SPEED = 0.6  # rad/s — 17_BOSS_SPEC.md §5.3, Phase 1
+    # GAME-100: telegraph para grade + feedback
+    _telegraph = ""
+    _telegraph_timer = 0.0
+    TELEGRAPH_DURATION = 0.4
 
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         super().__init__(
@@ -38,10 +43,17 @@ class BossGavilan(BossBase):
         self.set_phases([
             BossPhase(
                 phase_index=0,
-                health_threshold=0.0,
-                attack_patterns=[],
+                health_threshold=10.0,
+                attack_patterns=["DIVE", "FEATHER_STORM"],
                 movement_type="orbit",
                 speed_multiplier=1.0,
+            ),
+            BossPhase(
+                phase_index=1,
+                health_threshold=5.0,
+                attack_patterns=["DIVE", "FEATHER_STORM", "ORBIT_SHRINK"],
+                movement_type="orbit",
+                speed_multiplier=1.4,
             ),
         ])
         self.on_enter_stage()
@@ -54,6 +66,36 @@ class BossGavilan(BossBase):
 
     def _alert_behavior(self, dt: float) -> None:
         self._update_orbit(dt)
+        if self._telegraph:
+            self._telegraph_timer -= dt
+            if self._telegraph_timer <= 0:
+                self._execute_telegraphed_attack()
+                self._telegraph = ""
+            return
+        self._check_phase_transition()
+
+    def _check_phase_transition(self) -> None:
+        """phase transition con hp_threshold."""
+        if self.current_phase == 0 and self.current_health <= 7.0:
+            if self._event_bus:
+                self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
+
+    def _execute_telegraphed_attack(self) -> None:
+        if self._telegraph == "DIVE":
+            self._do_dive()
+        elif self._telegraph == "FEATHER_STORM":
+            self._do_feather_storm()
+
+    def _do_dive(self) -> None:
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="DIVE", rect=self.rect)
+        self._event_bus.emit(Events.PLAYER_DAMAGED, amount=0.5)
+
+    def _do_feather_storm(self) -> None:
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="FEATHER_STORM", rect=self.rect)
+
+    def _do_orbit_shrink(self) -> None:
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="ORBIT_SHRINK", rect=self.rect)
 
     def _update_orbit(self, dt: float) -> None:
         self._orbit_angle += self.ORBIT_SPEED * dt

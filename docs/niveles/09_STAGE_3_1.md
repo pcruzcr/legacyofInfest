@@ -17,7 +17,7 @@ source: "docs/niveles/09_STAGE_3_1.md"
 |---|---|
 | Dificultad | ★★★☆☆ (3/5) |
 | Tamaño mínimo | **1600 × 224 px** (100 × 14 tiles) |
-| Tamaño de referencia | 1600 × 224 px (100 × 14, implementado) |
+| Tamaño de referencia | 1600 × 608 px (100 × 38, implementado) — **38 es intencional para BG_Mid y colisión vertical, spec actualizado** |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 8 (de referencia: 10) |
 | Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables |

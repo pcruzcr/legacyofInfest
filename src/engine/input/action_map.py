@@ -101,8 +101,12 @@ DEFAULT_KEY_BINDINGS: dict[Action, list[int]] = {
     Action.BULLET_TIME: [pygame.K_q, pygame.K_r],
     # AUD-555 — coma/punto: el par convencional de "anterior/siguiente" en
     # muchos juegos, y ninguna de las dos teclas está tomada por otra acción.
-    Action.TAB_PREV: [pygame.K_COMMA],
-    Action.TAB_NEXT: [pygame.K_PERIOD],
+    # Ampliado para 1280×720@120: Q/E y LB/RB son los gatillos Ocarina
+    # (izq/der) que el jugador espera; LEFT/RIGHT quedan para la pestaña
+    # interna (inventario) pero también deben cambiar pestaña cuando no hay
+    # foco interno — se resuelve en pausa.py vía fallback.
+    Action.TAB_PREV: [pygame.K_COMMA, pygame.K_q, pygame.K_LEFTBRACKET],
+    Action.TAB_NEXT: [pygame.K_PERIOD, pygame.K_e, pygame.K_RIGHTBRACKET],
 }
 
 # Controller axis/deadzone constants

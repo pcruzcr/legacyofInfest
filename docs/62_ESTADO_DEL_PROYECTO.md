@@ -61,7 +61,7 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Enemigos y jefes
 
-* **65 tipos registrados** sobre ocho arquetipos base (22 clases + 35 especies del bestiario + 10 nuevas Ceibo/Cerbatana/Hormiga etc., varios jefes), con **13 estados** incluido
+* **65 tipos registrados** sobre ocho arquetipos base (22 clases + 35 especies del bestiario + 10 nuevas Ceibo/Cerbatana/Hormiga etc., varios jefes), con **15 estados** incluido
   `TELEGRAPHING`.
 * **Cerebro de escuadrón** con scikit-learn: predicción por lote, cadencia
   limitada y escalonada. Medido: 9 filas cuestan 1,82 ms en lote contra 11,87
@@ -329,7 +329,7 @@ ningún software vivo. El techo realista por categoría está en
 |---|---|---|---|
 | Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.277 líneas | — |
 | Jugador | 30 estados | — | — |
-| Enemigos | 65 tipos, 13 estados, IA por lote | tipos sin usar en ningún mapa: 13 (BossSpawn indirecto + 10 especies nuevas sin mapa) | — |
+| Enemigos | 65 tipos, 15 estados, IA por lote | tipos sin usar en ningún mapa: 13 (BossSpawn indirecto + 10 especies nuevas sin mapa) | — |
 | Jefes | fases, telegrafiado, puntos débiles | variedad entre jefes | — |
 | Escenarios | 115 tipos TMX en runtime (101 base), 11 mecánicas | stage 0 usa 4 de 11 | — |
 | Gráficos | luz, clima, VFX, post-procesado | atlas, batching, post en GPU | 2.5D |

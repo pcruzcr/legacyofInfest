@@ -35,7 +35,7 @@ date_processed: "2026-08-26"
 **Alcance:** bucle principal, tres relojes, composición de escalas de tiempo, tope de fotograma, bus de eventos, contenedor de escenas, ECS base, componente-como-vista.
 
 **Evidencia:**
-- `pytest tests/test_player_physics.py -v` → 28 estados jugador, salto 72 px
+- `pytest tests/test_player_physics.py -v` → 30 estados jugador, salto 72 px
 - `pytest tests/test_resolucion_de_movimiento.py -v` → resolutor compartido
 - `mypy src/engine/core src/engine/input src/engine/scene` → limpio
 - `ruff check src/engine/ src/framework/ tests/` → limpio

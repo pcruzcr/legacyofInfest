@@ -71,6 +71,12 @@ def ensure_registered() -> None:
         return
 
     from src.stages.boss_venado.boss_venado import BossVenado
+    # Stage 2-1 custom entities — needed for src/stages TMX at 1280×720 (verified)
+    try:
+        from src.stages.stage2_1_oficinas.dron04 import Dron04
+        from src.stages.stage2_1_oficinas.office_enemies import BruteOficinas, ChargerOficinas
+    except Exception:
+        Dron04 = BruteOficinas = ChargerOficinas = None  # type: ignore
 
     _ENTITY_REGISTRY: dict[str, type[EnemyBase]] = {
         "Walker": EnemyWalker,
@@ -99,6 +105,13 @@ def ensure_registered() -> None:
         "BuddyExpresso": BuddyExpresso,
         "BuddyEnguarde": BuddyEnguarde,
     }
+    # Custom stage entities (loaded lazily — only if import succeeded)
+    if Dron04 is not None:
+        _ENTITY_REGISTRY["Dron04"] = Dron04  # type: ignore
+    if ChargerOficinas is not None:
+        _ENTITY_REGISTRY["ChargerOficinas"] = ChargerOficinas  # type: ignore
+    if BruteOficinas is not None:
+        _ENTITY_REGISTRY["BruteOficinas"] = BruteOficinas  # type: ignore
 
     for type_name, entity_class in _ENTITY_REGISTRY.items():
         StageLoader.register_entity(type_name, entity_class)

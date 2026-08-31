@@ -31,7 +31,8 @@ from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework.entities import entity_factory
 
-INTERNAL_SIZE = (800, 600)
+from src.engine.core import settings as _settings
+INTERNAL_SIZE = (_settings.INTERNAL_WIDTH, _settings.INTERNAL_HEIGHT)
 FRAMES = 10
 DT = 1.0 / 60.0
 #: Pantallas legítimas dibujan poco (créditos de texto fino centrado rondan

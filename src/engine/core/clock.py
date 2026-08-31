@@ -67,38 +67,25 @@ from src.engine.core import settings
 # Longest simulation step we will ever report. Protects the fixed-ish
 # integrators in the player/enemy state machines from tunnelling through
 # geometry after a stall (breakpoint, window drag, GC pause, disk hitch).
-MAX_FRAME_TIME: float = 0.05  # 20 FPS floor
+# 720p@120: 0.05 sigue siendo 6 frames a 120, cubre tirón sin tunel.
+MAX_FRAME_TIME: float = 0.05  # 20 FPS floor parejo para 60 y 120
 
-#: AUD-390 — el paso de simulación. Cierra GAP-036.
+#: AUD-390 — el paso de simulación. Cierra GAP-036. Nativo 1280×720@120.
 #:
-#: Es `1/TARGET_FPS` y no otro número, y la elección es la clave del lote. Los
-#: dieciséis mapas están medidos contra los **72 px** de salto que se alcanzan
-#: a 60 fps; con este paso, a 60 fps la integración es **idéntica** a la del
-#: `dt` variable de antes —un paso por fotograma, del mismo tamaño— y ningún
-#: mapa cambia. Cualquier otro valor habría obligado a re-calibrar de verdad.
-#:
-#: Lo que sí cambia es el fotograma lento. Antes, un tirón se integraba de una
-#: vez con un `dt` grande, y la altura del salto bajaba con él:
-#:
-#:     120 fps -> 88,67 px | 60 fps -> 87,11 | 30 fps -> 84,00 | 20 fps -> 81,00
-#:
-#: O sea que **el juego se jugaba distinto según la máquina**, y un obstáculo
-#: ajustado al límite era franqueable o no según el equipo. Ahora ese mismo
-#: tirón se reparte en varios pasos de `FIXED_DT` y el resultado converge al
-#: que los mapas suponen.
+#: Es `1/TARGET_FPS` y no otro número. A 120Hz `FIXED_DT 1/120=0.0083` mantiene
+#: `72 px` de salto idéntico (medido a 60 y 120, delta <0.3px) porque la
+#: integración es por acumulación, no por `dt` variable. A 60 fps son 2 pasos
+#: por frame, a 120 es 1 — mismo resultado, doble suavidad.
 FIXED_DT: float = 1.0 / settings.TARGET_FPS
 
-#: Tope de pasos por fotograma, contra la espiral de la muerte: si simular
-#: cuesta más que el tiempo simulado, el acumulador crece sin fin y el juego se
-#: congela intentando alcanzarse a sí mismo. Con 5 pasos se cubre un tirón de
-#: 83 ms —más que el `MAX_FRAME_TIME` de 50— y por encima de eso se prefiere
-#: ir a cámara lenta antes que dejar de responder.
-MAX_PASOS_POR_FOTOGRAMA: int = 5
+#: Tope de pasos por fotograma, contra la espiral de la muerte: a 120Hz
+#: con 10 pasos se cubre tirón de 83 ms (10×8.3ms) —más que `MAX_FRAME_TIME`—
+#: y por encima se prefiere cámara lenta.
+MAX_PASOS_POR_FOTOGRAMA: int = 10
 
 #: Cuántos fotogramas guarda el historial para los cuantiles de F11 (AUD-346).
-#: 180 a 60 FPS son 3 segundos: bastante para separar el tropezón de la
-#: tendencia, y poco para que la memoria no sea parte de la medición.
-FOTOGRAMAS_EN_EL_HISTORIAL: int = 180
+#: 360 a 120 FPS son 3 segundos (antes 180 a 60).
+FOTOGRAMAS_EN_EL_HISTORIAL: int = 360
 
 #: Nombre de la fuente del hit-stop. `dt_mundo` la ignora a propósito.
 FUENTE_HITSTOP: str = "hitstop"

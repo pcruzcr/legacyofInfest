@@ -821,7 +821,7 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 65 tipos y 13 estados
+## 6. Enemigos: 65 tipos y 15 estados
 
 ### Los ocho arquetipos base
 

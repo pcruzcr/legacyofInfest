@@ -184,12 +184,14 @@ class App:
         if self._use_gl:
             try:
                 import moderngl  # noqa: F401
+                # Nativo 1280×720@120 con vsync para no tearing a 120Hz
                 pygame.display.set_mode(
                     (
                         settings.INTERNAL_WIDTH * settings.DISPLAY_SCALE,
                         settings.INTERNAL_HEIGHT * settings.DISPLAY_SCALE,
                     ),
                     pygame.OPENGL | pygame.DOUBLEBUF,
+                    vsync=1,
                 )
             # `(ImportError, pygame.error, Exception)` was redundant — Exception
             # subsumes both — and swallowed genuine GL bugs as "not available".
@@ -281,19 +283,14 @@ class App:
                          exc_info=True)
 
     def _abrir_ventana_software(self) -> None:
-        # AUD-460 — la ventana se crea al tamaño REAL que se quiere, sin la
-        # bandera de escalado automático de SDL: esa bandera delega en SDL el
-        # tamaño del marco y cada plataforma lo interpreta a su manera —en
-        # unas agranda la ventana hasta el escritorio, en otras la deja como
-        # está—, así que la pantalla no medía lo que `settings` promete. Aquí
-        # la medida es exacta: interior × `DISPLAY_SCALE`, y `_draw` escala
-        # el blit con `_publicar_software`.
+        # Nativo 1280×720@120 — vsync evita tearing a 120Hz
         escala = settings.DISPLAY_SCALE
         pygame.display.set_mode(
             (
                 settings.INTERNAL_WIDTH * escala,
                 settings.INTERNAL_HEIGHT * escala,
             ),
+            vsync=1,
         )
 
     def _init_gl(self) -> None:

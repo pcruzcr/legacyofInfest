@@ -8,9 +8,9 @@ import os
 from pathlib import Path
 from typing import Final
 
-INTERNAL_WIDTH: int = 800
-INTERNAL_HEIGHT: int = 600
-TARGET_FPS: int = 60
+INTERNAL_WIDTH: int = 1280
+INTERNAL_HEIGHT: int = 720
+TARGET_FPS: int = 120  # nativo 720p@120 — ver clock.py FIXED_DT
 # Window upscale factor. AUD-460: the window is really created at
 # interior × DISPLAY_SCALE and the frame blit is scaled to it
 # (`App._publicar_software`); before that the factor was only a promise.
@@ -104,22 +104,8 @@ PLAYER_COOLDOWN_LONG: float = 0.067
 BG_COLOR: tuple[int, int, int] = (15, 15, 40)
 
 #: Píxeles más allá del encuadre que se siguen simulando y dibujando (AUD-279).
-#:
-#: Una pantalla entera por lado. El primer valor que probé fue 400 —el doble de
-#: los 360 px que recorre como mucho un `Projectile`, 120 px/s durante 3 s— y
-#: **rompió stage 0**: el mapa mide 1.600 px y cuatro de sus nueve enemigos
-#: quedaban fuera de la zona con la cámara en el arranque, así que
-#: `test_every_enemy_in_stage0_moves` los encontró convertidos en estatuas.
-#:
-#: 800 mantiene el mapa de referencia —el que copian los estudiantes— con el
-#: comportamiento exacto que tenía antes de AUD-279, y sigue sobrando sobre el
-#: alcance de cualquier proyectil. Bajarlo hace visible el congelado; subirlo lo
-#: vuelve inútil.
-#:
-#: **Cero lo apaga entero.** Está para cuando alguien sospeche que el culling le
-#: está escondiendo un fallo, que es la primera pregunta razonable ante un
-#: enemigo que no se mueve. El porqué completo, en `framework/stage/culling.py`.
-CULLING_MARGEN: int = 800
+#: Nativo 720p: 1280 es una pantalla entera a 1280×720 (antes 800 para 800×600, 1920 para 1080p).
+CULLING_MARGEN: int = 1280
 
 #: ¿Una entidad que lanza en `update()` se lleva por delante el fotograma? (AUD-289)
 #:

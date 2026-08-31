@@ -28,16 +28,42 @@ class HUDBuilder:
         self.hud = hud
 
     def build_layout(self) -> HUDBuilder:
+        from src.engine.core import settings
+
+        h = self.hud
+        # PS4 1280×720 — layout real, no estirado: izquierda retrato/barras,
+        # centro puntos/exp/moneda/tiempo, derecha minimapa. A 1280 usamos
+        # coordenadas absolutas modernas; a otras resoluciones fallback escalado.
+        if settings.INTERNAL_WIDTH == 1280 and settings.INTERNAL_HEIGHT == 720:
+            # PS4 1280×720 — moderno, sin estirar: izquierda retrato 96, centro 560, derecha minimapa 192
+            MARGEN = 24
+            # Izquierda: retrato 96×96 circular + barras 96×16 apiladas (más grande, no extraño)
+            h._portrait_frame_rect = pygame.Rect(MARGEN, MARGEN, 96, 96)  # type: ignore[attr-defined]
+            h._portrait_sprite_rect = pygame.Rect(MARGEN + 4, MARGEN + 4, 88, 88)  # type: ignore[attr-defined]
+            ancho = 96
+            x = MARGEN
+            y_barras = h._portrait_frame_rect.bottom + 14  # type: ignore[attr-defined]
+            alto = 16
+            paso = 24
+            h._y_barras_bloque = y_barras  # type: ignore[attr-defined]
+            h._paso_barra_bloque = paso  # type: ignore[attr-defined]
+            h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)  # type: ignore[attr-defined]
+            h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)  # type: ignore[attr-defined]
+            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
+            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+            # Centro: panel 560×64 centrado (640-280,16) para tiempo/puntos/exp/moneda — más ancho, no cortado
+            cx = settings.INTERNAL_WIDTH // 2
+            h._score_region = pygame.Rect(cx - 280, MARGEN, 560, 64)  # type: ignore[attr-defined]
+            h._timer_bg_rect = pygame.Rect(cx - 260, MARGEN + 10, 160, 44)  # type: ignore[attr-defined]
+            h._timer_icon_rect = pygame.Rect(cx - 252, MARGEN + 18, 28, 28)  # type: ignore[attr-defined]
+            h._timer_rect = pygame.Rect(cx - 218, MARGEN + 18, 120, 28)  # type: ignore[attr-defined]
+            return self
+        # Fallback 800×600 y otros: escalado clásico 320→
         from src.engine.ui.hud import _rect_escalado
 
         MARGEN = 6
-        h = self.hud
-        # AUD-729: mypy no ve que HUD declare estos atributos — los crea el
-        # Builder dinámicamente. type: ignore es correcto aquí: el Director
-        # (HUD) garantiza que build_layout() se llame antes de cualquier uso.
         h._portrait_frame_rect = _rect_escalado(MARGEN, MARGEN, 24, 24)  # type: ignore[attr-defined]
         h._portrait_sprite_rect = _rect_escalado(MARGEN + 1, MARGEN + 1, 22, 22)  # type: ignore[attr-defined]
-        # barras apiladas bajo retrato
         from src.engine.ui.hud import _e
         ancho = h._portrait_frame_rect.width  # type: ignore[attr-defined]
         x = h._portrait_frame_rect.x  # type: ignore[attr-defined]

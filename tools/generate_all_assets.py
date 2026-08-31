@@ -27,7 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 A = PROJECT_ROOT / "assets"
 
-W, H = 800, 600
+W, H = 1280, 720
 SAMPLE_RATE = 22050
 random.seed(42)
 

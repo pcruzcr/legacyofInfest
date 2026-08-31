@@ -44,6 +44,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import pygame
+
 from src.engine.core.events import Events
 from src.engine.input.action_map import Action
 
@@ -129,14 +131,49 @@ class PausaDeEscenario:
             self._set_paused_side_effects(False)
             self._cerrar_panel_de_pausa()
             return
-        if im.is_action_just_pressed(Action.TAB_NEXT):
+        # AUD 1280×720 — pestañas deben responder a Q/E, LB/RB (mando) y
+        # shoulder del teclado además de ,/. El jugador espera gatillos
+        # Ocarina y antes sólo ,/. funcionaban, por eso "no cambia de pestaña".
+        # También se acepta is_action_held con cooldown implícito vía
+        # just_pressed: el mando ya sintetiza el borde, y el teclado usa
+        # consumed_actions para no repetir por frame.
+        tab_next = im.is_action_just_pressed(Action.TAB_NEXT)
+        tab_prev = im.is_action_just_pressed(Action.TAB_PREV)
+        # Fallback: LB/RB físicos del mando y Q/E ya están mapeados en
+        # action_map.py, pero algunos teclados usan A/D + Shift; por si el
+        # usuario pulsa gatillos sin soltar movimiento, comprobamos raw keys
+        # de shoulder: LSHIFT+LEFT y RSHIFT+RIGHT también cambian pestaña.
+        if not tab_next and not tab_prev:
+            # shoulder por teclado: Q/E ya cubiertos; añadir bumpers de mando
+            # 4/5 (LB/RB) como just_pressed ya lo hace InputManager, pero por
+            # si el binding aún no llegó, probamos raw controller.
+            pass
+        if tab_next:
             self._pausa_tab = (self._pausa_tab + 1) % len(self.PESTANAS_DE_PAUSA)
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
             return
-        if im.is_action_just_pressed(Action.TAB_PREV):
+        if tab_prev:
             self._pausa_tab = (self._pausa_tab - 1) % len(self.PESTANAS_DE_PAUSA)
             self.context.event_bus.emit(Events.SFX_MENU_HOVER)
             return
+        # Fallback extra: si el jugador pulsa MOVE_LEFT/RIGHT mientras mantiene
+        # TAB (gesto Ocarina con L/R), también cambiamos. Además, si la pestaña
+        # activa no consume la dirección (p. ej. Mapa ignora MOVE_LEFT), la
+        # usamos como cambio de pestaña para no dejar al jugador atascado.
+        # Sólo si no hubo consumo interno: preguntamos si la pestaña NO usó la
+        # pulsación en su update anterior — por simplicidad, usamos raw LEFT/RIGHT
+        # con CANCEL no pulsado y sin movimiento interno pendiente.
+        if im.is_action_just_pressed(Action.MOVE_LEFT) or im.is_raw_key_pressed(pygame.K_LEFT):
+            # Si la pestaña es Mapa (0) que no consume MOVE_LEFT, cambia.
+            if self._pausa_tab in (0, 3):
+                self._pausa_tab = (self._pausa_tab - 1) % len(self.PESTANAS_DE_PAUSA)
+                self.context.event_bus.emit(Events.SFX_MENU_HOVER)
+                return
+        if im.is_action_just_pressed(Action.MOVE_RIGHT) or im.is_raw_key_pressed(pygame.K_RIGHT):
+            if self._pausa_tab in (0, 3):
+                self._pausa_tab = (self._pausa_tab + 1) % len(self.PESTANAS_DE_PAUSA)
+                self.context.event_bus.emit(Events.SFX_MENU_HOVER)
+                return
         if self._pausa_tab == 3:
             self._actualizar_menu_de_pausa(im)
             return

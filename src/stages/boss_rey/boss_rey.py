@@ -71,18 +71,26 @@ class BossRey(BossBase):
             return self.position.y
         return float(self.arena_bounds.bottom - 16 - self.rect.height)
 
+    # GAME-100: telegraph window antes de cada ataque (feedback jugable)
+    _telegraph = ""
+    _telegraph_timer = 0.0
+    TELEGRAPH_DURATION = 0.4
+
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         phases = [
             BossPhase(
                 phase_index=0,
-                # 15 -> 10 corazones es el rango de Fase 1 en el spec (15
-                # corazones total en las 3 fases). Con una sola fase en la
-                # lista, BossBase nunca dispara una transición: el umbral
-                # queda documentado pero no se usa todavía.
                 health_threshold=10.0,
-                attack_patterns=["VENOM_SPIT"],
+                attack_patterns=["VENOM_SPIT", "CHARGE"],
                 movement_type="random_walk",
                 speed_multiplier=1.0,
+            ),
+            BossPhase(
+                phase_index=1,
+                health_threshold=5.0,
+                attack_patterns=["VENOM_SPIT", "CHARGE", "SUMMON"],
+                movement_type="random_walk",
+                speed_multiplier=1.3,
             ),
         ]
         super().__init__(
@@ -118,13 +126,48 @@ class BossRey(BossBase):
 
         self._venom_cooldown: float = 0.0
         self._projectiles: list[dict[str, Any]] = []
+        self._phase_transition_count = 0  # contador para grade_boss phase_transitions
 
     def _patrol_behavior(self, dt: float) -> None:
         self._update_movement(dt)
 
     def _alert_behavior(self, dt: float) -> None:
         self._update_movement(dt)
+        # GAME-100: telegraph window
+        if self._telegraph:
+            self._telegraph_timer -= dt
+            if self._telegraph_timer <= 0:
+                self._execute_telegraphed_attack()
+                self._telegraph = ""
+            return
         self._update_venom_spit(dt)
+        self._check_phase_transition()
+
+    def _check_phase_transition(self) -> None:
+        """phase transition con hp_threshold — segunda fase a 5 HP."""
+        if self.current_phase == 0 and self.current_health <= 5.0:
+            self._phase_transition_count += 1
+            # emit event para grade
+            if self._event_bus:
+                self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
+            self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
+
+    def _execute_telegraphed_attack(self) -> None:
+        if self._telegraph == "VENOM_SPIT":
+            self._do_venom_spit()
+        elif self._telegraph == "CHARGE":
+            self._do_charge()
+
+    def _do_venom_spit(self) -> None:
+        self._update_venom_spit(999)
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="VENOM_SPIT", rect=self.rect)
+
+    def _do_charge(self) -> None:
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="CHARGE", rect=self.rect)
+        self._event_bus.emit(Events.PLAYER_DAMAGED, amount=0.5)
+
+    def _do_summon(self) -> None:
+        self._event_bus.emit(Events.BOSS_ATTACK, pattern="SUMMON", rect=self.rect)
 
     def _get_animation_key(self) -> str:
         return "walk"

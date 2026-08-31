@@ -388,6 +388,13 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         destino = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
         self._player.set_spawn(destino)
         self._player.set_health(pending.health)
+        # PS4 1280×720 — al cargar saved, el mapa ahora es 720 de alto (antes 608)
+        # y la cámara estaba en 0,0, así que el jugador aparecía muy abajo cortado.
+        # Snap para centrar la cámara en el checkpoint y no mostrar vacío.
+        try:
+            self._camera.snap_to_target()
+        except Exception:
+            pass
         # AUD-292 — y la experiencia. `exp_total` se guardaba desde AUD-267 y
         # **nadie la volvía a leer**: cargar una partida devolvía al jugador a
         # nivel 1 con sus puntos de habilidad a cero, que es la misma familia de

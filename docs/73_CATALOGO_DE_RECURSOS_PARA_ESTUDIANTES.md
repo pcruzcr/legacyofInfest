@@ -87,7 +87,7 @@ incoming/outgoing multipliers). Ataque corto/largo: 0,50/1,00 corazones, hitbox
 
 ## 2. Enemigos
 
-### 2.1. Los 13 estados de IA (`src/framework/entities/enemy_base.py:53`)
+### 2.1. Los 15 estados de IA (`src/framework/entities/enemy_base.py:53`)
 
 `IDLE`, `PATROL`, `SEARCH`, `ALERT`, `CHASE`, `TELEGRAPHING`, `FIRING`,
 `RECOVER`, `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
@@ -288,7 +288,7 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
    `MessageTrigger`(_Once); usar `Message` produce un error.
 <!-- /cita-historica -->
 7. **Conteos de la doc inconciliables**: `60` decía 78/37, `62` decía 104/54 (2026-08-30); el código tiene **106 tipos declarables** (50 + 54 + 2 collision, ver §3.1) y
-   28 estados de jugador (ver §1.1).
+   30 estados de jugador (ver §1.1).
 
 ---
 

@@ -162,11 +162,15 @@ def _objetos() -> list[str]:
         objective_id="tutorial_mundo", text="Cruza con cinta y plataforma",
         obligatorio=True)
 
-    # ── Sala 5: Jefe lite (telegrafía + castigo) ──
+    # ── Sala 5: Jefe lite (telegrafía + castigo) + sigilo introductorio ──
     x0 = 4 * SALA * TS
     obj("MessageTrigger_Once", x0 + 2 * TS, suelo_px - 64, 64, 48,
         text="Sala 5/5 — Jefe lite. El enemigo telegrafía (círculo rojo) 0.4s antes. "
              "Esquiva y castiga en RECOVER. Salta o dash.")
+    # AUD-GAME-01: enseñar sigilo ANTES de exigirlo en stage_mecanicas sala 6.
+    # Guard aislado con 1.5s de barrido lento = ver sin morir, probar esconderse.
+    obj("Guard", x0 + 8 * TS, suelo_px - 32, 16, 32, mira_x=1.0, mira_y=0.0,
+        alcance=96.0, semiangulo=30.0, barrido=30.0, velocidad_barrido=25.0)
     obj("Walker", x0 + 14 * TS, suelo_px - 28, 24, 28, max_health=2.0, damage_on_contact=0.5, patrol_length=64.0)
     obj("Shooter", x0 + 22 * TS, suelo_px - 28, 24, 28, max_health=2.0, fire_rate=0.8, projectile_speed=110.0)
     # Luz y parallax visibles en 2.5D

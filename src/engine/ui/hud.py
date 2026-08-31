@@ -249,10 +249,14 @@ RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 6, 44, 44)
 
 def minimap_rect_por_defecto() -> pygame.Rect:
     """`RECUADRO_MINIMAPA_DISENO` a la escala de la pantalla real."""
+    # PS4 1280×720 — minimapa derecha 192×192, tamaño real acorde, no sanchado
+    if settings.INTERNAL_WIDTH == 1280 and settings.INTERNAL_HEIGHT == 720:
+        return pygame.Rect(settings.INTERNAL_WIDTH - 216, 24, 192, 192)
     return _rect_escalado(*RECUADRO_MINIMAPA_DISENO)
 
 
-_PORTRAIT_STATES = ("normal", "hurt", "critical", "dead")
+_PORTRAIT_STATES = ("normal", "walk", "jump", "fall", "dash", "hurt", "critical", "dead")
+# PS4 moderno: retrato animado con 8 estados, 80×80, smooth, refleja todos los estados del player
 
 
 class HUD:
@@ -276,6 +280,10 @@ class HUD:
         self._save_notify_timer: float = 0.0
         #: AUD-281 — lo que queda del rebote del contador de monedas.
         self._pulso_timer: float = 0.0
+        # PS4 moderno: retrato animado que refleja todos los estados del player
+        self._portrait_anim_timer: float = 0.0
+        self._player_state_for_portrait: str = "normal"
+        self._player_velocity_for_portrait: float = 0.0
         # AUD-729: declaraciones para mypy — los rects los crea el Builder
         # dinámicamente. Sin estas anotaciones mypy cree que HUD no tiene esos
         # atributos y cada acceso es attr-defined. Se inicializan con dummy
@@ -732,6 +740,29 @@ class HUD:
             self._oxigeno_flash_on = False
             self._oxigeno_flash_timer = 0.0
 
+        # PS4 moderno: animación del retrato (respiración + reflejo de estado)
+        self._portrait_anim_timer += dt
+
+    def set_player_state(self, state_name: str, velocity_x: float = 0.0) -> None:
+        """PS4 moderno: el retrato refleja el estado real del player (walk/jump/fall/dash)."""
+        # Normalizar a 8 estados del retrato
+        s = state_name.lower() if state_name else "normal"
+        if "walk" in s or "run" in s:
+            self._player_state_for_portrait = "walk"
+        elif "jump" in s:
+            self._player_state_for_portrait = "jump"
+        elif "fall" in s:
+            self._player_state_for_portrait = "fall"
+        elif "dash" in s:
+            self._player_state_for_portrait = "dash"
+        elif "hurt" in s or "damage" in s:
+            self._player_state_for_portrait = "hurt"
+        elif "dead" in s or "dying" in s:
+            self._player_state_for_portrait = "dead"
+        else:
+            self._player_state_for_portrait = "normal"
+        self._player_velocity_for_portrait = abs(velocity_x)
+
     def _get_portrait_state(self) -> str:
         if self._health <= 0:
             return "dead"
@@ -739,6 +770,12 @@ class HUD:
             return "critical"
         if self._hurt_portrait_timer > 0:
             return "hurt"
+        # PS4: si el player está en movimiento, mostrar walk/jump/fall/dash
+        # Prioridad: hurt/critical/dead > dash > jump/fall > walk > normal
+        ps = getattr(self, "_player_state_for_portrait", "normal")
+        if ps in ("jump", "fall", "dash", "walk"):
+            # Solo si no está herido/crítico
+            return ps
         return "normal"
 
     def draw(self, surface: pygame.Surface) -> None:
@@ -1016,29 +1053,73 @@ class HUD:
         surface.blit(txt, (tx, ty))
 
     def _draw_portrait(self, surface: pygame.Surface) -> None:
-        """AUD-535 — "diseño circular o de bordes redondeados suaves":
-        el marco 9-slice rectangular se reemplaza por un disco de fondo,
-        el retrato recortado en círculo (`_recortar_circular`, una vez al
-        cargar) y un anillo — no una caja."""
+        """PS4 moderno — retrato circular 80×80, animado, refleja todos los estados.
+        Sin estirar: a 1280×720 es 80×80 real (no 24×4), con anillo, glow y respiración."""
         state = self._get_portrait_state()
-        portrait = self._portraits.get(state)
+        # Fallback a normal si el estado no tiene asset (walk/jump etc usan normal si falta)
+        portrait = self._portraits.get(state) or self._portraits.get("normal")
         r = self._portrait_frame_rect
         centro = r.center
         radio = r.width // 2
 
-        color_map = {"normal": (60, 60, 80), "hurt": (180, 60, 60),
-                     "critical": (200, 40, 40), "dead": (40, 40, 40)}
-        color_anillo = color_map.get(state, (60, 60, 80))
+        # PS4: paleta por estado, más viva y con degradado
+        color_map = {
+            "normal": (80, 100, 160), "walk": (70, 160, 110), "jump": (200, 180, 80),
+            "fall": (200, 120, 60), "dash": (90, 200, 220), "hurt": (200, 60, 60),
+            "critical": (220, 30, 30), "dead": (50, 50, 60),
+        }
+        color_anillo = color_map.get(state, (80, 100, 160))
 
-        pygame.draw.circle(surface, (14, 14, 22), centro, radio)
+        # Animación PS4: respiración sutil (escala 1.0→1.03) y pulso de hurt/critical
+        t = getattr(self, "_portrait_anim_timer", 0.0)
+        # Respiración base 1.5s
+        respiracion = 1.0 + 0.02 * math.sin(t * 4.2)
+        # Si está en dash/jump, pulso más rápido
+        if state in ("dash", "jump"):
+            respiracion += 0.015 * math.sin(t * 12)
+        if state in ("hurt", "critical") and int(t * 8) % 2 == 0:
+            # Parpadeo rojo al estar herido
+            color_anillo = (255, 60, 60) if state != "dead" else (60, 60, 60)
+
+        # Fondo con glow exterior (PS4: bloom suave)
+        # Sombra
+        sombra = pygame.Surface((r.width + 12, r.height + 12), pygame.SRCALPHA)
+        pygame.draw.circle(sombra, (0, 0, 0, 60), (r.width//2 + 6, r.height//2 + 6), radio)
+        surface.blit(sombra, (r.x - 6, r.y - 6), special_flags=pygame.BLEND_RGBA_SUB)
+        # Base
+        pygame.draw.circle(surface, (18, 18, 32), centro, radio)
+        # Glow exterior según estado
+        glow_surf = pygame.Surface((r.width + 16, r.height + 16), pygame.SRCALPHA)
+        glow_col = (*color_anillo, 35)
+        pygame.draw.circle(glow_surf, glow_col, (r.width//2 + 8, r.height//2 + 8), radio + 6, width=8)
+        surface.blit(glow_surf, (r.x - 8, r.y - 8), special_flags=pygame.BLEND_RGBA_ADD)
+
         if portrait:
-            surface.blit(portrait, self._portrait_sprite_rect)
+            # Animación: escalar levemente el retrato con respiración (smooth)
+            # Usamos smoothscale para alta calidad PS4, no nearest
+            pw, ph = portrait.get_size()
+            # Calcular tamaño animado
+            aw = max(1, int(pw * respiracion))
+            ah = max(1, int(ph * respiracion))
+            if aw != pw or ah != ph:
+                # Escalar con smooth para PS4
+                anim_portrait = pygame.transform.smoothscale(portrait, (aw, ah))
+                # Centrar
+                off_x = (aw - pw) // 2
+                off_y = (ah - ph) // 2
+                surface.blit(anim_portrait, (self._portrait_sprite_rect.x - off_x, self._portrait_sprite_rect.y - off_y))
+            else:
+                surface.blit(portrait, self._portrait_sprite_rect)
         else:
             pygame.draw.circle(surface, color_anillo, centro,
                                self._portrait_sprite_rect.width // 2)
 
-        anillo = _anillo_del_retrato(r.width, max(2, _e(1)), color_anillo)
+        anillo = _anillo_del_retrato(r.width, 3, color_anillo)
         surface.blit(anillo, r.topleft)
+        # Highlight superior (PS4: brillo)
+        highlight = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
+        pygame.draw.circle(highlight, (255, 255, 255, 18), (centro[0] - r.x, centro[1] - r.y - radio//3), radio//2)
+        surface.blit(highlight, r.topleft, special_flags=pygame.BLEND_RGBA_ADD)
 
     def _draw_barra_de_vida(self, surface: pygame.Surface) -> None:
         """AUD-535 — reemplaza la fila de corazones: "se eliminan los
