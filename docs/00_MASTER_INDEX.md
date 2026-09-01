@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 1 de septiembre de 2026 · **Documentos:** 118 en `docs/` (117 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
+**Fecha:** 1 de septiembre de 2026 · **Documentos:** 126 en `docs/` (125 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -31,9 +31,9 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 70 (el encabezado de arriba los cuenta). Se retiraron 35:
-auditorías cerradas, informes
-de fase, hojas de ruta cumplidas y registros de decisiones ya tomadas. No eran
+ficheros y hoy son 126 (el encabezado de arriba los cuenta). Se retiraron 35
+auditorías cerradas, informes de fase, hojas de ruta cumplidas y registros de
+decisiones ya tomadas, y se incorporaron 59 —incluyendo AUD-800 (8)—. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
 pruebas y símbolos que hace tiempo que no existen. Siguen en el historial de
 git si hace falta consultarlos.
@@ -206,6 +206,14 @@ git si hace falta consultarlos.
 | [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) | Baseline de rendimiento — 1280×720 work 6.5 y 1920×1080 9.47 comparativa |
 | [`RELEASE_NOTES_RENDERER_RC.md`](RELEASE_NOTES_RENDERER_RC.md) | Notas de release Renderer RC — 1920@60 work 9.47 vs CPU 39.54 |
 | [`informe_stage4_1b_gates_8_9_10.md`](informe_stage4_1b_gates_8_9_10.md) | Informe stage4_1b gates 8-10 — validación de arte/QA/polish |
+| [`AUD-800_REPOSITORY_INVENTORY.md`](AUD-800_REPOSITORY_INVENTORY.md) | Inventario forense — 8.350 ficheros relevantes, 518 src, 6.556 tests, 854 assets, 37 TMX |
+| [`AUD-800_ENEMY_MATRIX.md`](AUD-800_ENEMY_MATRIX.md) | Matriz enemigos 35 — propósito, IA, daño, hitbox, niveles, fairness |
+| [`AUD-800_INPUT_MATRIX.md`](AUD-800_INPUT_MATRIX.md) | Matriz entrada 31 acciones — bindings, focus, leakage, accesibilidad |
+| [`AUD-800_PACING_MATRIX.md`](AUD-800_PACING_MATRIX.md) | Matriz pacing 26 niveles — introducción, densidad, checkpoint, curva |
+| [`AUD-800_CLEANUP_MANIFEST.md`](AUD-800_CLEANUP_MANIFEST.md) | Manifiesto limpieza — 6 temps DELETE, 1 P3 archivable, repo CLEAN |
+| [`AUD-800_REGRESSION_MATRIX.md`](AUD-800_REGRESSION_MATRIX.md) | Matriz regresión 15 subsistemas ×2 niveles — renderer→tests |
+| [`AUD-800_MASTER_SPECIFICATION.md`](AUD-800_MASTER_SPECIFICATION.md) | Especificación maestra — contrato 1280×720 80×45 16 pipeline nativo |
+| [`AUD-800_FINAL_CERTIFICATION.md`](AUD-800_FINAL_CERTIFICATION.md) | Certificación final 88/100 RC — 44 secciones, 0 P0 0 P1 7 P3 |
 
 ---
 
