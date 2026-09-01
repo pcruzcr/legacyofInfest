@@ -8,20 +8,39 @@ import os
 from pathlib import Path
 from typing import Final
 
+# AUD-754 — Nativo Presentation Pipeline (PS4 720p con letterbox a otros tamaños).
+# INTERNAL es la resolución de diseño que coincide con los mapas existentes
+# (45 filas *16 =720). 1280×720 es 16:9 exacto y llena el viewport sin huecos.
+# DISPLAY es la ventana física, que puede ser 1920×1080, 1649×877, 1366×768 etc.
+# La transformación única DISPLAY se calcula en src/engine/core/display.py:
+#   display = internal escalado con aspect-preserving + letterbox.
+# No confundir INTERNAL_RENDER_SIZE con DISPLAY_SIZE ni aplicar doble escalado
+# (camera zoom * display_scale). Ver NATIVE_RENDER_AUDIT.md.
 INTERNAL_WIDTH: int = 1280
 INTERNAL_HEIGHT: int = 720
 TARGET_FPS: int = 120  # nativo 720p@120 — ver clock.py FIXED_DT
-# Window upscale factor. AUD-460: the window is really created at
-# interior × DISPLAY_SCALE and the frame blit is scaled to it
-# (`App._publicar_software`); before that the factor was only a promise.
-# El camino GL (App._init_pygame) y el software (App._abrir_ventana_software)
-# la aplican los dos.
+#: Presupuesto de fotograma: 8.33 ms a 120 / 16.67 ms a 60. Ver
+#: docs/62_ESTADO_DEL_PROYECTO.md §B1 para el reparto medido (AUD-762).
+FRAME_BUDGET_120: float = 1000.0 / 120  # 8.33 ms
+FRAME_BUDGET_60: float = 1000.0 / 60  # 16.67 ms
+#: El juego apunta a 60 FPS estables a 1280×720 con lightmap a media
+#: resolución; 120 es sin sombras o 1280. Ver docs/74.
+TARGET_FPS_RECOMENDADO: int = 60
+#: Lightmap a mitad de resolución: 640×360 → ~4× menos píxeles que
+#: 1280×720, sin pérdida visible (luz es baja frecuencia). Activo por
+#: defecto; desactívalo para capturas.
+LIGHTMAP_HALF_RES: bool = True
+# Window upscale factor. AUD-460: la ventana se crea a interior × DISPLAY_SCALE
+# y el fotograma se escala a ella (`App._publicar_software` y `App._init_pygame`).
+# AUD-754: se restaura el parseo desde env (1..4) con letterbox aspect-preserving.
 _raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "1")
 try:
     _parsed_scale = int(_raw_scale) if _raw_scale and _raw_scale.lstrip("-").isdigit() else 1
 except ValueError:
     _parsed_scale = 1
 DISPLAY_SCALE: int = max(1, min(4, _parsed_scale))
+# Alias para el pipeline de presentación: tamaño interno vs display físico.
+INTERNAL_RENDER_SIZE: tuple[int, int] = (INTERNAL_WIDTH, INTERNAL_HEIGHT)
 
 # AUD-021: the reference-resolution auto-scale branch that used to live here was
 # unreachable — it required INTERNAL_WIDTH == 320, and INTERNAL_WIDTH is 800.
@@ -30,7 +49,7 @@ DISPLAY_SCALE: int = max(1, min(4, _parsed_scale))
 REFERENCE_WIDTH: int = 320
 REFERENCE_HEIGHT: int = 224
 
-TILE_SIZE: int = 16
+TILE_SIZE: int = 16  # PS4 720p nativo 16px 1:1 — 1280/16=80 tiles ancho, 720/16=45 alto coincide con TMX.
 
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
 PROJECT_ROOT: Path = _PROJECT_ROOT
@@ -129,6 +148,8 @@ COMBO_WINDOW: float = 0.5
 # para no romper tests ni balance existente; 4-10 escalan hasta 3.0.
 COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.0, 3.0)
 COMBO_MAX: int = 10
+# AUD-COMBO-CHECK: garantiza que la tabla de multiplicadores cubre todo el combo
+assert len(COMBO_DAMAGE_MULT) == COMBO_MAX, f"COMBO_DAMAGE_MULT len {len(COMBO_DAMAGE_MULT)} != COMBO_MAX {COMBO_MAX}"
 
 # ── Accessibility and other player preferences ─────────────────
 #

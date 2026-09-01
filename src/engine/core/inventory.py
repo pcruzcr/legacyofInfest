@@ -176,11 +176,35 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         description="Investigacion de campo: conocimiento puro, sin uso inmediato.",
         icon_color=(100, 180, 255),
     ),
-    #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
+     #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
     "buddy_token": ItemDef(
         id="buddy_token", name="Token de compañero",
         description="Un llamado de ayuda. Usalo para invocar un compañero.",
         icon_color=(200, 180, 220),
+    ),
+    # Pokemon RPG -- Pokeball para captura cenital
+    "pokeball": ItemDef(
+        id="pokeball", name="Pokeball",
+        description="Bola para capturar monstruos en hierba alta",
+        icon_color=(255, 80, 80), price=10,
+    ),
+    # B5 — piezas de corazón ¼ (4 piezas = 1 corazón) — Zelda
+    "heart_piece": ItemDef(
+        id="heart_piece", name="Fragmento de corazón",
+        description="1/4 de corazón. Junta 4 para +1 de vida máxima",
+        icon_color=(255, 100, 150), max_hp_bonus=0.25,
+    ),
+    # B7 — Canción del Sol (toggle día/noche) — Zelda OoT
+    "sun_song": ItemDef(
+        id="sun_song", name="Canción del Sol",
+        description="Alterna día y noche. Úsala para puzzles de luz/oscuridad",
+        icon_color=(255, 220, 80), price=50,
+    ),
+    # B9 — subarmas (base: arco) — SotN
+    "subweapon_dagger": ItemDef(
+        id="subweapon_dagger", name="Daga arrojadiza",
+        description="Subarma rápida. Consume 1 energía",
+        icon_color=(180, 180, 200), price=30,
     ),}
 
 

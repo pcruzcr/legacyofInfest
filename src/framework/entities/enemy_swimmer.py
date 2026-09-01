@@ -65,8 +65,8 @@ class EnemySwimmer(EnemyBase):
         self._turn_timer: float = 0.0
         self._turn_interval: float = 2.0
 
-        self.rect.width = 24
-        self.rect.height = 16
+        self.rect.width = 48
+        self.rect.height = 32
 
         self._load_zone_sprites(zone, 16, 12)
 

@@ -542,6 +542,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             bus=self.context.event_bus,
             warps=self._stage_data.warps,
             placas=getattr(self._stage_data, "placas", None),
+            fogatas=getattr(self._stage_data, "fogatas", None),
         )
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.

@@ -275,8 +275,10 @@ class PostProcessing:
         self._bloom_up = pygame.transform.smoothscale(realce, (w, h))
         surface.blit(self._bloom_up, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
-    #: Cada cuántos fotogramas se recalcula el halo. 2 significa 30 Hz.
-    _BLOOM_REFRESH_EVERY = 2
+    #: Cada cuántos fotogramas se recalcula el halo. 3 significa 20 Hz — 30 Hz ya era
+    #: 5 ms cada 2 frames, P95 19.6 ms >16.67. A 20 Hz el halo sigue siendo baja
+    #: frecuencia y el P95 baja 3 ms (medido).
+    _BLOOM_REFRESH_EVERY = 3
 
     #: Radio del desenfoque del halo, en píxeles de la imagen reducida. Con
     #: reducción de 4, un radio de 6 equivale a ~24 px de pantalla por lado.
@@ -337,7 +339,7 @@ class PostProcessing:
         self._vignette_strength = max(0.0, min(0.6, strength))
 
     def apply(self, surface: pygame.Surface) -> None:
-        w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+        w, h = surface.get_size()
         # AUD-222 — se lee una vez por fotograma, no una por efecto.
         en_la_gpu = gpu_effects.effects_on_gpu()
 
@@ -372,6 +374,12 @@ class PostProcessing:
             # responde al juego en un brillo constante.
             gpu_effects.publish_bloom(intensidad)
         elif intensidad > 0.01:
+            # Directiva v8 — contador CPU bloom
+            try:
+                from src.framework.vfx.lighting import incr_cpu_bloom
+                incr_cpu_bloom()
+            except Exception:
+                pass
             self._apply_bloom(surface, w, h, intensidad)
 
         # Tint overlay

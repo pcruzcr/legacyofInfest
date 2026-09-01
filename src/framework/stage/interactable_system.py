@@ -30,6 +30,7 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    Fogata,
     Llavero,
     PlacaDePresion,
     Recogible,
@@ -73,6 +74,7 @@ class InteractableSystem:
         placas: list[PlacaDePresion] | None = None,
         secret_exits: list[SecretExit] | None = None,
         secret_rooms: list[SecretRoom] | None = None,
+        fogatas: list[Fogata] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
@@ -85,6 +87,7 @@ class InteractableSystem:
         self.placas: list[PlacaDePresion] = list(placas or [])
         self.secret_exits: list[SecretExit] = list(secret_exits or [])
         self.secret_rooms: list[SecretRoom] = list(secret_rooms or [])
+        self.fogatas: list[Fogata] = list(fogatas or [])
         self.llavero = Llavero()
         self._bus = bus
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
@@ -122,6 +125,7 @@ class InteractableSystem:
         self._warpear(dt, jugador, usar)
         self._cerrar_las_cronometradas(dt, jugador)
         self._revelar_secretos(jugador, usar)
+        self._usar_fogata(jugador, usar)
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
@@ -449,6 +453,27 @@ class InteractableSystem:
             room.descubierto = True  # type: ignore[attr-defined]
             self._emitir(Events.SECRET_FOUND, secret_id=getattr(room, "secret_id", ""))
 
+    def _usar_fogata(self, jugador: pygame.Rect, usar: bool) -> None:
+        """B4 — bonfire: cura, guarda y marca checkpoint."""
+        for fogata in self.fogatas:
+            if not alcanza(jugador, fogata.rect):
+                continue
+            if usar:
+                self._avisar("Descansando en la fogata... ¡Vida restaurada!")
+                self._emitir(Events.PLAYER_HEALED, amount=5.0)
+                self._emitir(Events.CHECKPOINT_REACHED, checkpoint_id="fogata")
+                # Sonido y partículas
+                try:
+                    self._emitir(Events.SFX_CHECKPOINT, pos=fogata.rect.center)
+                except Exception:
+                    pass
+                fogata.usada = True
+            else:
+                # Hint cuando estás cerca pero no pulsas
+                if self.mensaje_timer <= 0:
+                    self._avisar(fogata.mensaje, duracion=1.0)
+            break
+
     def _warpear(self, dt: float, jugador: pygame.Rect, usar: bool) -> None:
         """AUD-287 — cruzar de un punto del mapa a otro.
 
@@ -479,11 +504,15 @@ class InteractableSystem:
             warp._espera = warp.enfriamiento
             if warp.mensaje:
                 self._avisar(warp.mensaje)
-            self._emitir(
-                EVENTO_WARP,
-                destino=(float(warp.destino.x), float(warp.destino.y)),
-                origen=warp.rect.center,
-            )
+            # AUD-BACKTRACK — si tiene destino_stage_id, es warp inter-escenario (backtracking 100%)
+            # Se emite destino_stage_id además de destino; el handler decide si cambia de mapa o solo teletransporta
+            payload: dict[str, object] = {
+                "destino": (float(warp.destino.x), float(warp.destino.y)),
+                "origen": warp.rect.center,
+            }
+            if getattr(warp, "destino_stage_id", ""):
+                payload["destino_stage_id"] = warp.destino_stage_id
+            self._emitir(EVENTO_WARP, **payload)
 
     # -- salida ----------------------------------------------------
     def _avisar(self, texto: str, duracion: float = 2.0) -> None:

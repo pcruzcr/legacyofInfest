@@ -417,12 +417,12 @@ class Player(BaseEntity):
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
 
-        # --- Rect setup ---
+        # --- Rect setup --- HD nativo 40×64 (2× 20×32 sin escalado)
         self.rect = pygame.Rect(
             int(self.position.x),
             int(self.position.y),
-            20,
-            32,
+            40,
+            64,
         )
 
         # --- Sprite frames ---
@@ -819,9 +819,21 @@ class Player(BaseEntity):
             self._event_bus.emit(Events.PLAYER_DIED)
             self._event_bus.emit(Events.SFX_PLAYER_DIE)
         else:
-            from src.framework.entities.states import HurtState
-            self._change_state_instance(HurtState(), force=True)
-            self._event_bus.emit(Events.SFX_PLAYER_HURT)
+            # Heavy hit (≥1.0) → STAGGER 0.6s 0.5× daño, veneno prolongado → POSSESSED
+            # Vista-agnóstico: funciona en lateral/cenital/isométrica
+            if effective_damage >= 1.0 and self._health > 0:
+                try:
+                    from src.framework.entities.states import StaggerState
+                    self._change_state_instance(StaggerState(duration=0.6), force=True)
+                    self._event_bus.emit(Events.SFX_PLAYER_HURT)
+                except Exception:
+                    from src.framework.entities.states import HurtState
+                    self._change_state_instance(HurtState(), force=True)
+                    self._event_bus.emit(Events.SFX_PLAYER_HURT)
+            else:
+                from src.framework.entities.states import HurtState
+                self._change_state_instance(HurtState(), force=True)
+                self._event_bus.emit(Events.SFX_PLAYER_HURT)
 
     def _change_state_instance(self, new_state: PlayerStateBase, force: bool = False) -> bool:
         """

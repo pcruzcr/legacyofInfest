@@ -161,6 +161,105 @@ void main() {
 }
 """
 
+# ── Directiva v8 — GPU light generation ────────────────────────────────
+GPU_LIGHT_MAX = 16
+
+light_gen_frag = f"""
+#version 330
+const int MAX_LIGHTS = {GPU_LIGHT_MAX};
+uniform vec3 ambientColor;
+uniform int numLights;
+uniform vec2 lightPos[MAX_LIGHTS];
+uniform float lightRadius[MAX_LIGHTS];
+uniform vec3 lightColor[MAX_LIGHTS];
+uniform float lightIntensity[MAX_LIGHTS];
+uniform vec2 resolution;
+in vec2 uv;
+out vec4 fragColor;
+void main() {{
+    vec2 pixel = uv * resolution;
+    vec3 light = ambientColor;
+    for (int i = 0; i < MAX_LIGHTS; i++) {{
+        if (i >= numLights) break;
+        vec2 pos = lightPos[i];
+        float radius = lightRadius[i];
+        if (radius <= 0.0) continue;
+        float dist = length(pixel - pos);
+        if (dist < radius) {{
+            float falloff = 1.0 - dist / radius;
+            vec3 contrib = lightColor[i] * lightIntensity[i] * falloff;
+            light = max(light, contrib);
+        }}
+    }}
+    fragColor = vec4(light, 1.0);
+}}
+"""
+
+light_gen_static_frag = f"""
+#version 330
+const int MAX_LIGHTS = {GPU_LIGHT_MAX};
+uniform vec3 ambientColor;
+uniform int numLights;
+uniform vec2 lightPos[MAX_LIGHTS];
+uniform float lightRadius[MAX_LIGHTS];
+uniform vec3 lightColor[MAX_LIGHTS];
+uniform float lightIntensity[MAX_LIGHTS];
+uniform vec2 resolution;
+in vec2 uv;
+out vec4 fragColor;
+void main() {{
+    vec2 pixel = uv * resolution;
+    vec3 light = ambientColor;
+    for (int i = 0; i < MAX_LIGHTS; i++) {{
+        if (i >= numLights) break;
+        float radius = lightRadius[i];
+        if (radius <= 0.0) continue;
+        float dist = length(pixel - lightPos[i]);
+        if (dist < radius) {{
+            float falloff = 1.0 - dist / radius;
+            vec3 contrib = lightColor[i] * lightIntensity[i] * falloff;
+            light = max(light, contrib);
+        }}
+    }}
+    fragColor = vec4(light, 1.0);
+}}
+"""
+
+light_composite_frag = """
+#version 330
+uniform sampler2D staticLight;
+uniform vec2 cameraOffset;
+uniform vec2 screenRes;
+uniform vec2 staticRes;
+uniform vec3 ambientColor;
+uniform int numDynamic;
+uniform vec2 dynPos[16];
+uniform float dynRadius[16];
+uniform vec3 dynColor[16];
+uniform float dynIntensity[16];
+in vec2 uv;
+out vec4 fragColor;
+void main() {
+    vec2 pixel = uv * screenRes;
+    vec2 world = cameraOffset + pixel;
+    vec2 staticUV = world / staticRes;
+    vec3 light = texture(staticLight, staticUV).rgb;
+    // dynamic lights on top (max)
+    for (int i = 0; i < 16; i++) {
+        if (i >= numDynamic) break;
+        float r = dynRadius[i];
+        if (r <= 0.0) continue;
+        float d = length(pixel - dynPos[i]);
+        if (d < r) {
+            float f = 1.0 - d / r;
+            vec3 c = dynColor[i] * dynIntensity[i] * f;
+            light = max(light, c);
+        }
+    }
+    fragColor = vec4(light, 1.0);
+}
+"""
+
 
 # AUD-215: aberracion cromatica para los impactos fuertes.
 #

@@ -181,5 +181,40 @@ class DiagnosticoDeEscenario:
         if self.entidades_retiradas:
             medidas["!! Entidades retiradas"] = ", ".join(
                 sorted(set(self.entidades_retiradas)))
+        # AUD-754 — diagnóstico de cámara / viewport para validación visual
+        try:
+            cam = getattr(self, "_camera", None)
+            if cam is not None:
+                medidas["CAMERA"] = (
+                    f"{cam.offset.x:.0f},{cam.offset.y:.0f} "
+                    f"zoom={cam.zoom:.2f} modo={cam.modo}"
+                )
+                medidas["VIEWPORT"] = (
+                    f"{settings.INTERNAL_WIDTH}×{settings.INTERNAL_HEIGHT} "
+                    f"offset {int(cam.offset.x)},{int(cam.offset.y)}"
+                )
+                # Map bounds
+                stage = self._stage_data
+                if stage is not None:
+                    mw, mh = stage.map_pixel_size
+                    medidas["STAGE_BOUNDS"] = (
+                        f"map {mw}×{mh} clamp_x=[0,{max(0,mw-settings.INTERNAL_WIDTH)}] "
+                        f"clamp_y=[0,{max(0,mh-settings.INTERNAL_HEIGHT)}]"
+                    )
+            # Display pipeline
+            from src.engine.core import display as _display
+            pipe = _display.describe_pipeline()
+            medidas["DISPLAY"] = (
+                f"win {pipe['WINDOW']} drawable {pipe['DRAWABLE']} "
+                f"internal {pipe['INTERNAL']}"
+            )
+            medidas["VIEWPORT_RECT"] = pipe["VIEWPORT_RECT"]
+            medidas["DISPLAY_SCALE"] = pipe["DISPLAY_SCALE"]
+            medidas["ASPECT"] = (
+                f"win {pipe['ASPECT_WINDOW']} internal {pipe['ASPECT_INTERNAL']} "
+                f"letterbox {pipe['LETTERBOX']}"
+            )
+        except Exception:
+            pass
         return medidas
 

@@ -98,7 +98,9 @@ def dispersion_de(identificador: str) -> tuple[float, float]:
 
 
 def construir_nodos() -> list[dict[str, Any]]:
-    """Un nodo por escenario descubierto, en el orden en que se juegan."""
+    """Un nodo por escenario descubierto, en el orden en que se juegan.
+    AUD-BACKTRACK — incluye HUB + 13 vistas como nodos de backtracking 100% (post-game).
+    """
     from src.engine.core.stage_registry import discover_stages
 
     nodos: list[dict[str, Any]] = []
@@ -107,14 +109,6 @@ def construir_nodos() -> list[dict[str, Any]]:
         stage_id = getattr(cls, "STAGE_ID", "") or cls.__name__
         nombre = getattr(cls, "STAGE_NAME", "") or stage_id
         nx, ny = _serpiente(i, len(escenarios))
-        # AUD-448 — la serpentina deja las columnas perfectamente alineadas y
-        # el mapa se lee como una lista doblada en zigzag. Se aparta cada nodo
-        # de su casilla, siempre lo mismo para el mismo escenario, y se acota
-        # al marco para que ninguno se salga de la pantalla.
-        # La rejilla base se comprime para dejar sitio a la dispersión, en vez
-        # de recortar después: recortando, todos los nodos del borde acababan
-        # exactamente en 0,0 y volvían a alinearse —justo el defecto que esto
-        # viene a quitar, sólo que ahora en la primera columna.
         margen = _DISPERSION_MAXIMA
         dx, dy = dispersion_de(stage_id)
         nx = round(margen + nx * (1.0 - 2 * margen) + dx, 4)
@@ -124,17 +118,90 @@ def construir_nodos() -> list[dict[str, Any]]:
             "name": nombre,
             "nx": nx,
             "ny": ny,
-            # El escenario se abre por su clase, no por su ruta TMX: la clase
-            # es la que registra los tipos de entidad propios del estudiante
-            # (`CuadernoVolador`, `BossRey`...). Construir un `StageScene`
-            # genérico con su TMX cargaría el mapa sin sus enemigos.
             "scene": cls,
             "unlocks": [],
-            # AUD-635 — skill requerido para desbloquear este nodo.
             "requires_skill": getattr(cls, "REQUIRES_SKILL", "") or "",
         })
     for anterior, siguiente in pairwise(nodos):
         anterior["unlocks"] = [siguiente["id"]]
+
+    # AUD-BACKTRACK — nodos extra para backtracking 100% en todas las vistas
+    # Se añaden tras la cadena principal, en una fila extra, siempre desbloqueados post-game
+    # Vistas demo + hub: 13 vistas + hub + dojo + pokemon
+    extras = [
+        ("hub_backtracking", "HUB — NEXO 100%"),
+        ("stage_isometrica", "ISOMETRICA"),
+        ("stage_dimetrica", "DIMETRICA"),
+        ("stage_trimetrica", "TRIMETRICA"),
+        ("stage_oblicua", "OBLICUA"),
+        ("stage_frontal", "FRONTAL"),
+        ("stage_paralaje", "PARALAJE"),
+        ("stage_y-sorting", "Y-SORTING"),
+        ("stage_stencil", "STENCIL"),
+        ("stage_dissolve", "DISSOLVE"),
+        ("stage_mode7", "MODE7"),
+        ("stage_raycast", "RAYCAST"),
+        ("stage_cenital", "CENITAL LAB"),
+        ("stage_pokemon_cenital", "POKEMON CENITAL"),
+        ("stage_ai_dojo", "DOJO IA"),
+    ]
+    # Cargar clases si existen, si no fallback a StageScene genérico por TMX
+    import importlib
+    from pathlib import Path
+
+    from src.engine.core import settings
+
+    base_len = len(nodos)
+    for j, (sid, name) in enumerate(extras):
+        # Intentar importar clase
+        cls = None
+        for mod in [f"src.stages.{sid}.{sid}", "src.stages.hub_backtracking.hub_backtracking"]:
+            try:
+                m = importlib.import_module(mod)
+                for attr in dir(m):
+                    c = getattr(m, attr)
+                    if isinstance(c, type) and getattr(c, "STAGE_ID", "") == sid:
+                        cls = c
+                        break
+                if cls:
+                    break
+            except Exception:
+                continue
+        # Si no hay clase, usar StageScene genérico si existe TMX
+        if cls is None:
+            tmx = Path(settings.ASSETS_DIR / "maps" / sid / f"{sid}.tmx")
+            if tmx.exists():
+                from src.framework.scenes.stage_scene import StageScene
+                # closure para capturar sid/name/tmx
+                def make_gen(sid_=sid, name_=name, tmx_=tmx):
+                    class _Gen(StageScene):
+                        STAGE_ID = sid_
+                        STAGE_NAME = name_
+                        TMX_PATH = tmx_
+                    _Gen.__name__ = f"Gen_{sid_}"
+                    return _Gen
+                cls = make_gen()
+            else:
+                continue
+        # Posición en fila extra (última fila)
+        nx, ny = _serpiente(base_len + j, base_len + len(extras))
+        dx, dy = dispersion_de(sid)
+        nx = round(margen + nx * (1.0 - 2 * margen) + dx, 4)
+        ny = round(margen + ny * (1.0 - 2 * margen) + dy, 4)
+        # Hub conecta a todos, vistas conectan al hub
+        unlocks = []
+        if sid == "hub_backtracking":
+            unlocks = [e[0] for e in extras if e[0] != "hub_backtracking"]
+        nodos.append({
+            "id": sid,
+            "name": name,
+            "nx": nx,
+            "ny": ny,
+            "scene": cls,
+            "unlocks": unlocks,
+            "requires_skill": "",
+            "is_backtrack": True,
+        })
     return nodos
 
 
@@ -228,17 +295,23 @@ class WorldMapScene(BaseScene):
 
         self._nodes = []
         anterior_completado = True      # el primero no depende de nadie
+        hub_desbloqueado = "stage0" in completed or not completed  # hub siempre visible, backtracking post-stage0
         for nd in STAGE_NODES:
             node = dict(nd)
             hecho = node["id"] in completed
             node["completed"] = hecho
-            # AUD-635 — desbloqueo por progreso + skill requerido
             skill_req = node.get("requires_skill", "")
             skill_ok = (
                 not skill_req
                 or get_inventory().has_skill(skill_req)
                 or getattr(self, "_habilidades_libres", False)
             )
+            # AUD-BACKTRACK — nodos de backtracking (vistas) desbloqueados tras stage0 o siempre en demo
+            if node.get("is_backtrack"):
+                node["unlocked"] = (hub_desbloqueado or hecho) and skill_ok
+                # No afecta la cadena lineal
+                self._nodes.append(node)
+                continue
             node["unlocked"] = (anterior_completado or hecho) and skill_ok
             anterior_completado = hecho
             self._nodes.append(node)

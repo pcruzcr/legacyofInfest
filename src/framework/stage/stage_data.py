@@ -42,6 +42,7 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    Fogata,
     PlacaDePresion,
     Recogible,
     SecretExit,
@@ -469,10 +470,14 @@ class StageProgression:
     secret_exits: list[SecretExit] = field(default_factory=list)
     #: AUD-625 — salas secretas (`SecretRoom`) con tell visual.
     secret_rooms: list[SecretRoom] = field(default_factory=list)
+    #: B4 — fogatas reutilizables (bonfire) — Dark Souls/Hollow Knight
+    fogatas: list[Fogata] = field(default_factory=list)  # type: ignore[name-defined]
     #: Placas de presión (PressurePlate)
     placas: list[PlacaDePresion] = field(default_factory=list)  # type: ignore[name-defined]
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
     scroll_forzados: list[ScrollForzado] = field(default_factory=list)  # type: ignore[name-defined]
+    #: Indoor/outdoor — zonas donde el clima y día/noche se atenúan (techo)
+    indoor_zones: list[pygame.Rect] = field(default_factory=list)
     #: F5.3–F5.6 — componentes ECS declarados desde el TMX.
     componentes: list[list[object]] = field(default_factory=list)
     zone: int = 0

@@ -60,8 +60,8 @@ class EnemyShielded(EnemyBase):
         self._shield_regen_timer: float = 0.0
         self._shield_broken: bool = False
 
-        self.rect.width = 28
-        self.rect.height = 24
+        self.rect.width = 56
+        self.rect.height = 48
 
         self._load_zone_sprites(zone, 16, 14)
 

@@ -94,8 +94,8 @@ class EnemyPezAbismal(EnemyFlying):
         # 32×16 anterior) para que siga habiendo margen alrededor de una
         # silueta más grande; `_load_extra_sprites` hace lo mismo con
         # `_sprite_fw/_sprite_fh`.
-        self.rect.width = 56
-        self.rect.height = 32
+        self.rect.width = 112
+        self.rect.height = 64
         # AUD-325 — no pisa suelo: nada en agua abierta, igual que un
         # volador no pisa suelo en aire abierto.
         self._hug_slopes = False

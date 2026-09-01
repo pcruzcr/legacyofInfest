@@ -49,19 +49,20 @@ class AmbientParticleSystem:
     )
 
     def __init__(self, rng: random.Random | None = None) -> None:
-        #: AUD-398 — azar propio (GAP-042). Sin semilla nace del global,
-        #: que ya está sembrado, así que la partida no cambia; lo que
-        #: cambia es que estas partículas dejan de desplazar la secuencia
-        #: que leen la cámara y el clima.
         self._rng = rng if rng is not None else generador()
         self._emitter = ParticleEmitter()
         self._rate: float = 0.0
         self._timer: float = 0.0
         self._particle_type: str = "dust"
+        self._indoor_factor: float = 0.0  # 0 outdoor, 1 indoor — ver set_indoor_factor
 
     def set_effect(self, particle_type: str, rate: float = 10.0) -> None:
         self._particle_type = particle_type
         self._rate = max(0.0, rate)
+
+    def set_indoor_factor(self, factor: float) -> None:
+        """0 outdoor (polvo tenue) → 1 indoor (polvo denso en rayo de luz)."""
+        self._indoor_factor = max(0.0, min(1.0, factor))
 
     @property
     def count(self) -> int:
@@ -110,14 +111,21 @@ class AmbientParticleSystem:
         return []
 
     def _spawn(self, camera_offset: pygame.Vector2) -> None:
-        sx = camera_offset.x + self._rng.uniform(0, settings.INTERNAL_WIDTH)
-        sy = camera_offset.y + self._rng.uniform(0, settings.INTERNAL_HEIGHT)
+        # HD nativo: polvo volumétrico con deriva suave,室内 más denso, outdoor con viento
+        sx = camera_offset.x + self._rng.uniform(-20, settings.INTERNAL_WIDTH + 20)
+        sy = camera_offset.y + self._rng.uniform(-20, settings.INTERNAL_HEIGHT + 20)
 
         if self._particle_type == "dust":
+            # HD: polvo son motas 2×2 con alfa, deriva horizontal lenta, indoor más visible
+            is_indoor = getattr(self, "_indoor_factor", 0.0) > 0.5 if hasattr(
+                self, "_indoor_factor"
+            ) else False
+            col = (135, 115, 95) if is_indoor else (120, 100, 80)
             self._emitter.emit_directed(
-                sx, sy, angle=270, speed=self._rng.uniform(5, 15),
-                count=1, lifetime=self._rng.uniform(2, 4),
-                size=(1, 2), color=(120, 100, 80), spread=30,
+                sx, sy, angle=self._rng.uniform(170, 190) if not is_indoor else self._rng.uniform(80, 100),
+                speed=self._rng.uniform(8, 18) if not is_indoor else self._rng.uniform(2, 6),
+                count=2 if is_indoor else 1, lifetime=self._rng.uniform(4, 7),
+                size=(2, 2), color=col, spread=15,
                 gravity=0,
             )
         elif self._particle_type == "leaves":

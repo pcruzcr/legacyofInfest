@@ -271,6 +271,12 @@ ignore = [
 # before they can import from src/ — the import genuinely cannot come first.
 # This is the one case where E402 describes correct code.
 "tools/build_dataset.py" = ["E402", "E501", "E702"]
+"tools/train_enemy_ai.py" = ["E402", "E501", "E702", "E741", "F401", "F541", "I001"]
+"tools/verificar_entrega3.py" = ["E501", "E741", "F541", "F841", "E402"]
+"tests/test_stage_spatial_integrity.py" = ["E501", "I001", "B007", "F841", "E402"]
+"tests/test_dynamic_visual.py" = ["E501", "I001", "B007", "F841", "E402", "E401", "RUF059"]
+"tests/test_game_state_integration.py" = ["E501", "I001", "B007", "F841", "E402", "E401", "F401", "RUF059"]
+"scripts/capture_dynamic_qa.py" = ["E501", "E402", "I001", "B007", "F841", "E401", "RUF059"]
 "scripts/validate_assets.py" = ["E402"]
 "scripts/validate_tmx.py" = ["E402", "E501"]
 

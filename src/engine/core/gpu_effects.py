@@ -84,6 +84,12 @@ DELEGABLES: Final[frozenset[str]] = frozenset({BLOOM, VIGNETTE, WATER})
 
 _en_la_gpu: frozenset[str] = frozenset()
 _bloom_publicado: float = 0.0
+# ── Luces para GPU lighting (directiva v8) ────────────────────────────
+# Cada luz publicada: (x, y, radius, (r,g,b) 0-1, intensity, flicker)
+_luces_ambient: tuple[float, float, float] | None = None
+_luces_lista: list[dict] | None = None
+_luces_camera: tuple[float, float] | None = None
+_luces_version: int = 0  # para detectar cambios estáticos vs dinámicos
 
 
 def set_effects_on_gpu(names: Iterable[str]) -> None:
@@ -122,6 +128,7 @@ def reset() -> None:
     """
     global _en_la_gpu, _bloom_publicado, _aberracion_pedida, _agua_region, _rayos
     global _lote_de_sprites, _matriz_de_color
+    global _luces_ambient, _luces_lista, _luces_camera, _luces_version
     _en_la_gpu = frozenset()
     _bloom_publicado = 0.0
     _aberracion_pedida = 0.0
@@ -135,6 +142,10 @@ def reset() -> None:
     # de arriba, y aun así costó nueve pruebas rojas en
     # `test_aberracion_cromatica.py`.
     _matriz_de_color = None
+    _luces_ambient = None
+    _luces_lista = None
+    _luces_camera = None
+    _luces_version = 0
 
 
 def begin_frame() -> None:
@@ -145,7 +156,7 @@ def begin_frame() -> None:
     publicara otro valor.
     """
     global _bloom_publicado, _agua_region, _rayos, _lote_de_sprites
-    global _matriz_de_color
+    global _matriz_de_color, _luces_ambient, _luces_lista, _luces_camera
     _bloom_publicado = 0.0
     # AUD-216/217 - el agua y los rayos también se olvidan cada fotograma, y
     # por la misma razón que el bloom: los menús no dibujan escenario, así que
@@ -161,6 +172,10 @@ def begin_frame() -> None:
     # y **no era verdad**: AUD-401 no lo enganchó a este borrón. La promesa
     # estaba escrita y el código no la cumplía.
     _matriz_de_color = None
+    # Directiva v8 — las luces también son por fotograma
+    _luces_ambient = None
+    _luces_lista = None
+    _luces_camera = None
 
 
 def publish_bloom(intensity: float) -> None:
@@ -295,6 +310,32 @@ def publish_lote_de_sprites(lote: Any) -> None:
 def published_lote_de_sprites() -> Any:
     """El lote publicado este fotograma, o `None` si nadie dibujó en GPU."""
     return _lote_de_sprites
+
+
+def publish_luces(
+    ambient: tuple[float, float, float],
+    luces: list[dict],
+    camera: tuple[float, float],
+) -> None:
+    """Publica las definiciones de luz para la pasada GPU.
+
+    Directiva v8 — el payload viene de `LightSystem` tal cual (13 luces,
+    11 estáticas + 2 dinámicas).  Cada luz: {x, y, radius, color, intensity,
+    flicker}.  La pasada GPU debe recibir esto y no una textura CPU.
+    """
+    global _luces_ambient, _luces_lista, _luces_camera, _luces_version
+    _luces_ambient = ambient
+    _luces_lista = luces
+    _luces_camera = camera
+    _luces_version += 1
+
+
+def published_luces() -> tuple[tuple[float, float, float] | None, list[dict] | None, tuple[float, float] | None]:
+    return _luces_ambient, _luces_lista, _luces_camera
+
+
+def get_luces_version() -> int:
+    return _luces_version
 
 
 def consume_chromatic_aberration() -> float:

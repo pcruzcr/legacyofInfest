@@ -112,8 +112,8 @@ class EnemyCaster(EnemyBase):
         # AUD-455: el y del TMX es la esquina superior (semántica nativa de
         # Tiled); el descuento de altura hacía flotar a todos los enemigos de
         # suelo. Ver `enemy_walker` para el porqué completo.
-        self.rect.width = 20
-        self.rect.height = 28
+        self.rect.width = 40
+        self.rect.height = 56
 
         self._shoot_cooldown: float = 0.0
         self._fire_rate: float = 2.5

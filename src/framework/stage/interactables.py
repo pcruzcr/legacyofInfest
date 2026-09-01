@@ -155,6 +155,17 @@ class Cofre:
 
 
 @dataclass
+class Fogata:
+    """Bonfire — B4: punto de guardado y curación reutilizable, como Dark Souls/Hollow Knight.
+    Vista-agnóstico: rect + mensaje, funciona en lateral/cenital/isométrica.
+    """
+
+    rect: pygame.Rect
+    mensaje: str = "Fogata — pulsa para descansar (cura y guarda)"
+    usada: bool = False
+
+
+@dataclass
 class Disparador:
     """Emite un evento del bus. El escenario decide qué significa.
 
@@ -176,6 +187,10 @@ class Disparador:
 @dataclass
 class ZonaDeWarp:
     """Teletransporta al jugador a otro punto **del mismo mapa** — AUD-287.
+    Con `destino_stage_id` teletransporta a **otro escenario** — AUD-BACKTRACK
+    (backtracking 100% en todas las vistas). Vista-agnóstico: el rect es el
+    disparador y el destino es el stage_id + posición, sin tocar
+    `vista_system` ni `PhysicsProfile`.
 
     Zelda (las cuevas), Metroid (los ascensores), Hollow Knight (los bancos de
     los Stagways), Super Metroid (los tubos). Lo que hasta ahora no se podía
@@ -211,6 +226,10 @@ class ZonaDeWarp:
     mensaje: str = ""
     #: AUD-635 — skill_id requerido para usar el warp.
     requires_skill: str = ""
+    #: AUD-BACKTRACK — stage_id destino para backtracking inter-escenario.
+    #: Vacío = warp intra-mapa (comportamiento histórico). Con valor, cambia de
+    #: escenario vía `SceneManager` — funciona en todas las vistas.
+    destino_stage_id: str = ""
     usado: bool = False
     _espera: float = 0.0
 

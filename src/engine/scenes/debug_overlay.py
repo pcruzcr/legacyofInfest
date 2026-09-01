@@ -74,6 +74,9 @@ class DebugOverlay:
         self._overlay: pygame.Surface | None = None
         self._line_cache: dict[int, tuple[str, pygame.Surface]] = {}
         self._hint_surf: pygame.Surface | None = None
+        # AUD-754 — diagnóstico de presentación nativa (F9)
+        self._display_diag: bool = False
+        self._display_diag_surf: pygame.Surface | None = None
 
     def _ensure_font(self) -> None:
         if self._font is not None:
@@ -83,6 +86,11 @@ class DebugOverlay:
     @property
     def visible(self) -> bool:
         return self._visible
+
+    def toggle_display_diagnostics(self) -> None:
+        """AUD-754 — alterna overlay de diagnóstico de presentación (F9)."""
+        self._display_diag = not self._display_diag
+        self._visible = True  # al activar diagnóstico, mostrar consola
 
     def handle_input(self, input_manager: Any) -> None:
         """Lee las dos teclas de la consola. Lo llama `App`, cada fotograma.
@@ -103,6 +111,9 @@ class DebugOverlay:
             # `LEARN_COLLISION`, `LEARN_FSM` y `LEARN_RENDER`: elegir el nivel
             # del árbol abría además tres lecciones del curso.
             self._tree_level = (self._tree_level + 1) % len(TREE_LEVELS)
+        # AUD-754 — F9 diagnóstico de display (independiente de F11, pero muestra overlay)
+        if input_manager.is_raw_key_pressed(pygame.K_F9):
+            self.toggle_display_diagnostics()
 
     def draw(self, surface: pygame.Surface, fps: float,
              medidas: dict[str, Any] | None = None,
@@ -152,9 +163,23 @@ class DebugOverlay:
                 "P50 {p50:.2f} | P95 {p95:.2f} | P99 {p99:.2f} | "
                 "peor {peor:.2f} ms".format(**q))
         lines.append(f"Objetos vivos: {len(gc.get_objects())}")
+        # AUD-754 — diagnóstico de presentación nativa (F9)
+        if self._display_diag:
+            try:
+                from src.engine.core import display as _display
+                pipe = _display.describe_pipeline()
+                for k, v in pipe.items():
+                    lines.append(f"{k}: {v}")
+                # Medidas extra de cámara si están en medidas
+                # (la escena publica CAMERA: x,y zoom etc. en medidas_de_depuracion)
+            except Exception:
+                lines.append("Display diag: error")
         for etiqueta, valor in (medidas or {}).items():
             lines.append(f"{etiqueta}: {valor}")
-        lines.append(f"Árbol: {TREE_LEVELS[self._tree_level]}  |  [F11] cerrar  [F12] rotar")
+        lines.append(
+            f"Árbol: {TREE_LEVELS[self._tree_level]}  |  [F11] cerrar  "
+            "[F12] rotar  [F9] display diag  [F10] fullscreen",
+        )
         lines.append("")
 
         # Event queue snapshot
@@ -235,6 +260,29 @@ class DebugOverlay:
                 txt = cached[1]
             surface.blit(txt, (4, y))
             y += 10
+
+        # AUD-754 — grid de depuración de presentación (solo con F9)
+        if self._display_diag:
+            try:
+                # Borde del viewport interno (todo el surface)
+                pygame.draw.rect(surface, (0, 255, 255), surface.get_rect(), 1)
+                # Centro de pantalla y de cámara (si medidas trae CAMERA)
+                cx, cy = settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 2
+                pygame.draw.line(surface, (255, 255, 0), (cx - 10, cy), (cx + 10, cy), 1)
+                pygame.draw.line(surface, (255, 255, 0), (cx, cy - 10), (cx, cy + 10), 1)
+                # Safe area HUD (32px margen)
+                safe = pygame.Rect(32, 32, settings.INTERNAL_WIDTH - 64, settings.INTERNAL_HEIGHT - 64)
+                pygame.draw.rect(surface, (255, 0, 255), safe, 1)
+                # Etiquetas WORLD 0,0 y CAMERA CENTER si medidas disponibles
+                if medidas and "CAMERA" in medidas:
+                    # medidas["CAMERA"] se publica como "x,y zoom"
+                    pass
+                # Texto pequeño en esquina
+                self._ensure_font()
+                tag = self._font.render("DEBUG GRID: VIEWPORT | SAFE AREA | CENTER", True, (0, 255, 255))
+                surface.blit(tag, (settings.INTERNAL_WIDTH - tag.get_width() - 4, 4))
+            except Exception:
+                pass
 
         if y < settings.INTERNAL_HEIGHT - 20:
             surface.blit(self._hint_surf, (4, settings.INTERNAL_HEIGHT - 14))

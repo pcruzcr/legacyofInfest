@@ -144,13 +144,25 @@ class BossRey(BossBase):
         self._check_phase_transition()
 
     def _check_phase_transition(self) -> None:
-        """phase transition con hp_threshold — segunda fase a 5 HP."""
+        """Phase 2 a 5 HP — delega al protocolo base (AUD-760 hardening).
+
+        Antes emitía dos eventos sin cambiar `current_phase` ni activar
+        `is_transitioning`/`invulnerable`; el HUD y `grade_boss` veían un
+        cambio pero la `speed_multiplier` nunca subía a 1.3 y la ventana
+        invulnerable de 2.5 s no existía. Ahora va por el camino real.
+        """
         if self.current_phase == 0 and self.current_health <= 5.0:
             self._phase_transition_count += 1
-            # emit event para grade
-            if self._event_bus:
-                self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
-            self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
+            # Delegar al motor: pone is_transitioning, invuln, stinger y
+            # cambia current_phase en _finish_phase_transition.
+            try:
+                self._start_phase_transition()  # type: ignore[attr-defined]
+            except Exception:
+                # Fallback si la base cambia de nombre: mantener el evento
+                # mínimo para que grade_boss no quede en 0.
+                if self._event_bus:
+                    self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
+                self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
 
     def _execute_telegraphed_attack(self) -> None:
         if self._telegraph == "VENOM_SPIT":

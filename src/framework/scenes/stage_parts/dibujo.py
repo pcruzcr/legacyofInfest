@@ -148,10 +148,59 @@ class DibujoDeEscenario:
         # sombreador multiplicaría la sombra dos veces. En el camino
         # software, `render` hace las dos cosas como siempre.
         if getattr(self.context, "usar_gl", False):
-            self._lighting.render_map(surface.get_size(), self._camera.offset)
+            # Directiva v8 — GPU lighting real. No render_map en GPU.
+            # Se publican las definiciones y el shader GPU genera el lightmap.
+            # Mantener compatibilidad CPU fallback en else.
+            try:
+                from src.engine.core import gpu_effects as _gpu
+                # Ambient en 0..1
+                b = float(getattr(self._lighting, "ambient_brightness", 0.3))
+                ac = getattr(self._lighting, "ambient_color", (255, 255, 255))
+                ambient = (ac[0] / 255.0 * b, ac[1] / 255.0 * b, ac[2] / 255.0 * b)
+                luces: list[dict] = []
+                for luz in getattr(self._lighting, "lights", []):
+                    try:
+                        # Resolver radio/intensidad actuales (con flicker)
+                        if hasattr(luz, "get_current_radius"):
+                            rad = float(luz.get_current_radius())
+                        else:
+                            rad = float(getattr(luz, "radius", 80))
+                        if hasattr(luz, "get_current_intensity"):
+                            intens = float(luz.get_current_intensity())
+                        else:
+                            intens = float(getattr(luz, "intensity", 0.8))
+                        col = getattr(luz, "color", (255, 255, 200))
+                        # Normalizar color a 0..1
+                        col_n = (col[0] / 255.0, col[1] / 255.0, col[2] / 255.0)
+                        luces.append({
+                            "x": float(luz.position.x),
+                            "y": float(luz.position.y),
+                            "radius": rad,
+                            "color": col_n,
+                            "intensity": intens,
+                            "flicker": bool(getattr(luz, "flicker", False)),
+                        })
+                    except Exception:
+                        continue
+                off = getattr(self._camera, "offset", None)
+                cam = (float(off.x), float(off.y)) if off is not None else (0.0, 0.0)
+                _gpu.publish_luces(ambient, luces, cam)
+                # Bloom: publicar intensidad efectiva aunque se salte el CPU apply
+                try:
+                    intensidad = max(
+                        float(getattr(self._post_processing, "_bloom_intensity", 0.0)),
+                        float(getattr(self._post_processing, "_bloom_base", 0.0)),
+                    )
+                    _gpu.publish_bloom(intensidad)
+                except Exception:
+                    pass
+            except Exception:
+                # Si la publicación falla, no se rompe el fotograma;
+                # el renderer caerá a textura negra y se verá oscuro, pero no reventará.
+                pass
         else:
             self._lighting.render(surface, self._camera.offset)
-        self._post_processing.apply(surface)
+            self._post_processing.apply(surface)
 
     def dibujar_ui(self, surface: pygame.Surface) -> None:
         """La interfaz: lo que nunca recibe la luz del escenario.

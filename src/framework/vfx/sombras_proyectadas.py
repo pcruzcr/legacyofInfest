@@ -236,8 +236,25 @@ class ProyectorDeSombras:
     def _pintar_cuna(self, mascara: pygame.Surface,
                      poligono: list[tuple[float, float]],
                      piso_ambiente: tuple[int, int, int]) -> None:
-        lienzo = self._lienzo_de(mascara.get_size())
-        lienzo.fill((255, 255, 255, 255))
-        pygame.draw.polygon(lienzo, (*piso_ambiente, 255), poligono)
-        mascara.blit(lienzo, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        # AUD-B1: antes se hacía fill+polygon+blit a pantalla completa por cada
+        # sombra (52 veces por fotograma en stage0 → 104M píxeles). Ahora se
+        # recorta al AABB del polígono y se blitea sólo ese rect.
+        if not poligono:
+            return
+        xs = [p[0] for p in poligono]
+        ys = [p[1] for p in poligono]
+        min_x = max(0, int(min(xs)))
+        min_y = max(0, int(min(ys)))
+        max_x = min(mascara.get_width(), int(max(xs)) + 1)
+        max_y = min(mascara.get_height(), int(max(ys)) + 1)
+        w = max_x - min_x
+        h = max_y - min_y
+        if w <= 0 or h <= 0:
+            return
+        # Trasladar polígono al origen del recorte
+        recorte = [(x - min_x, y - min_y) for x, y in poligono]
+        tmp = pygame.Surface((w, h), pygame.SRCALPHA)
+        tmp.fill((255, 255, 255, 255))
+        pygame.draw.polygon(tmp, (*piso_ambiente, 255), recorte)
+        mascara.blit(tmp, (min_x, min_y), special_flags=pygame.BLEND_RGBA_MIN)
 

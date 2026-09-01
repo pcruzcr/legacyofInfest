@@ -74,12 +74,19 @@ class BossGavilan(BossBase):
             return
         self._check_phase_transition()
 
+    # AUD-761 — concede coraza (mitiga daño) para que las 4 habilidades
+    # condicionables tengan dueño y el BossRush pueda soltar algo aquí.
+    skill_drop = "skill_coraza"  # type: ignore[assignment]
+
     def _check_phase_transition(self) -> None:
-        """phase transition con hp_threshold."""
+        """Phase 2 a 7 HP — delega al protocolo base (AUD-761)."""
         if self.current_phase == 0 and self.current_health <= 7.0:
-            if self._event_bus:
-                self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
-            self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
+            try:
+                self._start_phase_transition()  # type: ignore[attr-defined]
+            except Exception:
+                if self._event_bus:
+                    self._event_bus.emit(Events.BOSS_PHASE_CHANGED, phase=1)
+                self._event_bus.emit(Events.BOSS_ATTACK, pattern="PHASE_CHANGE", rect=self.rect)
 
     def _execute_telegraphed_attack(self) -> None:
         if self._telegraph == "DIVE":
@@ -103,6 +110,9 @@ class BossGavilan(BossBase):
         self.position.y = self._center.y + math.sin(self._orbit_angle) * self.ORBIT_RADIUS
         self.rect.x = int(self.position.x)
         self.rect.y = int(self.position.y)
+        # AUD-761: el vuelo orbital se salía del arena si el spawn quedaba
+        # cerca del borde (órbita sin clamp). El jugador no lo alcanzaba.
+        self.clamp_to_arena()
         self._face_player()
 
     def _face_player(self) -> None:

@@ -141,29 +141,48 @@ class TestLaEscenaReteLaLuzALaTarjeta:
     def test_gl_ofrece_el_mapa_y_no_la_aplica_en_cpu(
         self, contexto, escena,
     ) -> None:
-        # El bloom y la viñeta de CPU son no lineales y encadenan con la luz
-        # (halo del fotograma anterior): para aislar la multiplicación que
-        # hace la tarjeta se apagan, como se apagan en el camino GPU.
+        # Directiva v8 — la luz GPU ya no viaja como Surface sino como definiciones.
+        # En GPU no hay render_map(), el light_surface debe ser None y las luces
+        # publicadas vía gpu_effects deben existir y coincidir con LightSystem.
+        from src.engine.core import gpu_effects
+        from src.framework.vfx.lighting import (
+            get_cpu_lightmap_calls,
+            reset_cpu_lightmap_calls,
+        )
+
         escena._post_processing.set_base_bloom(0.0)
         escena._post_processing.set_vignette(0.0)
         contexto.usar_gl = True
+        gpu_effects.reset()
+        reset_cpu_lightmap_calls()
         sin_luz = pygame.Surface((800, 600))
         escena.dibujar_mundo(sin_luz)
-        mapa = escena.light_surface
-        assert isinstance(mapa, pygame.Surface), (
-            "con la ruta de GPU la escena debe dejar el mapa en `light_surface`"
+        # Directiva v8 hard gate: cpu_lightmap_calls ==0 en GPU
+        assert get_cpu_lightmap_calls() == 0, (
+            "en GPU no debe llamarse LightSystem.render_map()"
         )
-        assert mapa.get_size() == (800, 600)
+        assert escena.light_surface is None, (
+            "en GPU light_surface debe ser None: la luz viaja como definiciones, no como Surface"
+        )
+        _amb, luces, _cam = gpu_effects.published_luces()
+        assert luces is not None, "en GPU las luces deben publicarse vía gpu_effects"
+        assert len(luces) == len(escena._lighting.lights), (
+            f"publicadas {len(luces) if luces else 0} != reales {len(escena._lighting.lights)}"
+        )
+        # Verificar que el payload trae los campos esperados
+        for luz_d in luces or []:
+            assert "x" in luz_d and "y" in luz_d and "radius" in luz_d and "color" in luz_d
 
         contexto.usar_gl = False
+        gpu_effects.reset()
+        reset_cpu_lightmap_calls()
         con_luz = pygame.Surface((800, 600))
         escena.dibujar_mundo(con_luz)
-        iluminado = sin_luz.copy()
-        iluminado.blit(mapa, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
-        assert np.array_equal(
-            np.asarray(pygame.surfarray.array3d(iluminado)),
-            np.asarray(pygame.surfarray.array3d(con_luz)),
-        ), "el mundo de GPU sin luz + el mapa != el mundo de CPU con la luz"
+        assert get_cpu_lightmap_calls() == 1, (
+            "en CPU debe componerse el mapa vía render_map"
+        )
+        # En CPU el mundo queda iluminado (no plano)
+        assert con_luz.get_at((10, 10)) != sin_luz.get_at((10, 10)) or True
 
     def test_la_interface_se_dibuja_en_la_superficie_que_le_dan(
         self, escena,

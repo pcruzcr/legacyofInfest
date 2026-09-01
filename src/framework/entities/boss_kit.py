@@ -106,13 +106,17 @@ class BossAttack:
 
     def __post_init__(self) -> None:
         # 1. Telegrafía obligatoria — windup <0.35 es ilegible y vuelve el combate ensayo/error
+        # AUD-761: no se clamp ea a 0.35 — hacerlo ocultaba el defecto y rompía
+        # `is_readable()` y el timing de `AttackScheduler` (windup 0.3 clampeado
+        # a 0.35 hacía que 0.45s siguiera en ACTIVE cuando debía estar en
+        # RECOVER). Se avisa y se deja el valor tal cual para que el diseñador
+        # lo corrija y `is_readable()` pueda detectarlo.
         if self.windup < MIN_READABLE_WINDUP:
             import logging
             logging.getLogger(__name__).warning(
-                "BossAttack %r windup %.2fs < %.2fs — clamp a mínimo legible",
+                "BossAttack %r windup %.2fs < %.2fs — ilegible, sube el telegrafiado",
                 self.name, self.windup, MIN_READABLE_WINDUP,
             )
-            object.__setattr__(self, "windup", MIN_READABLE_WINDUP)
 
     def available_in(self, phase: int) -> bool:
         return not self.phases or phase in self.phases

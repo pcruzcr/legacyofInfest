@@ -993,30 +993,8 @@ def aplicar_prefab(nombre: str, stage: StageData, offset: pygame.Vector2 = pygam
 
 
         try:
-
-
-
-
-
-
-
-            # Crear dict de props con posición
-
-
-
-
-
-
-
             props = dict(obj.get("props", {}))
-
-
-
-
-
-
-
-            handler({"type": obj.get("type", ""), "x": x, "y": obj.get("y", 0), "width": obj.get("width", 0), "height": obj.get("height", 0)}, None, props)  # noqa: E501
+            handler({"type": obj.get("type", ""), "x": x, "y": _y, "width": obj.get("width", 0), "height": obj.get("height", 0)}, stage, props)  # noqa: E501
 
 
 

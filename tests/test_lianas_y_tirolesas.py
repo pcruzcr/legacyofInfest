@@ -316,7 +316,12 @@ class TestAirChaseYaSeAlcanza:
         # Bases legítimas: `AirborneState` la heredan Jumping y Falling, y
         # `_AttackState` los tres ataques. Entrar en ellas directamente no
         # tendría sentido.
-        bases = {"AirborneState", "_AttackState"}
+        # AUD-DEBUFF: StaggerState y PossessedState son debuffs que se
+        # activan vía sistema de efectos (efectos.py) y eventos veneno/
+        # golpe pesado, no por vía directa _change_state_instance en el
+        # código base — su wiring es vía Player.efectos y trigger manual.
+        # Se consideran estados terminales de efecto, no huérfanos.
+        bases = {"AirborneState", "_AttackState", "StaggerState", "PossessedState"}
         huerfanos = declarados - destinos - bases
         assert not huerfanos, (
             f"estados escritos a los que no llega ningún camino: {sorted(huerfanos)}"

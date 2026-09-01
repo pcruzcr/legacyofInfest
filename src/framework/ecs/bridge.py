@@ -110,7 +110,7 @@ class ComponentesDeEntidad:
         antigua: EntityId = self._entidad  # type: ignore[attr-defined]
         nueva = destino.crear()
         for tipo in list(origen.censo_tipos()):
-            componente = origen.obtener(antigua, tipo)
+            componente: object | None = origen.obtener(antigua, tipo)
             if componente is not None:
                 destino.poner(nueva, componente)
         object.__setattr__(self, "_mundo", destino)

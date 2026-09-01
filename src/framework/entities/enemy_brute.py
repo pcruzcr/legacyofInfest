@@ -40,8 +40,13 @@ class EnemyBrute(EnemyBase):
         # AUD-455: el y del TMX es la esquina superior (semántica nativa de
         # Tiled); el descuento de altura hacía flotar a todos los enemigos de
         # suelo. Ver `enemy_walker` para el porqué completo.
-        self.rect.width = 100
-        self.rect.height = 60
+        # AUD-PROP: 100x60 era 4x el sprite 24x18 y dejaba hitbox gigante con
+        # visual diminuto (placeholder). Ahora 32x28 es 1.33x el sprite, igual
+        # que Walker (24x28 vs 16x12) y mantiene proporciones legibles.
+        self.rect.width = 64
+        self.rect.height = 56
+        # Para que el loader encuentre el sprite de especie correcto
+        self._species_id = "BruteGolemHielo"
 
         self._slam_cooldown: float = 3.0
         self._telegraph_duration = 0.3
@@ -150,7 +155,7 @@ class EnemyBrute(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        return pygame.Rect(0, 0, 100, 60)
+        return self.caja_ajustada(margen_x=2, margen_y=2)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self._build_hurtbox()
@@ -164,9 +169,9 @@ class EnemyBrute(EnemyBase):
         """
         if self._shockwave_active and not self._shockwave_has_hit:
             shockwave_rect = pygame.Rect(
-                self.position.x + (self.rect.width - 60) // 2,
-                self.position.y + self.rect.height - 20,
-                60, 20
+                self.position.x + (self.rect.width - 32) // 2,
+                self.position.y + self.rect.height - 12,
+                32, 12
             )
             player_hurtbox = player.hurtbox if hasattr(player, "hurtbox") else player.rect
             if shockwave_rect.colliderect(player_hurtbox):
@@ -198,12 +203,15 @@ class EnemyBrute(EnemyBase):
             surface.blit(warning_surf, (indicator_x, indicator_y))
 
         if self._shockwave_active:
-            shock_x = screen_x + (self.rect.width - 60) // 2
-            shock_y = screen_y + self.rect.height - 20
+            shock_x = screen_x + (self.rect.width - 32) // 2
+            shock_y = screen_y + self.rect.height - 12
             if self._shock_surf is None:
-                self._shock_surf = pygame.Surface((60, 20), pygame.SRCALPHA)
+                self._shock_surf = pygame.Surface((32, 12), pygame.SRCALPHA)
             shock_surf = self._shock_surf
+            if shock_surf.get_size() != (32, 12):
+                self._shock_surf = pygame.Surface((32, 12), pygame.SRCALPHA)
+                shock_surf = self._shock_surf
             shock_surf.fill((0, 0, 0, 0))
             alpha = int(180 * (self._shockwave_timer / max(self._shockwave_duration, 0.001)))
-            pygame.draw.ellipse(shock_surf, (200, 180, 100, alpha), (0, 0, 60, 20))
+            pygame.draw.ellipse(shock_surf, (200, 180, 100, alpha), (0, 0, 32, 12))
             surface.blit(shock_surf, (shock_x, shock_y))

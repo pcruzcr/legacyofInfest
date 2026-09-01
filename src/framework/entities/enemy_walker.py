@@ -58,8 +58,8 @@ class EnemyWalker(EnemyBase):
         # flotaban a la altura de su caja (el Walker de stage0 se quedaba a
         # 1 px de poder tocar al jugador de pie). El y del TMX es la esquina
         # superior, como lo dibuja Tiled.
-        self.rect.width = 24
-        self.rect.height = 28
+        self.rect.width = 48
+        self.rect.height = 56
 
         # Load sprites
         self._load_zone_sprites(zone, 16, 12)

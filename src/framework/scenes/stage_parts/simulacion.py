@@ -129,6 +129,8 @@ class SimulacionDeEscenario:
 
     def _aplicar_hora(self) -> None:
         """Aplica el ambiente del fotograma: luz, bloom, tinte y agarre.
+        Con indoor/outdoor real: bajo techo la luz es cálida constante y no
+        llueve — ver _es_indoor().
 
         AUD-362 — la escena **consume** un `EnvironmentState` que compone
         la simulación; los números son los de antes (lo fija
@@ -137,17 +139,30 @@ class SimulacionDeEscenario:
         pruebas y posiblemente alguna entrega.
         """
         estado = self._simulacion.estado()
-        # AUD-362 — el suelo de luz de la noche sube con la luna. Es la
-        # primera consecuencia jugable de la astronomía: una noche de luna
-        # llena se ve y una de luna nueva da miedo, sin que el escenario
-        # tenga que saber qué día es ni tocar una propiedad del mapa.
-        # `luz_lunar` ya vale 0 de día, así que esto no toca el mediodía.
+        # Indoor/outdoor: bajo techo la lluvia y el ciclo se atenúan
+        es_indoor = self._es_indoor()  # type: ignore[attr-defined]
+        if es_indoor:
+            # Indoor: luz cálida constante 0.85, sin variación día/noche, sin bloom extra nocturno
+            # Se construye un estado indoor derivado: factor 0.85, tinte cálido, sin lluvia
+            from src.framework.world.environment import EnvironmentState
+
+            estado = EnvironmentState(
+                hora=estado.hora,
+                factor_ambiente=0.85,
+                color_ambiente=(255, 230, 180),
+                bloom_extra=0.02,
+                clima="clear",
+                humedad=0.0,
+                viento=0.0,
+                visibilidad=1.0,
+                altura_solar=estado.altura_solar,
+                azimut_solar=estado.azimut_solar,
+                fase_lunar=estado.fase_lunar,
+            )
+        # AUD-362 — el suelo de luz de la noche sube con la luna.
         suelo = self.MIN_AMBIENTE
-        if estado.es_de_noche:
+        if not es_indoor and estado.es_de_noche:
             suelo += self.LUNA_LLENA_SUMA * estado.luz_lunar
-        #: El ambiente de este fotograma, público. Ésta es la API que faltaba:
-        #: un enemigo que quiera comportarse distinto de noche, o un efecto
-        #: que quiera saber si llueve, leen esto y no un privado ajeno.
         self.ambiente = estado
 
         # AUD-425 — el pulso visual, la última pieza del reloj musical.
@@ -327,12 +342,7 @@ class SimulacionDeEscenario:
 
     def _aplicar_clima(self, estado: EnvironmentState) -> None:
         """El mundo dice qué tiempo hace; el VFX lo pinta — AUD-374.
-
-        Antes iban por dos caminos que no se hablaban y el viento —se
-        calculaba cada fotograma— **no lo leía nadie**. La comparación se
-        hace aquí y no apoyándose en la guarda interna de `set_climate`:
-        `test_el_acto_se_aplica_una_vez_y_no_en_cada_fotograma` vigila la
-        llamada, no la inocuidad (salió de una comprobación de mutación).
+        Indoor/outdoor real: bajo techo la lluvia/p polvo se atenúa y el viento no entra.
         """
         clima = getattr(self, "_weather", None)
         if clima is None:
@@ -340,12 +350,48 @@ class SimulacionDeEscenario:
         if clima.climate != estado.clima:
             clima.set_climate(estado.clima)
         clima.aplicar_viento(estado.viento)
+        # Indoor/outdoor: si está bajo techo, atenuar lluvia y viento, intensificar polvo
+        try:
+            indoor = 1.0 if self._es_indoor() else 0.0
+            prev = getattr(clima, "_indoor_factor", 0.0)
+            cur = prev * 0.9 + indoor * 0.1
+            clima.set_indoor_factor(cur)
+            # Polvo ambiental: indoor más denso (rayo de luz), outdoor tenue
+            amb = getattr(self, "_ambient_particles", None)
+            if amb is not None and hasattr(amb, "set_indoor_factor"):
+                amb.set_indoor_factor(cur)
+        except Exception:
+            pass
 
     #: El ambiente antes de que exista simulación: mediodía despejado, que
     #: es la identidad. Una escena preguntada antes de `on_enter` responde
     #: un estado válido en vez de reventar, y ningún consumidor necesita
     #: una rama `if ambiente is None` — la rama que nunca se prueba.
     ambiente = EnvironmentState.neutro()
+
+    def _es_indoor(self) -> bool:
+        """¿El jugador está bajo techo? Vista-agnóstico: rect collide, funciona en lateral/cenital/isométrica."""
+        try:
+            player = getattr(self, "_player", None)
+            if player is None or not hasattr(player, "rect"):
+                return False
+            # Si el mapa no declara cielo (cielo=False) es indoor global
+            if not getattr(self._stage_data, "cielo", True):
+                # Cielo apagado = interior puro (ej. caverna, hub interior)
+                # Pero si no hay IndoorZone, se respeta; si hay, se usa el rect
+                zones = getattr(self._stage_data, "indoor_zones", []) or []
+                if not zones:
+                    return True
+            zones = getattr(self._stage_data, "indoor_zones", []) or []
+            if not zones:
+                return False
+            pr = player.rect
+            for z in zones:
+                if z.colliderect(pr):
+                    return True
+            return False
+        except Exception:
+            return False
 
     def _aplicar_agarre(self, estado: EnvironmentState) -> None:
         """El suelo mojado hace derrapar al jugador — AUD-362.
@@ -363,9 +409,10 @@ class SimulacionDeEscenario:
         perfil = getattr(jugador, "perfil", None)
         if perfil is None:
             return
-        # La guarda es explícita, y no sólo `frenado_del_suelo` (que ya
-        # devuelve 0 en seco), para que quien lea esto vea la condición que
-        # importa: el suelo mojado es lo que cambia la regla.
+        # Indoor: el suelo no se moja bajo techo, aunque llueva fuera
+        if self._es_indoor():
+            perfil.friccion = 0.0
+            return
         perfil.friccion = (
             estado.frenado_del_suelo if estado.suelo_mojado else 0.0)
 

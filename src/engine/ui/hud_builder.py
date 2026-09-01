@@ -31,13 +31,30 @@ class HUDBuilder:
         from src.engine.core import settings
 
         h = self.hud
-        # PS4 1280×720 — layout real, no estirado: izquierda retrato/barras,
-        # centro puntos/exp/moneda/tiempo, derecha minimapa. A 1280 usamos
-        # coordenadas absolutas modernas; a otras resoluciones fallback escalado.
+        # HD nativo 1920×1080 1:1 — sin escalado. Izquierda retrato 128, centro 800, derecha minimapa 280
+        if settings.INTERNAL_WIDTH == 1920 and settings.INTERNAL_HEIGHT == 1080:
+            MARGEN = 32
+            h._portrait_frame_rect = pygame.Rect(MARGEN, MARGEN, 128, 128)  # type: ignore[attr-defined]
+            h._portrait_sprite_rect = pygame.Rect(MARGEN + 6, MARGEN + 6, 116, 116)  # type: ignore[attr-defined]
+            ancho = 128
+            x = MARGEN
+            y_barras = h._portrait_frame_rect.bottom + 18
+            alto = 20
+            paso = 30
+            h._y_barras_bloque = y_barras
+            h._paso_barra_bloque = paso
+            h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)
+            h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)
+            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)
+            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)
+            cx = settings.INTERNAL_WIDTH // 2
+            h._score_region = pygame.Rect(cx - 400, MARGEN, 800, 80)
+            h._timer_bg_rect = pygame.Rect(cx - 380, MARGEN + 14, 220, 56)
+            h._timer_icon_rect = pygame.Rect(cx - 370, MARGEN + 24, 36, 36)
+            h._timer_rect = pygame.Rect(cx - 328, MARGEN + 24, 180, 36)
+            return self
         if settings.INTERNAL_WIDTH == 1280 and settings.INTERNAL_HEIGHT == 720:
-            # PS4 1280×720 — moderno, sin estirar: izquierda retrato 96, centro 560, derecha minimapa 192
             MARGEN = 24
-            # Izquierda: retrato 96×96 circular + barras 96×16 apiladas (más grande, no extraño)
             h._portrait_frame_rect = pygame.Rect(MARGEN, MARGEN, 96, 96)  # type: ignore[attr-defined]
             h._portrait_sprite_rect = pygame.Rect(MARGEN + 4, MARGEN + 4, 88, 88)  # type: ignore[attr-defined]
             ancho = 96
@@ -51,7 +68,6 @@ class HUDBuilder:
             h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)  # type: ignore[attr-defined]
             h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
             h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
-            # Centro: panel 560×64 centrado (640-280,16) para tiempo/puntos/exp/moneda — más ancho, no cortado
             cx = settings.INTERNAL_WIDTH // 2
             h._score_region = pygame.Rect(cx - 280, MARGEN, 560, 64)  # type: ignore[attr-defined]
             h._timer_bg_rect = pygame.Rect(cx - 260, MARGEN + 10, 160, 44)  # type: ignore[attr-defined]

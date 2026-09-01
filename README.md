@@ -13,7 +13,7 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Consola de depuración (F11) con FPS, cola de eventos y árbol de módulos; cajas de colisión en F1
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 6.274 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 6.323 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
 
 ```
 pip install -r requirements.txt
@@ -35,8 +35,8 @@ dependencias:
   `AERIAL_SLAM` `GROUND_POUND` `AIR_CHASE` `STAGGER` `POSSESSED` `CHARGE_RELEASE`
 - **Escenarios** — carga de TMX con dibujado por pyscroll, capas de colisión,
   puntos de control, zonas de peligro, fosos, bloqueos de cámara y fondos con
-  parallax. **115 tipos de objeto** aceptados desde Tiled en ejecución (50
-  integrados del framework y 65 del registro una vez descubiertos los
+  parallax. **119 tipos de objeto** aceptados desde Tiled en ejecución (51
+  integrados del framework y 68 del registro una vez descubiertos los
   escenarios, más `Solid` y `Platform` en la capa `Collision`)
 - **Enemigos** — 65 tipos registrados sobre ocho arquetipos base (caminante, volador,
   tirador, arquero, embestidor, bruto, hechicero, asesino) con una máquina de
@@ -61,7 +61,7 @@ src/
   framework/           framework de juego (entidades, escenario, ecs, ia, vfx,
                        ui, procesamiento, académico)
   stages/              el escenario 0 y las entregas de los estudiantes
-tests/                 6.274 pruebas sobre todos los módulos
+tests/                 6.323 pruebas sobre todos los módulos
 tools/                 generadores de mapas
 scripts/               validadores, calificadores y el previsualizador de TMX
 docs/                  documentación completa

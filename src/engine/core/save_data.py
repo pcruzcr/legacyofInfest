@@ -12,7 +12,7 @@ from typing import Any, ClassVar
 import orjson
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-SAVE_VERSION = 4
+SAVE_VERSION = 5
 MAX_SLOTS = 5
 
 #: Primera versión que guarda el inventario dentro de la partida (AUD-292).
@@ -131,6 +131,10 @@ class SaveData(BaseModel):
     #: logro de contador («mata 50 enemigos») lleva su cuenta a medias, y
     #: perderla al cargar sería peor que no guardarlo.
     logros: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    #: B1 — NG+ (Nueva Partida Plus) — cuántas veces se ha completado el juego.
+    #: Cada NG+ sube la dificultad (ver difficulty.py). Se incrementa al ver
+    #: los créditos tras `hub_backtracking` o `boss_paburu`.
+    ng_plus: int = Field(default=0, ge=0)
 
     @field_validator("health", "max_health")
     @classmethod
@@ -249,6 +253,9 @@ class SaveData(BaseModel):
             # las cinco ranuras el mismo historial.
             data.setdefault("logros", {})
             data["version"] = 4
+        if ver < 5:
+            data.setdefault("ng_plus", 0)
+            data["version"] = 5
         return data
 
     def to_json(self) -> bytes:

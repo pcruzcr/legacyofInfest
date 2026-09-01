@@ -54,8 +54,8 @@ class EnemyMedusa(EnemyFlying):
             damage_on_contact=0.0,
         )
         self.contact_knockback = 0.0
-        self.rect.width = 20
-        self.rect.height = 18
+        self.rect.width = 40
+        self.rect.height = 36
         self._sprite_fw = self.SPRITE_ANCHO
         self._sprite_fh = self.SPRITE_ALTO
 

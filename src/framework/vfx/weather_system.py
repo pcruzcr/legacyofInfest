@@ -12,14 +12,15 @@ from src.framework.world.simulation import viento_de
 
 
 class WeatherSystem:
-    """Stage weather effects (rain, snow, fog, storm) driven by TMX climate property."""
+    """Stage weather effects (rain, snow, fog, storm) — HD nativo sin pixelado."""
 
+    # HD nativo 1920×1080: densidad 2.5× vs 800×600. Lluvia real son vetas largas con splash, no puntos.
     CLIMATE_PARAMS: dict[str, dict] = {
-        "clear":  {"particles": 0,  "overlay_alpha": 0,   "overlay_color": (0, 0, 0)},
-        "rain":   {"particles": 60, "overlay_alpha": 30,  "overlay_color": (60, 70, 90)},
-        "snow":   {"particles": 40, "overlay_alpha": 50,  "overlay_color": (200, 210, 220)},
-        "fog":    {"particles": 0,  "overlay_alpha": 80,  "overlay_color": (180, 180, 190)},
-        "storm":  {"particles": 100,"overlay_alpha": 60,  "overlay_color": (40, 40, 50)},
+        "clear":  {"particles": 0,   "overlay_alpha": 0,   "overlay_color": (0, 0, 0)},
+        "rain":   {"particles": 150, "overlay_alpha": 18,  "overlay_color": (55, 65, 85)},
+        "snow":   {"particles": 90,  "overlay_alpha": 35,  "overlay_color": (210, 220, 230)},
+        "fog":    {"particles": 0,   "overlay_alpha": 70,  "overlay_color": (185, 185, 195)},
+        "storm":  {"particles": 220, "overlay_alpha": 45,  "overlay_color": (35, 35, 45)},
     }
 
     def __init__(self, climate: str = "clear",
@@ -51,6 +52,7 @@ class WeatherSystem:
         # hasta el `fill` si el brillo no ha cambiado.
         self._destello: pygame.Surface | None = None
         self._destello_alfa: int = -1
+        self._indoor_factor: float = 0.0  # 0 outdoor, 1 indoor — ver set_indoor_factor
         self._set_climate_params()
 
     def _set_climate_params(self) -> None:
@@ -139,9 +141,11 @@ class WeatherSystem:
 
     def update(self, dt: float, camera_offset: pygame.Vector2) -> None:
         self._timer += dt
-        if self._particle_rate > 0:
-            spawn_interval = 1.0 / self._particle_rate
-            max_spawn = max(1, int(self._particle_rate * dt))
+        # Indoor/outdoor: si está 100% indoor, no llueve (techo). Si 50% indoor (umbral puerta), mitad.
+        eff_rate = self._particle_rate * (1.0 - self._indoor_factor)
+        if eff_rate > 0:
+            spawn_interval = 1.0 / eff_rate
+            max_spawn = max(1, int(eff_rate * dt))
             spawned = 0
             while self._timer >= spawn_interval and spawned < max_spawn:
                 self._timer -= spawn_interval
@@ -195,30 +199,39 @@ class WeatherSystem:
         self._emitter.clear()
 
     def _spawn_particle(self, camera_offset: pygame.Vector2) -> None:
-        sx = camera_offset.x + self._rng.uniform(-20, settings.INTERNAL_WIDTH + 20)
-        sy = camera_offset.y - 10
+        # HD nativo: lluvia son vetas 2×12 con cola alfa, no puntos 1×2. Polvo son nubes suaves.
+        sx = camera_offset.x + self._rng.uniform(-40, settings.INTERNAL_WIDTH + 40)
+        sy = camera_offset.y - 20
         color = self._get_particle_color()
 
         if self._climate == "rain":
+            # Veta larga 2×14, gravedad alta, fricción 1.0 para caída recta, con viento real
             self._emitter.emit_directed(
-                sx, sy, angle=self._angulo_con_viento(), speed=280,
-                count=1, lifetime=self._rng.uniform(*self._VIDA_LLUVIA),
-                size=(1, 2), color=color, spread=5,
-                gravity=980, friction=0.99,
+                sx, sy, angle=self._angulo_con_viento(), speed=520,
+                count=2, lifetime=self._rng.uniform(0.85, 1.1),
+                size=(2, 14), color=color, spread=3,
+                gravity=1200, friction=1.0,
             )
+            # Splash al impactar (10% de las gotas)
+            if self._rng.random() < 0.12:
+                self._emitter.emit(
+                    sx, camera_offset.y + settings.INTERNAL_HEIGHT - 8,
+                    config=self._splash_config(color),
+                )
         elif self._climate == "snow":
+            # Nieve HD: copos 4×4 con rotación y deriva, no cuadrados 2×4
             self._emitter.emit_directed(
-                sx, sy, angle=self._angulo_con_viento(), speed=self._rng.uniform(30, 60),
-                count=1, lifetime=self._rng.uniform(2.0, 4.0),
-                size=(2, 4), color=color, spread=20,
-                gravity=50, friction=0.95,
+                sx, sy, angle=self._angulo_con_viento(), speed=self._rng.uniform(40, 75),
+                count=1, lifetime=self._rng.uniform(3.5, 5.5),
+                size=(4, 4), color=color, spread=25,
+                gravity=18, friction=0.97,
             )
         elif self._climate == "storm":
             self._emitter.emit_directed(
-                sx, sy, angle=self._angulo_con_viento(), speed=280,
-                count=1, lifetime=self._rng.uniform(*self._VIDA_LLUVIA),
-                size=(1, 3), color=color, spread=10,
-                gravity=980, friction=0.99,
+                sx, sy, angle=self._angulo_con_viento(), speed=580,
+                count=3, lifetime=self._rng.uniform(0.8, 1.0),
+                size=(2, 16), color=color, spread=7,
+                gravity=1300, friction=1.0,
             )
 
     #: Cuánto vive una gota, en segundos.
@@ -250,14 +263,34 @@ class WeatherSystem:
         # vertical; se resta porque 90 grados es hacia abajo.
         return 90.0 - math.degrees(math.atan2(self._wind, 280.0))
 
+    def _splash_config(self, color: tuple[int, int, int]):
+        from src.framework.vfx.particle_system import BurstConfig
+
+        # Splash HD: 3 partículas pequeñas que rebotan 2px, vida corta
+        return BurstConfig(
+            count=3, speed=45, lifetime=0.18, size=(1, 2),
+            color=(180, 190, 210), spread=70, gravity=400, friction=0.85,
+        )
+
     def _get_particle_color(self) -> tuple[int, int, int]:
         if self._climate == "rain":
-            return (150, 170, 200)
+            return (165, 185, 220)  # HD: azul grisáceo con más brillo, no 150,170,200 apagado
         elif self._climate == "snow":
-            return (230, 235, 240)
+            return (245, 248, 255)  # HD: blanco puro con tinte azul, no 230 gris
         elif self._climate == "storm":
-            return (120, 130, 150)
+            return (135, 145, 165)
         return (200, 200, 200)
+
+    # ── Indoor/outdoor — afecta lluvia y luz ───────────────────────
+    def set_indoor_factor(self, factor: float) -> None:
+        """0.0 outdoor (lluvia completa) → 1.0 indoor (sin lluvia, luz cálida).
+        Lo llama StageScene cada frame según si el jugador está bajo techo (colisión con IndoorZone o cielo=False).
+        """
+        # Reduce densidad de partículas proporcionalmente, no binario
+        self._indoor_factor = max(0.0, min(1.0, factor))
+        # Ajusta overlay: indoor atenúa el velo de tormenta
+        base = self.CLIMATE_PARAMS.get(self._climate, self.CLIMATE_PARAMS["clear"])
+        self._overlay_alpha = int(base["overlay_alpha"] * (1.0 - self._indoor_factor * 0.7))
 
     #: AUD-145 — clima → fichero REAL, con su ruta completa desde `assets/`.
     #:

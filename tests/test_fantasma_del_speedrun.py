@@ -151,6 +151,13 @@ class TestLaEscenaLoUsaDeVerdad:
     def test_la_escena_graba_mientras_se_juega(self) -> None:
         escena = self._escena()
         try:
+            # AUD-FANTASMA: el fantasma solo graba en Boss Rush
+            from src.framework.stage.boss_rush_mode import BossRushMode, BossRushStage
+            modo = BossRushMode()
+            modo.add_stage(BossRushStage("test_boss", "TestBoss", lambda ctx: escena))
+            modo.start()
+            escena.context.boss_rush = modo
+            escena._preparar_fantasma()
             assert escena._fantasma is not None, "la escena no graba nada"
             for _ in range(60):
                 escena.update(1 / 60)
@@ -179,6 +186,12 @@ class TestLaEscenaLoUsaDeVerdad:
         lienzo = pygame.Surface((800, 600))
         lienzo.fill((0, 0, 0))
         try:
+            # AUD-FANTASMA: solo se dibuja en Boss Rush y como player transparente
+            from src.framework.stage.boss_rush_mode import BossRushMode, BossRushStage
+            modo = BossRushMode()
+            modo.add_stage(BossRushStage("test_boss", "TestBoss", lambda ctx: escena))
+            modo.start()
+            escena.context.boss_rush = modo
             previo = GhostData()
             jugador = escena._player
             for _ in range(120):
@@ -196,6 +209,12 @@ class TestLaEscenaLoUsaDeVerdad:
     def test_solo_guarda_si_la_carrera_fue_mejor(self, tmp_path) -> None:
         escena = self._escena()
         try:
+            # AUD-FANTASMA: guardado solo en Boss Rush
+            from src.framework.stage.boss_rush_mode import BossRushMode, BossRushStage
+            modo = BossRushMode()
+            modo.add_stage(BossRushStage("test_boss", "TestBoss", lambda ctx: escena))
+            modo.start()
+            escena.context.boss_rush = modo
             escena._ruta_del_fantasma = lambda: tmp_path / "g.json"
             mejor = GhostData()
             for i in range(5):

@@ -787,6 +787,7 @@ class HUD:
         self._draw_tiempo_bala(surface)
         self._draw_boss_rush(surface)
         self._draw_score(surface)
+        self._draw_nivel(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
@@ -912,6 +913,55 @@ class HUD:
         ix = r.right - monedas.get_width() - icono.get_width() - _e(2)
         iy = r.y + (monedas.get_height() - icono.get_height()) // 2
         surface.blit(icono, (ix, iy))
+
+    def set_porcentaje_items(self, pct: float | None) -> None:
+        """B2 — % de ítems del escenario (0.0-1.0). None = no mostrar."""
+        self._porcentaje_items = pct  # type: ignore[attr-defined]
+
+    def _draw_nivel(self, surface: pygame.Surface) -> None:
+        """Barra de nivel / XP + % ítems — B2: siempre visible."""
+        try:
+            from src.engine.core.experience import get_experience
+            exp = get_experience()
+            nivel = exp.nivel
+            dentro, total = exp.progreso_del_nivel()
+            pct = (dentro / total) if total > 0 else 0
+            puntos = exp.puntos
+            txt = f"Nv.{nivel}  {dentro}/{total} XP"
+            if puntos > 0:
+                txt += f"  +{puntos} pt(s) (K)"
+            pct_items = getattr(self, "_porcentaje_items", None)
+            if pct_items is not None:
+                txt += f"  Items {int(pct_items*100)}%"
+            # Posición: debajo del score_region, centrado
+            r = self._score_region
+            # Fuente pequeña escalada
+            f = self._font
+            # Si el texto es muy largo, recorta
+            surf = f.render(txt, True, (180, 220, 255))
+            # Fondo sutil
+            bg_w = surf.get_width() + _e(8)
+            bg_h = surf.get_height() + _e(4)
+            bg_x = r.x + (r.width - bg_w) // 2
+            bg_y = r.bottom + _e(2)
+            # No dibujar si se sale de pantalla (fallback 800)
+            if bg_y + bg_h < settings.INTERNAL_HEIGHT:
+                bg_surf = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+                bg_surf.fill((20, 25, 40, 160))
+                surface.blit(bg_surf, (bg_x, bg_y))
+                surface.blit(surf, (bg_x + _e(4), bg_y + _e(2)))
+                # Barra fina debajo del texto
+                bar_w = bg_w - _e(8)
+                bar_h = _e(3)
+                bx = bg_x + _e(4)
+                by = bg_y + bg_h + _e(1)
+                pygame.draw.rect(surface, (40, 45, 60), (bx, by, bar_w, bar_h), border_radius=1)
+                fill_w = int(bar_w * max(0.0, min(1.0, pct)))
+                if fill_w > 0:
+                    pygame.draw.rect(surface, (90, 160, 255), (bx, by, fill_w, bar_h), border_radius=1)
+                pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
+        except Exception:
+            pass
 
     def set_special_meter(self, current: float, max_val: float) -> None:
         self._special_current = current

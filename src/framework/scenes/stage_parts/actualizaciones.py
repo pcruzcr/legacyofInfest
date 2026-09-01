@@ -177,6 +177,29 @@ class ActualizacionesDeEscenario:
             if getattr(self, "_nado", None) is not None and self._nado.aire_maximo > 0.0:
                 ratio = self._nado.aire / self._nado.aire_maximo if self._nado.en_agua else -1.0
                 self._hud.set_oxigeno(ratio, self._nado.avisando)
+            # B2 — % ítems del escenario (Fogata %): recogidos vs total del TMX
+            try:
+                total_items = len(
+                    getattr(stage, "recogibles", []) or []
+                ) + len(
+                    getattr(stage, "cerraduras", []) or []
+                ) + len(getattr(stage, "cofres", []) or [])
+                # Contar recogidos: los que tienen recogido/abierto
+                recogidos = 0
+                for r in getattr(stage, "recogibles", []) or []:
+                    if getattr(r, "recogido", False):
+                        recogidos += 1
+                for c in getattr(stage, "cofres", []) or []:
+                    if getattr(c, "abierto", False):
+                        recogidos += 1
+                if total_items > 0:
+                    self._hud.set_porcentaje_items(
+                        min(1.0, recogidos / total_items)
+                    )
+                else:
+                    self._hud.set_porcentaje_items(None)
+            except Exception:
+                pass
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:
@@ -197,9 +220,15 @@ class ActualizacionesDeEscenario:
                 getattr(clock, "unscaled_dt", dt) if clock is not None else dt,
             )
         self._speedrun.update(dt)
+        # AUD-FANTASMA: grabar solo en Boss Rush; en historia no se genera
+        # traza para no contaminar el fantasma del modo competitivo.
         if self._fantasma is not None and self._player is not None:
-            self._fantasma.grabar_si_toca(
-                dt, self._player.position.x, self._player.position.y)
+            try:
+                if getattr(self, "_boss_rush_activo", lambda: None)() is not None:
+                    self._fantasma.grabar_si_toca(
+                        dt, self._player.position.x, self._player.position.y)
+            except Exception:
+                pass
         # AUD-249: la cámara viaja al sistema de peligros porque el borde que
         # mata en un `ScrollZone` se mueve con ella.
         self._hazards.update(dt, self._player, self._stage_data, self._camera)

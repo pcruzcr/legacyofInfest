@@ -72,23 +72,43 @@ def _soporta(escena: object | None, metodo: str) -> bool:
 
 
 def _publicar_software(origen: pygame.Surface, destino: pygame.Surface) -> None:
-    """Publica el fotograma interno en la ventana — AUD-460.
+    """Publica el fotograma interno en la ventana — AUD-460 / AUD-754.
 
-    AUD-013 suprimió el escalado manual porque la ventana se creaba al tamaño
-    interno y un blit agrandado quedaba recortado a la esquina superior
-    izquierda. Ese defecto era del **tamaño de la ventana**, no del blit:
-    eliges mal las dos variables y el arreglo correcto es arreglar la
-    variable equivocada. Desde AUD-460 la ventana mide interior ×
-    `DISPLAY_SCALE` (ver `_abrir_ventana_software`), así que aquí se escala el
-    fotograma **hacia** esa ventana, y cuando coinciden no se escala nada.
+    AUD-754 — Presentación nativa con letterbox aspect-preserving.
+
+    Antes hacía un scale a `destino.get_size()` directo, que estiraba si los
+    aspectos diferían (p.ej. interno 1280×720 en ventana 1649×877). Ahora calcula
+    el viewport letterbox con `display.calculate_viewport` y centra el fotograma:
+
+      display_scale = min(W/1280, H/720)  — UNA única transformación de presentación.
+      viewport = (offset_x, offset_y, scaled_w, scaled_h)
+
+    No confundir con camera zoom (mundo) ni con UI scale — este es el único
+    escalado global. No aplica smoothscale a pixel-art si rompe; para UI ya
+    rasterizada podría usar smooth si está permitido. El letterbox deja barras
+    negras donde el aspecto no coincide, sin deformar.
 
     El blit con destino (`pygame.transform.scale`) evita crear una superficie
     nueva por fotograma.
     """
+    from src.engine.core import display as _display
+
     if origen.get_size() == destino.get_size():
         destino.blit(origen, (0, 0))
+        return
+    dw, dh = destino.get_size()
+    iw, ih = origen.get_size()
+    vp_x, vp_y, vp_w, vp_h = _display.calculate_viewport(dw, dh, iw, ih)
+    # Letterbox: rellenar de negro y centrar escalado sin deformar
+    if vp_w == dw and vp_h == dh:
+        pygame.transform.scale(origen, (dw, dh), destino)
     else:
-        pygame.transform.scale(origen, destino.get_size(), destino)
+        destino.fill((0, 0, 0))
+        # Escalar al viewport, no a ventana completa
+        # Si escala es 1.0 y offset 0, el branch de arriba ya habría coincidido
+        # pero por redondeo puede diferir 1px, así que siempre ir por aquí para letterbox
+        escalado = pygame.transform.scale(origen, (vp_w, vp_h))
+        destino.blit(escalado, (vp_x, vp_y))
 
 
 def modo_daltonico_gl(ajustes: object | None) -> int:
@@ -184,13 +204,14 @@ class App:
         if self._use_gl:
             try:
                 import moderngl  # noqa: F401
-                # Nativo 1280×720@120 con vsync para no tearing a 120Hz
+                # Nativo 1280×720@120 con vsync + RESIZABLE para matriz multi-resolución
+                # (1920×1080,1600×900,1366×768,1280×720, ventana/fullscreen) — AUD-754
                 pygame.display.set_mode(
                     (
                         settings.INTERNAL_WIDTH * settings.DISPLAY_SCALE,
                         settings.INTERNAL_HEIGHT * settings.DISPLAY_SCALE,
                     ),
-                    pygame.OPENGL | pygame.DOUBLEBUF,
+                    pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE,
                     vsync=1,
                 )
             # `(ImportError, pygame.error, Exception)` was redundant — Exception
@@ -283,13 +304,14 @@ class App:
                          exc_info=True)
 
     def _abrir_ventana_software(self) -> None:
-        # Nativo 1280×720@120 — vsync evita tearing a 120Hz
+        # Nativo 1280×720@120 — vsync + RESIZABLE para letterbox multi-resolución (AUD-754)
         escala = settings.DISPLAY_SCALE
         pygame.display.set_mode(
             (
                 settings.INTERNAL_WIDTH * escala,
                 settings.INTERNAL_HEIGHT * escala,
             ),
+            pygame.RESIZABLE,
             vsync=1,
         )
 
@@ -554,6 +576,35 @@ class App:
         for e in events:
             if e.type == pygame.QUIT:
                 has_quit = True
+            # AUD-754 — manejo de ventana: resize, fullscreen y viewport.
+            # Tras cada cambio actualizar window/drawable/viewport/projection/UI.
+            # No recrear renderer innecesariamente; solo actualizar viewport.
+            if e.type == pygame.VIDEORESIZE:
+                # Re-crear ventana con nuevo tamaño manteniendo flags
+                try:
+                    w, h = e.w, e.h
+                    flags = pygame.display.get_surface().get_flags() if pygame.display.get_surface() else 0
+                    # Preservar OPENGL vs software
+                    is_gl = bool(flags & pygame.OPENGL)
+                    new_flags = (pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE) if is_gl else pygame.RESIZABLE
+                    pygame.display.set_mode((w, h), new_flags, vsync=1)
+                    # Actualizar viewport del GL si existe
+                    if self._gl_renderer is not None:
+                        from src.engine.core import display as _display
+                        vp = _display.calculate_viewport(w, h)
+                        self._gl_renderer.set_display_viewport(*vp)
+                except Exception:
+                    logger.debug("VIDEORESIZE handling failed", exc_info=True)
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_F10:
+                # AUD-754 — Fullscreen nativo: debe renderizar a drawable nativo,
+                # preservar aspecto, sin deformar, con UNA transformación de presentación.
+                self._toggle_fullscreen()
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_F9:
+                # Diagnóstico de presentación (display) — muestra overlay nativo
+                try:
+                    self.debug_overlay.toggle_display_diagnostics()
+                except AttributeError:
+                    pass
         self.input_manager.pump(events)
         # AUD-283 — la consola se lee aquí, antes que la escena, y a propósito:
         # una escena modal —el menú de pausa, un diálogo— consume sus teclas y
@@ -565,9 +616,48 @@ class App:
         if self.scene_manager.stack_size > 0:
             self.scene_manager.current.process_events(events)
 
+    def _toggle_fullscreen(self) -> None:
+        """Alterna fullscreen nativo — AUD-754.
+
+        FULLSCREEN: dibujar a resolución nativa del drawable, preservar aspecto,
+        sin distorsión, con letterbox/pillarbox si hace falta, y centrado.
+        No recrea renderer; solo cambia modo de ventana y viewport.
+        """
+        try:
+            surf = pygame.display.get_surface()
+            flags = surf.get_flags() if surf else 0
+            is_full = bool(flags & pygame.FULLSCREEN)
+            # Obtener tamaño de escritorio para fullscreen nativo
+            info = pygame.display.Info()
+            desktop_w, desktop_h = info.current_w or settings.INTERNAL_WIDTH, info.current_h or settings.INTERNAL_HEIGHT
+            if is_full:
+                # Volver a ventana: interior × scale
+                w = settings.INTERNAL_WIDTH * settings.DISPLAY_SCALE
+                h = settings.INTERNAL_HEIGHT * settings.DISPLAY_SCALE
+                is_gl = bool(flags & pygame.OPENGL)
+                new_flags = (pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE) if is_gl else pygame.RESIZABLE
+                pygame.display.set_mode((w, h), new_flags, vsync=1)
+            else:
+                # Ir a fullscreen nativo del escritorio
+                is_gl = bool(flags & pygame.OPENGL)
+                new_flags = pygame.FULLSCREEN
+                if is_gl:
+                    new_flags |= pygame.OPENGL | pygame.DOUBLEBUF
+                pygame.display.set_mode((desktop_w, desktop_h), new_flags, vsync=1)
+            # Actualizar viewport GL tras cambio
+            if self._gl_renderer is not None:
+                from src.engine.core import display as _display
+                ww, wh = pygame.display.get_surface().get_size()
+                vp = _display.calculate_viewport(ww, wh)
+                self._gl_renderer.set_display_viewport(*vp)
+        except Exception:
+            logger.debug("fullscreen toggle failed", exc_info=True)
+
     def _draw(self, dt: float = 0.0) -> None:
         # Facade — punto único para backend GL vs Software (AUD-725)
-        from src.engine.render.render_facade import GLBackend, SoftwareBackend
+        from src.engine.render.render_facade import GLBackend, RenderFacade, SoftwareBackend
+        if not hasattr(self, "_render_facade") or self._render_facade is None:
+            self._render_facade = RenderFacade(prefer_gl=self._use_gl)
         self._render_facade.set_backend(GLBackend() if self._use_gl and self._gl_renderer else SoftwareBackend())
         # AUD-222 — se olvida lo publicado en el fotograma anterior *antes* de
         # que dibuje nadie. Los menús no ejecutan post-procesado, así que sin

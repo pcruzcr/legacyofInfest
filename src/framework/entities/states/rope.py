@@ -196,6 +196,78 @@ class TirolesaState(PlayerStateBase):
             )
 
 
+class GanchoTechoState(PlayerStateBase):
+    """Grapple al techo — Spider PS1, Ori bash. Cuelga del techo y se balancea o se impulsa.
+    HD nativo 1920: cuerda visible con trail, sin escalado.
+    """
+
+    def __init__(self, punto_anclaje: pygame.Vector2 | None = None) -> None:
+        from src.framework.entities.player import PlayerState
+        super().__init__(PlayerState.CLIMBING)
+        self._ancla = punto_anclaje
+        self._t = 0.0
+        self._longitud: float = 80.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        player.velocity.update(0.0, 0.0)
+        player.is_grounded = False
+        self._t = 0.0
+        if self._ancla is not None:
+            dx = player.rect.centerx - self._ancla.x
+            dy = player.rect.centery - self._ancla.y
+            self._longitud = max(30.0, (dx*dx + dy*dy) ** 0.5)
+        player._event_bus.emit(Events.SFX_PLAYER_CLIMB, pos=(player.position.x, player.position.y))
+
+    def update(self, player: Player, dt: float, input_manager: InputManager | None) -> None:
+        from src.framework.entities.states import FallingState, JumpingState
+        inp = _InputSnapshot(input_manager)
+        self._t += dt
+        if self._ancla is None:
+            player._change_state_instance(FallingState())
+            return
+        # Péndulo simple: gravedad + input
+        dx = player.rect.centerx - self._ancla.x
+        dy = player.rect.centery - self._ancla.y
+        dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+        # Normalizar y mantener longitud
+        nx, ny = dx/dist, dy/dist
+        # Input añade impulso tangencial
+        if inp.move_x != 0:
+            # Tangente (-ny, nx) * input
+            tx, ty = -ny, nx
+            player.velocity.x += tx * inp.move_x * 600 * dt
+            player.velocity.y += ty * inp.move_x * 600 * dt
+        # Gravedad péndulo
+        player.velocity.y += 400 * dt
+        # Constraint a círculo
+        player.position.x += player.velocity.x * dt
+        player.position.y += player.velocity.y * dt
+        # Re-proyectar a círculo
+        dx2 = player.rect.centerx - self._ancla.x
+        dy2 = player.rect.centery - self._ancla.y
+        d2 = max(1.0, (dx2*dx2 + dy2*dy2) ** 0.5)
+        if d2 > self._longitud:
+            scale = self._longitud / d2
+            player.position.x = self._ancla.x + dx2*scale - player.rect.width/2
+            player.position.y = self._ancla.y + dy2*scale - player.rect.height/2
+            player.rect.topleft = (int(player.position.x), int(player.position.y))
+            # Amortiguar velocidad radial
+            dot = player.velocity.x*nx + player.velocity.y*ny
+            if dot > 0:
+                player.velocity.x -= dot*nx*0.5
+                player.velocity.y -= dot*ny*0.5
+        if inp.jump_pressed and self._t > 0.12:
+            # Soltar con impulso tangencial + vertical
+            player.velocity.x += -ny * 250
+            player.velocity.y = player.perfil.salto_impulso * 0.9
+            player._change_state_instance(JumpingState())
+            return
+        if inp.crouch_held:
+            player._change_state_instance(FallingState())
+            return
+
+
 class BalanceoEnLianaSaltoState(PlayerStateBase):
     """Colgado de una liana de salto — balanceo y salto entre lianas.
 

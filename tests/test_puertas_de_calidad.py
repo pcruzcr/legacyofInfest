@@ -47,7 +47,8 @@ ALCANCE = RAIZ / "mypy_scope.txt"
 #: retirando de otros sitios, pero aquí es el punto: la prueba **tiene** que
 #: fallar cuando alguien quita un paquete, y para eso hace falta recordar
 #: cuántos había. Subirlo al añadir es parte del trabajo de añadir.
-PAQUETES_MINIMOS = 6
+#: AUD-76x lo lleva de 6 a 10 (stage ya limpio + ecs 9→0).
+PAQUETES_MINIMOS = 10
 
 
 def _paquetes_del_alcance() -> list[str]:

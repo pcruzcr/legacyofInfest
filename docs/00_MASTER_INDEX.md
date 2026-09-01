@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 30 de agosto de 2026 · **Documentos:** 75 en `docs/` (72 indexados abajo + este índice + 2 de informe no indexados antes), más 5 ficheros de la raíz
+**Fecha:** 1 de septiembre de 2026 · **Documentos:** 118 en `docs/` (117 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -162,6 +162,49 @@ git si hace falta consultarlos.
 | [`94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md`](94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md) | Cierre de gaps y plan por fases — estado verificado del árbol: qué hallazgo ya está resuelto, qué GAP sigue abierto, qué decisión espera al dueño, y el orden de cierre |
 | [`50_IMPROVEMENT_ROADMAP.md`](50_IMPROVEMENT_ROADMAP.md) | Roadmap M1-M8 — hitos verificables con criterios de aceptación medibles (comandos) |
 | [`PLAN_PENDIENTE_2026_08_26.md`](PLAN_PENDIENTE_2026_08_26.md) | Plan de trabajo pendiente — 15 tareas en 5 fases (A-E): pre-commit, import-linter, perf gate, scripts verificación, assist mode, playtest bot, docs, gráficos/audio |
+| [`NATIVE_RENDER_AUDIT.md`](NATIVE_RENDER_AUDIT.md) | Auditoría de presentación nativa — ventana/drawable/internal/viewport/cámara/HUD/letterbox |
+| [`NATIVE_COMPOSITION_AUDIT.md`](NATIVE_COMPOSITION_AUDIT.md) | Auditoría de composición nativa — 20 secciones, invariante 1280/16/80×45 |
+| [`VISUAL_COMPOSITION_AUDIT.md`](VISUAL_COMPOSITION_AUDIT.md) | Auditoría visual 25 secciones — AUD-756 composición 1280/16/80×45 |
+| [`VISUAL_ASSET_INVENTORY.md`](VISUAL_ASSET_INVENTORY.md) | Inventario visual por espacio WORLD/CAMERA/VIEWPORT/UI/DISPLAY |
+| [`VISUAL_SCALE_MATRIX.md`](VISUAL_SCALE_MATRIX.md) | Matriz de escala visual — Element Native px Tiles ref Expected |
+| [`LEVEL_VISUAL_MATRIX.md`](LEVEL_VISUAL_MATRIX.md) | Matriz visual de niveles — validación de cada stage (cámara, escala, suelo, parallax, HUD) |
+| [`LEVEL_VISUAL_COMPOSITION_MATRIX.md`](LEVEL_VISUAL_COMPOSITION_MATRIX.md) | Matriz visual por nivel 26 — Player/Platforms/Enemies/Boss/Background/Parallax/Foreground/Camera/HUD/Density |
+| [`LEVEL_NATIVE_COMPOSITION_AUDIT.md`](LEVEL_NATIVE_COMPOSITION_AUDIT.md) | Auditoría nativa por nivel — 26 levels TMX/camera/tiles/sprites/background/parallax/HUD |
+| [`TMX_SPATIAL_AUDIT.md`](TMX_SPATIAL_AUDIT.md) | Auditoría TMX espacial — tile 16, object top-left, 37 TMX |
+| [`STAGE_SPATIAL_INTEGRITY_MATRIX.md`](STAGE_SPATIAL_INTEGRITY_MATRIX.md) | Matriz integridad espacial 26 — TMX/World/Camera/Collision/Player/Enemies/Objects/Spawns/Checkpoints/Transitions/Parallax |
+| [`STAGE_SPATIAL_INTEGRITY_AUDIT.md`](STAGE_SPATIAL_INTEGRITY_AUDIT.md) | Auditoría integridad espacial 30 secciones — AUD-757 1280/80×45 |
+| [`AUD-757_FINDINGS.md`](AUD-757_FINDINGS.md) | Hallazgos AUD-757 — F01-F12 1 PNG fix |
+| [`VISUAL_REFERENCE_SHEET.md`](VISUAL_REFERENCE_SHEET.md) | Referencia visual — player 40×64 2.5×4 tiles, bosses, HUD |
+| [`LEVEL_VISUAL_QA_MATRIX.md`](LEVEL_VISUAL_QA_MATRIX.md) | Matriz QA visual 26 — Composition/Scale/Contrast/Depth/Navigation/Pixel/Lighting/HUD/FX |
+| [`AUD-758_FINDINGS.md`](AUD-758_FINDINGS.md) | Hallazgos AUD-758 — V01-V03 1 ambient_light fix |
+| [`PIXEL_PERFECT_VISUAL_QA.md`](PIXEL_PERFECT_VISUAL_QA.md) | Certificación pixel-perfect 23 secciones — 1280×720 16 80×45 |
+| [`VISUAL_NATIVE_AUDIT.md`](VISUAL_NATIVE_AUDIT.md) | Auditoría nativa visual — 1280×720 80×45 16 unidades |
+| [`RENDER_PIPELINE_AUDIT.md`](RENDER_PIPELINE_AUDIT.md) | Auditoría pipeline render — WORLD→CAMERA→VIEWPORT→DISPLAY 7 VALID |
+| [`VISUAL_LEVEL_AUDIT.md`](VISUAL_LEVEL_AUDIT.md) | Auditoría niveles visual — 26 levels composition/camera/background/lighting |
+| [`LEVEL_COMPOSITION_MATRIX.md`](LEVEL_COMPOSITION_MATRIX.md) | Matriz composición niveles — Size/Tiles/Objects/Enemies/Checkpoints/Camera/Background |
+| [`VISUAL_REGRESSION_BASELINE.md`](VISUAL_REGRESSION_BASELINE.md) | Baseline regresión visual — 13 golden frames 1280×720 |
+| [`VISUAL_FINDINGS.md`](VISUAL_FINDINGS.md) | Hallazgos visuales — VF01-VF06 1 V04 5 V10 |
+| [`DYNAMIC_VISUAL_QA.md`](DYNAMIC_VISUAL_QA.md) | QA dinámica 23 secciones — 60/120 frames camera/player/parallax/HUD |
+| [`DYNAMIC_LEVEL_QA_MATRIX.md`](DYNAMIC_LEVEL_QA_MATRIX.md) | Matriz QA dinámica 26 — Camera/Animation/Parallax/HUD/Transition/FX |
+| [`AUD-759_FINDINGS.md`](AUD-759_FINDINGS.md) | Hallazgos AUD-759 — D01-D05 5× D13 intentional |
+| [`GAME_STATE_INVENTORY.md`](GAME_STATE_INVENTORY.md) | Inventario estados 21 — Entry/Exit/Parent/Overlay/Input/Render/Persistence |
+| [`GAME_STATE_GRAPH.md`](GAME_STATE_GRAPH.md) | Grafo estados 21 transiciones — STATE→EVENT→STATE |
+| [`GAME_STATE_INTEGRATION_MATRIX.md`](GAME_STATE_INTEGRATION_MATRIX.md) | Matriz integración 21 — Entry/Operation/Exit/Persistence/Re-entry |
+| [`HISTORICAL_BUG_REGRESSION.md`](HISTORICAL_BUG_REGRESSION.md) | Regresión 13 bugs históricos — PASS |
+| [`FULL_GAME_INTEGRATION_AUDIT.md`](FULL_GAME_INTEGRATION_AUDIT.md) | Auditoría integración 40 fases — producto completo |
+| [`FINAL_VISUAL_ACCEPTANCE_REPORT.md`](FINAL_VISUAL_ACCEPTANCE_REPORT.md) | Reporte aceptación visual final — 26 levels 156 screens 0-10 |
+| [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) | Certificación RC — 1280×720 80×45 16 26/26 PASS |
+| [`RELEASE_CANDIDATE_FREEZE.md`](RELEASE_CANDIDATE_FREEZE.md) | Freeze RC — arquitectura y contenido congelado 1280×720 |
+| [`FINAL_QA_STATUS.md`](FINAL_QA_STATUS.md) | Estado QA final — 7 audits PASS 115 tests PASS |
+| [`AUD-760_FINDINGS.md`](AUD-760_FINDINGS.md) | Hallazgos AUD-760 — I01-I10 10× I12 |
+| [`NATIVE_RENDER_FIXES.md`](NATIVE_RENDER_FIXES.md) | Correcciones de presentación nativa — cada fix con causa, transform old/new, pruebas |
+| [`95_GUIA_ENTREGA_3_MADURA.md`](95_GUIA_ENTREGA_3_MADURA.md) | Guía Entrega 3 — versión 1280×720 madura, verificación y checklist |
+| [`96_GUIA_IA_DOJO_2_SEMANAS.md`](96_GUIA_IA_DOJO_2_SEMANAS.md) | Dojo IA — plan de 2 semanas con scikit-learn para BehaviorPredictor |
+| [`97_ROADMAP_PS4_HD_2D_2_5D.md`](97_ROADMAP_PS4_HD_2D_2_5D.md) | Roadmap PS4 HD 2D/2.5D — de 1280 a 1920 y plan PS4 |
+| [`98_DECISIONES_DUENO_2K26.md`](98_DECISIONES_DUENO_2K26.md) | Decisiones del dueño A1,A7,B7,C1,D2,P4,P5 — cierre 100% |
+| [`HYBRID_RENDERER_RC_CERTIFICATION.md`](HYBRID_RENDERER_RC_CERTIFICATION.md) | Certificación Hybrid Renderer — 1920 work 9.47 P95 10.50 P99 12.25 readback 0 |
+| [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) | Baseline de rendimiento — 1280×720 work 6.5 y 1920×1080 9.47 comparativa |
+| [`RELEASE_NOTES_RENDERER_RC.md`](RELEASE_NOTES_RENDERER_RC.md) | Notas de release Renderer RC — 1920@60 work 9.47 vs CPU 39.54 |
 | [`informe_stage4_1b_gates_8_9_10.md`](informe_stage4_1b_gates_8_9_10.md) | Informe stage4_1b gates 8-10 — validación de arte/QA/polish |
 
 ---

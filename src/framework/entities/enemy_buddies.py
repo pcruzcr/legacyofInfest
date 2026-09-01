@@ -60,8 +60,8 @@ class BuddyBase(EnemyBase):
         self._rider: Player | None = None
         self._follow_distance: float = 60.0
         
-        self.rect.width = 24
-        self.rect.height = 24
+        self.rect.width = 48
+        self.rect.height = 48
         
         self._load_zone_sprites(zone, 24, 24)
 
@@ -204,8 +204,8 @@ class BuddyRino(BuddyBase):
         self._rideable.rider_hitbox_offset = pygame.Vector2(0, -12)
         
         self._follow_distance = 80.0
-        self.rect.width = 32
-        self.rect.height = 28
+        self.rect.width = 64
+        self.rect.height = 56
         
         # Charge ability
         self._charge_cooldown: float = 0.0
@@ -310,8 +310,8 @@ class BuddyExpresso(BuddyBase):
         self._rideable.can_fly = True
         self._rideable.rider_offset = pygame.Vector2(0, -18)
         
-        self.rect.width = 24
-        self.rect.height = 20
+        self.rect.width = 48
+        self.rect.height = 40
         self._hug_slopes = False  # voladores no se pegan a pendientes
         
         self._flight_mode: str = "hover"
@@ -400,8 +400,8 @@ class BuddyEnguarde(BuddyBase):
         self._rideable.can_fly = False  # underwater movement
         self._rideable.rider_offset = pygame.Vector2(0, -16)
         
-        self.rect.width = 28
-        self.rect.height = 22
+        self.rect.width = 56
+        self.rect.height = 44
         self._hug_slopes = False
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:

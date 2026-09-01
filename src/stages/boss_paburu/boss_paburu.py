@@ -405,8 +405,10 @@ class BossPaburu(BossBase):
         self._animas.clear()
         if self.current_phase == FORM_RELIC:
             if self.relic_variant is None:
-                import random
-                self.relic_variant = random.choice(["gold", "black"])
+                # AUD-762: determinista y testeable — usa el generador propio
+                # (GAP-042) en vez del global. Semillable, reproducible y no
+                # contamina `random` del resto del motor.
+                self.relic_variant = self._azar.choice(["gold", "black"])
             # LA INYECCIÓN. `attack_patterns` de la fase 3 nace VACÍA en
             # `set_phases` a propósito: los patrones dependen del sorteo, y
             # declararlos antes de sortear obligaría al planificador a saber

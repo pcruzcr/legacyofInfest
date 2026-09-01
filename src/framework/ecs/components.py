@@ -80,7 +80,7 @@ class Transform:
     @property
     def posicion(self) -> pygame.Vector2:
         d = self._duenio
-        return d.position if d is not None else self._posicion  # type: ignore[union-attr]
+        return d.position if d is not None else self._posicion  # type: ignore[attr-defined]
 
     @posicion.setter
     def posicion(self, valor: pygame.Vector2) -> None:
@@ -89,12 +89,12 @@ class Transform:
     @property
     def rect(self) -> pygame.Rect:
         d = self._duenio
-        return d.rect if d is not None else self._rect  # type: ignore[union-attr]
+        return d.rect if d is not None else self._rect  # type: ignore[attr-defined]
 
     @rect.setter
     def rect(self, valor: pygame.Rect) -> None:
         if self._duenio is not None:
-            self._duenio.rect = valor  # type: ignore[union-attr]
+            self._duenio.rect = valor  # type: ignore[attr-defined]
         else:
             self._rect = valor
 
@@ -108,7 +108,7 @@ class Transform:
         valor = -1 if valor < 0 else 1
         self._facing = valor
         if self._duenio is not None and hasattr(self._duenio, "facing_direction"):
-            self._duenio.facing_direction = valor  # type: ignore[union-attr]
+            self._duenio.facing_direction = valor  # type: ignore[attr-defined]
 
     @property
     def material_actual(self) -> object | None:
@@ -126,7 +126,7 @@ class Transform:
     def material_actual(self, valor: object | None) -> None:
         d = self._duenio
         if d is not None and hasattr(d, "_material_de_zona"):
-            d._material_de_zona = valor  # type: ignore[union-attr]
+            d._material_de_zona = valor  # type: ignore[attr-defined]
 
     def __repr__(self) -> str:
         clase = "vista" if self._duenio is not None else "propio"
@@ -210,24 +210,24 @@ class Salud:
     @property
     def actual(self) -> float:
         d = self._duenio
-        return float(d.current_health) if d is not None else self._actual  # type: ignore[union-attr]
+        return float(d.current_health) if d is not None else self._actual  # type: ignore[attr-defined]
 
     @actual.setter
     def actual(self, valor: float) -> None:
         if self._duenio is not None:
-            self._duenio.current_health = valor  # type: ignore[union-attr]
+            self._duenio.current_health = valor  # type: ignore[attr-defined]
         else:
             self._actual = valor
 
     @property
     def maxima(self) -> float:
         d = self._duenio
-        return float(d.max_health) if d is not None else self._maxima  # type: ignore[union-attr]
+        return float(d.max_health) if d is not None else self._maxima  # type: ignore[attr-defined]
 
     @maxima.setter
     def maxima(self, valor: float) -> None:
         if self._duenio is not None:
-            self._duenio.max_health = valor  # type: ignore[union-attr]
+            self._duenio.max_health = valor  # type: ignore[attr-defined]
         else:
             self._maxima = valor
 
@@ -235,7 +235,7 @@ class Salud:
     def invulnerable(self) -> bool:
         d = self._duenio
         if d is not None and hasattr(d, "_invincibility_timer"):
-            return self._invulnerable or d._invincibility_timer > 0  # type: ignore[union-attr]
+            return self._invulnerable or d._invincibility_timer > 0  # type: ignore[attr-defined]
         return self._invulnerable
 
     @invulnerable.setter

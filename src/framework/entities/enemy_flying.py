@@ -105,8 +105,8 @@ class EnemyFlying(EnemyBase):
             ]
 
         # Rect size
-        self.rect.width = 20
-        self.rect.height = 14
+        self.rect.width = 40
+        self.rect.height = 28
 
         # Cached surfaces
         self._dive_warn_surf: pygame.Surface | None = None

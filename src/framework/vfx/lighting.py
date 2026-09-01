@@ -8,6 +8,35 @@ import pygame
 from src.engine.render.sprite_batch import SpriteBatch
 from src.framework.vfx.sombras_proyectadas import ProyectorDeSombras
 
+# ── Hard gates — contadores inequívocos (directiva v8) ────────────────
+_cpu_lightmap_calls: int = 0
+_cpu_bloom_calls: int = 0  # bloom CPU via PostProcessing (difuminar)
+_gpu_light_passes: int = 0
+_gpu_light_count: int = 0
+
+
+def get_cpu_lightmap_calls() -> int:
+    return _cpu_lightmap_calls
+
+
+def reset_cpu_lightmap_calls() -> None:
+    global _cpu_lightmap_calls
+    _cpu_lightmap_calls = 0
+
+
+def incr_cpu_bloom() -> None:
+    global _cpu_bloom_calls
+    _cpu_bloom_calls += 1
+
+
+def get_cpu_bloom_calls() -> int:
+    return _cpu_bloom_calls
+
+
+def reset_cpu_bloom_calls() -> None:
+    global _cpu_bloom_calls
+    _cpu_bloom_calls = 0
+
 
 class LightSource:
     """A 2D point light with position, radius, color, and intensity."""
@@ -255,7 +284,7 @@ class LightSystem:
             target.blit(mapa, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
     def render_map(self, size: tuple[int, int],
-                   camera_offset: pygame.Vector2) -> pygame.Surface:
+                    camera_offset: pygame.Vector2) -> pygame.Surface:
         """Compone el multiplicador de luz para un tamaño y lo devuelve.
 
         AUD-343 — mismo trabajo que `render`, pero sin aplicar nada al
@@ -267,56 +296,99 @@ class LightSystem:
         GPU llama a `render_map` (o se la deja hacer a `render`, que ahora es
         `render_map` + un blit) y el renderer hace la otra mitad.
         """
+        global _cpu_lightmap_calls
+        _cpu_lightmap_calls += 1
+        # AUD-762: half-res lightmap 960×540
+        from src.engine.core import settings as _settings
+
         w, h = size
+        half = bool(getattr(_settings, "LIGHTMAP_HALF_RES", False))
+        lw, lh = (w // 2, h // 2) if half else (w, h)
+        cam = pygame.Vector2(camera_offset.x / 2, camera_offset.y / 2) if half else camera_offset
 
         if self._multiplier is None or self._multiplier.get_size() != (w, h):
             self._multiplier = pygame.Surface((w, h), pygame.SRCALPHA)
-        # El brillo modula cada canal del tinte, así que un tinte blanco da el
-        # gris neutro de siempre y uno cálido tiñe la sombra hacia el naranja.
+        work: pygame.Surface
+        if half:
+            if not hasattr(self, "_work_half") or self._work_half is None or self._work_half.get_size() != (lw, lh):  # type: ignore[attr-defined]
+                self._work_half = pygame.Surface((lw, lh), pygame.SRCALPHA)  # type: ignore[attr-defined]
+            work = self._work_half  # type: ignore[attr-defined]
+        else:
+            work = self._multiplier
         b = self.ambient_brightness
         piso = (
             int(self.ambient_color[0] * b),
             int(self.ambient_color[1] * b),
             int(self.ambient_color[2] * b),
         )
-        self._multiplier.fill(piso)
+        work.fill(piso)
 
-        # AUD-302 — los degradados van en un lote, uno por foco.
-        #
-        # **Salvo con sombras proyectadas.** Con obstáculos, la sombra de cada
-        # luz se resta justo después de sumarla y antes de la siguiente
-        # (AUD-278): agruparlas rompería ese orden y las sombras de un muro
-        # borrarían la luz de focos que ese muro no tapa. Con obstáculos se
-        # dibuja como siempre, uno por uno.
         por_lotes = not self._obstaculos
         lote = SpriteBatch() if por_lotes else None
 
+        if not hasattr(self, "_frame_id"):
+            self._frame_id = 0  # type: ignore[attr-defined]
+        self._frame_id += 1  # type: ignore[attr-defined]
+        fid: int = self._frame_id  # type: ignore[attr-defined]
+
+        lw_h = work.get_size()
+        cw, ch = lw_h[0], lw_h[1]
         for light in self.lights:
-            screen_pos = (
-                int(light.position.x - camera_offset.x),
-                int(light.position.y - camera_offset.y),
-            )
-            gradient = light.get_cached_gradient()
-            gw, gh = gradient.get_size()
+            if half:
+                screen_pos = (int(light.position.x / 2 - cam.x), int(light.position.y / 2 - cam.y))
+                r = light.get_current_radius() / 2
+            else:
+                screen_pos = (int(light.position.x - camera_offset.x), int(light.position.y - camera_offset.y))
+                r = light.get_current_radius()
+            if screen_pos[0] + r < 0 or screen_pos[0] - r > cw or screen_pos[1] + r < 0 or screen_pos[1] - r > ch:
+                continue
+            grad_full = light.get_cached_gradient()
+            if half:
+                gw_f, gh_f = grad_full.get_size()
+                half_key = (id(grad_full), gw_f // 2, gh_f // 2)
+                cache = getattr(self, "_half_grad_cache", None)
+                if cache is None:
+                    cache = {}  # type: ignore[attr-defined]
+                    self._half_grad_cache = cache  # type: ignore[attr-defined]
+                grad = cache.get(half_key)  # type: ignore[attr-defined]
+                if grad is None:
+                    grad = pygame.transform.smoothscale(grad_full, (max(1, gw_f // 2), max(1, gh_f // 2)))
+                    cache[half_key] = grad  # type: ignore[attr-defined]
+                    if len(cache) > 64:  # type: ignore[attr-defined]
+                        cache.pop(next(iter(cache)))  # type: ignore[attr-defined]
+                gw, gh = grad.get_size()
+            else:
+                grad = grad_full
+                gw, gh = grad.get_size()
             blit_x = screen_pos[0] - gw // 2
             blit_y = screen_pos[1] - gh // 2
             if lote is not None:
-                lote.dibujar(gradient, (blit_x, blit_y), None,
-                             pygame.BLEND_RGBA_MAX)
+                lote.dibujar(grad, (blit_x, blit_y), None, pygame.BLEND_RGBA_MAX)
                 continue
-            self._multiplier.blit(gradient, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
-            # AUD-278 — la sombra se resta **de esta luz**, justo después de
-            # sumarla y antes de la siguiente. Hacerlo al final, sobre la
-            # máscara ya compuesta, borraría también la luz de los focos que no
-            # están tapados por ese muro.
+            work.blit(grad, (blit_x, blit_y), special_flags=pygame.BLEND_RGBA_MAX)
             if self._obstaculos:
-                self._proyector.proyectar(
-                    self._multiplier, light.position,
-                    light.get_current_radius(), self._obstaculos, camera_offset,
-                    piso_ambiente=piso)
+                is_static = not getattr(light, "flicker", False)
+                if is_static and (fid % 4 != 0):
+                    continue
+                if half:
+                    foco_h = pygame.Vector2(light.position.x / 2, light.position.y / 2)
+                    obs_h = [
+                        pygame.Rect(int(rr.x/2), int(rr.y/2), max(1,int(rr.width/2)), max(1,int(rr.height/2)))
+                        for rr in self._obstaculos
+                    ]
+                    self._proyector.proyectar(work, foco_h, r, obs_h, cam, piso_ambiente=piso)
+                else:
+                    self._proyector.proyectar(
+                        work, light.position, r,
+                        self._obstaculos, camera_offset,
+                        piso_ambiente=piso,
+                    )
 
         if lote is not None:
-            lote.volcar(self._multiplier)
+            lote.volcar(work)
+
+        if half:
+            pygame.transform.smoothscale(work, (w, h), self._multiplier)
 
         return self._multiplier
 

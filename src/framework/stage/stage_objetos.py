@@ -720,24 +720,52 @@ class ObjetosDeTiled:
         medio configurar: es un rectángulo que teletransporta al origen del
         mapa, que es peor que no existir porque parece un fallo del motor.
         """
-        if "destino_x" not in props or "destino_y" not in props:
+        # AUD-BACKTRACK — destino_stage_id opcional; si está,
+        # destino_x/y son opcionales (van al spawn del destino)
+        destino_stage_id = str(props.get("destino_stage_id", "") or "").strip()
+        has_pos = "destino_x" in props and "destino_y" in props
+        if not has_pos and not destino_stage_id:
             logger.warning(
-                "WarpZone en (%s, %s) sin 'destino_x'/'destino_y': se ignora. "
+                "WarpZone en (%s, %s) sin 'destino_x'/'destino_y' ni 'destino_stage_id': se ignora. "
                 "Con destino implícito mandaría al jugador a la esquina del "
                 "mapa y parecería un fallo del motor.", obj.x, obj.y,
             )
             return
+        # Si es warp inter-escenario sin pos, va al spawn del destino (0,0 se resuelve en StageScene)
+        if not has_pos and destino_stage_id:
+            props["destino_x"] = 0
+            props["destino_y"] = 0
         requires_skill = str(props.get("requires_skill", "") or "").strip()
         stage.warps.append(ZonaDeWarp(
             rect=cls._rect_de(obj),
-            destino=pygame.Vector2(float(props["destino_x"]),
-                                   float(props["destino_y"])),
+            destino=pygame.Vector2(float(props.get("destino_x", 0)),
+                                   float(props.get("destino_y", 0))),
             automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
             una_vez=cls._bool_de(props.get("una_vez"), por_defecto=False),
             key_id=str(props.get("key_id", "")),
             enfriamiento=float(props.get("enfriamiento", 0.5)),
             mensaje=str(props.get("mensaje", "")),
             requires_skill=requires_skill,
+            destino_stage_id=destino_stage_id,
+        ))
+
+    @classmethod
+    @register("IndoorZone")
+    def _handle_indoor(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`IndoorZone` — marca área bajo techo. Sin clima, luz cálida constante.
+        Vista-agnóstico: rect + flag, funciona en lateral/isométrica/raycast."""
+        stage.indoor_zones.append(cls._rect_de(obj))
+
+    @classmethod
+    @register("Fogata")
+    @register("Bonfire")
+    def _handle_fogata(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`Fogata`/`Bonfire` — B4: punto de guardado y curación reutilizable."""
+        from src.framework.stage.interactables import Fogata
+
+        stage.fogatas.append(Fogata(
+            rect=cls._rect_de(obj),
+            mensaje=str(props.get("mensaje", "Fogata — pulsa para descansar")),
         ))
 
     @classmethod

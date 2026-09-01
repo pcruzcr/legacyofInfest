@@ -658,9 +658,24 @@ class StageLoader(ObjetosDeTiled):
         dos listados se desincronizarían en cuanto faltara un fichero.
         """
         try:
-            bg_surf = AssetLoader.load_image(
-                bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-            )
+            # AUD-755 R3 — background nativo 1280×720. Si el PNG ya es ≥1280
+            # en alguna dimensión, no forzar size (evita stretch legacy para
+            # "llenar"). Solo si w<1280 y h<720 escalar nearest con warning.
+            # Cargar sin tamaño forzado primero para inspeccionar
+            probe = AssetLoader.load_image(bg_path)
+            pw, ph = probe.get_size()
+            if pw >= settings.INTERNAL_WIDTH or ph >= settings.INTERNAL_HEIGHT:
+                bg_surf = probe
+            else:
+                logger.warning(
+                    "StageLoader: bg %s %dx%d < %dx%d nativo — escalando "
+                    "nearest legacy (migrar asset a nativo)",
+                    bg_path, pw, ph, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
+                )
+                # Re-cargar con tamaño nativo usando nearest (AssetLoader interno usa scale)
+                bg_surf = AssetLoader.load_image(
+                    bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                )
             stage.background_layers.append(bg_surf)
             return True
         except (pygame.error, FileNotFoundError, PermissionError):

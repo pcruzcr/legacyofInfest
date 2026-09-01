@@ -61,8 +61,8 @@ class EnemyIceSkater(EnemyBase):
         self._slide_attack_timer: float = 0.0
         self._is_sliding_attack: bool = False
 
-        self.rect.width = 24
-        self.rect.height = 20
+        self.rect.width = 48
+        self.rect.height = 40
 
         self._load_zone_sprites(zone, 16, 14)
 

@@ -17,6 +17,7 @@ queda mudo sin un solo error en consola.
 """
 from __future__ import annotations
 
+import logging
 import random
 from typing import Any
 
@@ -24,6 +25,8 @@ from src.engine.core import settings
 from src.engine.core.events import Events
 from src.framework.stage.interactable_system import EVENTO_RECOGIDO, EVENTO_WARP
 from src.framework.vfx.hit_effects import HitEffects
+
+logger = logging.getLogger(__name__)
 
 
 class SenalesDeEscenario:
@@ -103,6 +106,7 @@ class SenalesDeEscenario:
 
         def _on_warp(**data: Any) -> None:
             """AUD-287 — el salto de una punta del mapa a la otra.
+            AUD-BACKTRACK — con destino_stage_id salta de **escenario** (100% backtracking en todas las vistas).
 
             Lo aplica la escena y no `InteractableSystem` porque el jugador y la
             cámara son suyos. Y hay que hacer **tres** cosas, no una:
@@ -114,7 +118,34 @@ class SenalesDeEscenario:
                normal, un warp de 3.000 px produce medio segundo de barrido a
                toda velocidad por el nivel, que marea y además enseña partes del
                mapa que el diseño no quería enseñar todavía.
+
+            Con destino_stage_id (backtracking) hace **cambio de escenario**
+            vista-agnóstico: funciona igual en lateral, cenital, isométrica, etc.
             """
+            # AUD-BACKTRACK — warp inter-escenario
+            stage_id = data.get("destino_stage_id")
+            if stage_id:
+                try:
+                    from src.engine.core.stage_registry import discover_stages
+
+                    for cls in discover_stages():
+                        if getattr(cls, "STAGE_ID", "") == stage_id:
+                            self.context.scene_manager.replace(cls(self.context))
+                            return
+                    # Fallback genérico por TMX si no hay clase
+                    from pathlib import Path as _P
+
+                    from src.framework.scenes.stage_scene import StageScene
+
+                    p = _P(settings.ASSETS_DIR / "maps" / str(stage_id) / f"{stage_id}.tmx")
+                    if p.exists():
+                        self.context.scene_manager.replace(StageScene(self.context, p))
+                        return
+                    logger.warning("Backtrack warp: stage_id '%s' no encontrado", stage_id)
+                except Exception:
+                    logger.warning("Backtrack warp a '%s' falló", stage_id, exc_info=True)
+                return
+
             destino = data.get("destino")
             if destino is None or self._player is None:
                 return
