@@ -65,8 +65,8 @@ DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage0" / "stage0.tmx"
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
-MW, MH = 100, 38          # 1600 × 608 px
-SUELO_Y = 30              # fila del suelo
+MW, MH = 160, 45          # 2560 × 720 px — 80×45 nativo ×2 pantallas, suelo en fila 38 (608) para llenar viewport 720 sin hueco
+SUELO_Y = 38              # fila del suelo (38*16=608, suelo 608-720 =112 px =7 filas)
 
 # Baldosas — tileset_stage0.png mide 1024×1024, 4096 baldosas, 64 columnas.
 TS_COLUMNAS = 64
