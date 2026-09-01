@@ -45,8 +45,9 @@ class HUDBuilder:
             h._paso_barra_bloque = paso
             h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)
             h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)
-            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)
-            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)
+            h._mana_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)
+            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)
+            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 4, ancho, alto)
             cx = settings.INTERNAL_WIDTH // 2
             h._score_region = pygame.Rect(cx - 400, MARGEN, 800, 80)
             h._timer_bg_rect = pygame.Rect(cx - 380, MARGEN + 14, 220, 56)
@@ -66,8 +67,9 @@ class HUDBuilder:
             h._paso_barra_bloque = paso  # type: ignore[attr-defined]
             h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)  # type: ignore[attr-defined]
             h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)  # type: ignore[attr-defined]
-            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
-            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+            h._mana_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
+            h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+            h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 4, ancho, alto)  # type: ignore[attr-defined]
             cx = settings.INTERNAL_WIDTH // 2
             h._score_region = pygame.Rect(cx - 280, MARGEN, 560, 64)  # type: ignore[attr-defined]
             h._timer_bg_rect = pygame.Rect(cx - 260, MARGEN + 10, 160, 44)  # type: ignore[attr-defined]
@@ -90,8 +92,9 @@ class HUDBuilder:
         h._paso_barra_bloque = paso  # type: ignore[attr-defined]
         h._vida_bar_rect = pygame.Rect(x, y_barras, ancho, alto)  # type: ignore[attr-defined]
         h._estamina_bar_rect = pygame.Rect(x, y_barras + paso, ancho, alto)  # type: ignore[attr-defined]
-        h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
-        h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+        h._mana_bar_rect = pygame.Rect(x, y_barras + paso * 2, ancho, alto)  # type: ignore[attr-defined]
+        h._carga_bar_rect = pygame.Rect(x, y_barras + paso * 3, ancho, alto)  # type: ignore[attr-defined]
+        h._oxigeno_bar_rect = pygame.Rect(x, y_barras + paso * 4, ancho, alto)  # type: ignore[attr-defined]
         h._score_region = _rect_escalado(MARGEN + 30, MARGEN, 92, 24)  # type: ignore[attr-defined]
         h._timer_bg_rect = _rect_escalado(134, MARGEN, 52, 16)  # type: ignore[attr-defined]
         h._timer_icon_rect = _rect_escalado(137, MARGEN + 1, 12, 12)  # type: ignore[attr-defined]

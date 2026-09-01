@@ -3,6 +3,7 @@
 Genera student_templates/stage_template/stage_template.tmx alineado a nativo 80×45.
 """
 from pathlib import Path
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DESTINO = PROJECT_ROOT / "student_templates" / "stage_template" / "stage_template.tmx"
 TS=16
@@ -19,12 +20,20 @@ def generar():
         for y in range(SUELO_Y+1, MH):
             g[y][x]=SUELO_SUPERFICIE
     # hueco ejemplo? no, mantener suelo continuo para template
-    csv=",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
-    ceros=",".join(["0"]*(MW*MH))
-    def capa(n,id_,datos):
-        return f' <layer id="{id_}" name="{n}" width="{MW}" height="{MH}">\n  <data encoding="csv">\n{datos}\n</data>\n </layer>'
+    csv = ",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
+    ceros = ",".join(["0"] * (MW * MH))
+
+    def capa(n, id_, datos):
+        return (
+            f' <layer id="{id_}" name="{n}" width="{MW}" height="{MH}">\n'
+            f"  <data encoding=\"csv\">\n{datos}\n</data>\n </layer>"
+        )
+
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" tileheight="{TS}" infinite="0" nextlayerid="9" nextobjectid="30">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal"
+ renderorder="right-down" width="{MW}" height="{MH}"
+ tilewidth="{TS}" tileheight="{TS}" infinite="0"
+ nextlayerid="9" nextobjectid="30">
  <properties>
   <property name="schema_version" value="1"/>
   <property name="stage_id" value="stage_template"/>
@@ -51,9 +60,13 @@ def generar():
   </object>
   <object id="3" type="NextTrigger" name="NextTrigger_01" x="1200" y="544" width="16" height="64"/>
   <object id="4" type="Walker" name="Walker_ejemplo_01" x="400" y="544"/>
-  <object id="5" type="Light" name="Light_ejemplo" x="352" y="480" width="16" height="16">
-   <properties><property name="radius" type="float" value="96"/><property name="color" value="#ffd9a0"/><property name="intensity" type="float" value="0.8"/></properties>
-  </object>
+   <object id="5" type="Light" name="Light_ejemplo" x="352" y="480" width="16" height="16">
+    <properties>
+     <property name="radius" type="float" value="96"/>
+     <property name="color" value="#ffd9a0"/>
+     <property name="intensity" type="float" value="0.8"/>
+    </properties>
+   </object>
  </objectgroup>
  <objectgroup id="7" name="Collision">
   <object id="20" type="Solid" name="Solid_Floor" x="0" y="608" width="1280" height="112"/>

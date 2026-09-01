@@ -12,22 +12,14 @@ if TYPE_CHECKING:
     from src.engine.input.input_manager import InputManager
 
 
-# Module-level hardcoded tips. Future: externalize to JSON / YAML (ARC-033).
+# Module-level hardcoded tips — ESPAÑOL, corto, contextual (AUD-762)
 TUTORIAL_TIPS: dict[str, list[str]] = {
-    "move": ["Move: LEFT/RIGHT or A/D", "Jump: SPACE or UP/W", "Crouch: DOWN/S"],
-    "attack": ["Short attack: Z or J", "Long attack: X or K (hold to charge)", "Dash: SHIFT or ALT"],
-    "combat": [
-        "Parry: Attack + Crouch together",
-        "Aerial attack: Press attack in air",
-        "Dash attack: Attack during dash",
-    ],
-    "advanced": [
-        "Wall jump: Jump while sliding on wall",
-        "Air combo: Launch enemy + follow up in air",
-        "Ultimate: Both attacks with full SP meter",
-    ],
-    "checkpoint": ["Checkpoint reached! Progress saved."],
-    "boss": ["BOSS FIGHT! Use all your skills.", "Watch for telegraphs before attacks."],
+    "move": ["Mueve: A/D o ←/→", "Salta: ESPACIO o W/↑", "Agáchate: S/↓"],
+    "attack": ["Ataque corto: Z o J", "Ataque largo: X o K (mantén)", "Dash: SHIFT o ALT"],
+    "combat": ["Parry: Ataque + Agachado", "Ataque aéreo: ataca en el aire"],
+    "advanced": ["Salto en pared", "Combo aéreo", "Ultimate: ambos ataques"],
+    "checkpoint": ["¡Punto de control!"],
+    "boss": ["¡JEFE! Observa los avisos."],
 }
 
 

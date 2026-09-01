@@ -218,12 +218,21 @@ class LoadingScene(BaseScene):
                 self.context.scene_manager.replace(self._next_scene)
 
     def draw(self, surface: pygame.Surface) -> None:
-        if not self.visible_todavia:
-            return
         w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
-        # Fondo del kit: antes `(10,10,20)`, uno de los seis grises oscuros
-        # distintos que el juego usaba para decir «pantalla».
+        # AUD-762 — loading nunca en blanco: fondo inmediato incluso antes del umbral
+        # para que el jugador vea "LEGACY OF INFEST" y barra en 0% sin parpadeo blanco.
+        # El umbral solo retrasa el fade, no el fondo.
         surface.fill(Theme.BG)
+        if not self.visible_todavia:
+            # Dibujar barra en 0% y título para feedback inmediato, sin esperar 0.25s
+            bar_w, bar_h = 200, 16
+            bx, by = (w - bar_w) // 2, h // 2
+            draw_progress_bar(surface, pygame.Rect(bx, by, bar_w, bar_h), 0.0)
+            title = self._font_title.render("LEGACY OF INFEST", True, Theme.ACCENT)
+            surface.blit(title, ((w - title.get_width()) // 2, by - 50))
+            label = self._font_info.render("Cargando…", True, Theme.TEXT_MUTED)
+            surface.blit(label, (bx, by - 18))
+            return
         with self._lock:
             progress = self._progress
             task_name = self._current_task_name

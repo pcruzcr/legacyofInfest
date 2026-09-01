@@ -249,9 +249,9 @@ RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 6, 44, 44)
 
 def minimap_rect_por_defecto() -> pygame.Rect:
     """`RECUADRO_MINIMAPA_DISENO` a la escala de la pantalla real."""
-    # PS4 1280×720 — minimapa derecha 192×192, tamaño real acorde, no sanchado
+    # PS4 1280×720 - minimapa compacto 128×128, no 192 (too large, mostly empty)
     if settings.INTERNAL_WIDTH == 1280 and settings.INTERNAL_HEIGHT == 720:
-        return pygame.Rect(settings.INTERNAL_WIDTH - 216, 24, 192, 192)
+        return pygame.Rect(settings.INTERNAL_WIDTH - 152, 24, 128, 128)
     return _rect_escalado(*RECUADRO_MINIMAPA_DISENO)
 
 
@@ -294,6 +294,7 @@ class HUD:
         self._paso_barra_bloque: int = 0
         self._vida_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._estamina_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._mana_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._carga_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._oxigeno_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._score_region: pygame.Rect = pygame.Rect(0, 0, 0, 0)
@@ -451,6 +452,9 @@ class HUD:
         #: AUD-141 — estamina. En 0 la barra no se dibuja.
         self._estamina_actual: float = 0.0
         self._estamina_max: float = 0.0
+        #: AUD-762 — mana celeste. En 0 la barra no se dibuja (mismo que estamina).
+        self._mana_actual: float = 0.0
+        self._mana_max: float = 0.0
         #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
         self._bala_fraccion: float = -1.0
         self._bala_activo: bool = False
@@ -781,8 +785,9 @@ class HUD:
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_portrait(surface)
         self._draw_barra_de_vida(surface)
-        self._draw_special_meter(surface)
         self._draw_estamina(surface)
+        self._draw_mana(surface)
+        self._draw_special_meter(surface)
         self._draw_oxigeno(surface)
         self._draw_tiempo_bala(surface)
         self._draw_boss_rush(surface)
@@ -919,31 +924,29 @@ class HUD:
         self._porcentaje_items = pct  # type: ignore[attr-defined]
 
     def _draw_nivel(self, surface: pygame.Surface) -> None:
-        """Barra de nivel / XP + % ítems — B2: siempre visible."""
+        """Barra de nivel / XP — compacta bajo retrato, no centro dominante."""
         try:
             from src.engine.core.experience import get_experience
             exp = get_experience()
             nivel = exp.nivel
             dentro, total = exp.progreso_del_nivel()
             pct = (dentro / total) if total > 0 else 0
-            puntos = exp.puntos
-            txt = f"Nv.{nivel}  {dentro}/{total} XP"
-            if puntos > 0:
-                txt += f"  +{puntos} pt(s) (K)"
-            pct_items = getattr(self, "_porcentaje_items", None)
-            if pct_items is not None:
-                txt += f"  Items {int(pct_items*100)}%"
-            # Posición: debajo del score_region, centrado
-            r = self._score_region
-            # Fuente pequeña escalada
+            # Texto compacto: NIVEL 2 110/200 (sin +pts que domina centro)
+            txt = f"NIVEL {nivel}  {dentro}/{total}"
+            # Posición: bajo bloque identidad (izquierda), compacta 96×12, no centro
+            # Usa _carga_bar_rect como referencia para apilar debajo
+            bx0 = self._carga_bar_rect.x
+            by0 = self._carga_bar_rect.bottom + _e(6)
+            # Si no hay carga (raro), usa vida
+            if self._carga_bar_rect.width == 0:
+                bx0 = self._vida_bar_rect.x
+                by0 = self._vida_bar_rect.bottom + _e(6)
             f = self._font
-            # Si el texto es muy largo, recorta
             surf = f.render(txt, True, (180, 220, 255))
-            # Fondo sutil
-            bg_w = surf.get_width() + _e(8)
-            bg_h = surf.get_height() + _e(4)
-            bg_x = r.x + (r.width - bg_w) // 2
-            bg_y = r.bottom + _e(2)
+            bg_w = self._carga_bar_rect.width
+            bg_h = surf.get_height() + _e(2)
+            bg_x = bx0
+            bg_y = by0
             # No dibujar si se sale de pantalla (fallback 800)
             if bg_y + bg_h < settings.INTERNAL_HEIGHT:
                 bg_surf = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
@@ -984,6 +987,12 @@ class HUD:
         self._estamina_max = max_val
         self._reflow_bloque_de_identidad()
 
+    def set_mana(self, current: float, max_val: float) -> None:
+        """AUD-762 — mana celeste. En 0 la barra no se dibuja (mismo que estamina)."""
+        self._mana_actual = current  # type: ignore[attr-defined]
+        self._mana_max = max_val  # type: ignore[attr-defined]
+        self._reflow_bloque_de_identidad()
+
     def set_oxigeno(self, ratio: float, avisando: bool) -> None:
         """AUD-575 (GAP-071 resuelto) — el aire del buceo. `ratio < 0`
         significa "no hay agua en juego" y la barra no se dibuja; con el
@@ -995,20 +1004,32 @@ class HUD:
         self._oxigeno_avisando = avisando
 
     def _reflow_bloque_de_identidad(self) -> None:
-        """AUD-565 — con la estamina apagada, la barra de carga sube a
-        ocupar el sitio que dejaría vacío la de estamina, en vez de que el
-        bloque de identidad se quede con un tercio en blanco.
-
-        `_estamina_bar_rect` no cambia de tamaño ni desaparece: sigue
-        existiendo con su ancho de siempre (lo consultan pruebas y
-        `estamina_bar_rect()`) — sólo deja de pintarse (`_draw_estamina`
-        ya lo hacía por su cuenta) y de reservarle sitio a la barra de
-        abajo.
+        """AUD-565 + AUD-762 — bloque identidad 5 barras: vida, estamina, mana, carga, oxigeno.
+        Cada barra activa ocupa un slot; inactivas colapsan sin hueco.
+        `_estamina/mana_bar_rect` siguen existiendo con ancho (pruebas) — sólo dejan de pintarse.
         """
+        y = self._y_barras_bloque
+        paso = self._paso_barra_bloque
+        # vida siempre en y
+        self._vida_bar_rect.y = y
+        y += paso
+        # estamina
         if self._estamina_max > 0.0:
-            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque * 2
+            self._estamina_bar_rect.y = y
+            y += paso
+        # mana celeste (AUD-762)
+        if getattr(self, "_mana_max", 0) > 0.0:
+            self._mana_bar_rect.y = y  # type: ignore[attr-defined]
+            y += paso
+        # carga (ultimate azul) siempre visible? si no, colapsa
+        self._carga_bar_rect.y = y
+        y += paso
+        # oxigeno solo si ratio >=0 se dibuja, pero reserva sitio igual si visible
+        if getattr(self, "_oxigeno_ratio", -1) >= 0.0:
+            self._oxigeno_bar_rect.y = y
         else:
-            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque
+            # oxigeno inactivo no ocupa, pero no afecta carga
+            pass
 
     def set_tiempo_bala(self, fraccion: float, activo: bool) -> None:
         """AUD-260. Con `fraccion` negativa la barra no se dibuja.
@@ -1053,6 +1074,15 @@ class HUD:
         color_fin = (240, 210, 60)
         _dibujar_barra_moderna(surface, self._estamina_bar_rect, pct,
                                (70, 60, 15), color_fin, halo_al_llenar=False)
+
+    def _draw_mana(self, surface: pygame.Surface) -> None:
+        """AUD-762 — mana celeste. En 0 la barra no se dibuja."""
+        if getattr(self, "_mana_max", 0) <= 0.0:
+            return
+        pct = max(0.0, min(1.0, self._mana_actual / self._mana_max))  # type: ignore[attr-defined]
+        color_fin = (70, 180, 220)  # celeste
+        _dibujar_barra_moderna(surface, self._mana_bar_rect, pct,  # type: ignore[attr-defined]
+                               (15, 40, 60), color_fin, halo_al_llenar=False)
 
     def _draw_oxigeno(self, surface: pygame.Surface) -> None:
         """AUD-575 (GAP-071 resuelto) — la barra de aire del buceo.

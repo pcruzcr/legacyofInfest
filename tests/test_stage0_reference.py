@@ -4,13 +4,17 @@ Valida que stage0 y template sean 80x45/160x45 nativos 1280x720 ground 608
 y que player feet == ground, visible, camera 0,0, viewport 1280x720.
 """
 import os
+
 os.environ.setdefault("SDL_VIDEODRIVER","dummy")
 os.environ.setdefault("SDL_AUDIODRIVER","dummy")
-import pathlib, pygame, pytest
+import pathlib
+
+import pygame
+
 from src.engine.core import settings
-from src.framework.stage.stage_loader import StageLoader
 from src.framework.entities.player import Player
 from src.framework.stage.camera import Camera
+from src.framework.stage.stage_loader import StageLoader
 
 STAGE0 = pathlib.Path("assets/maps/stage0/stage0.tmx")
 TEMPLATE = pathlib.Path("student_templates/stage_template/stage_template.tmx")
@@ -43,14 +47,14 @@ def test_world_viewport_tile():
 
 def test_floor_y():
     import xml.etree.ElementTree as ET
-    tree=ET.parse(STAGE0)
-    el=tree.getroot()
-    coll=el.find(".//objectgroup[@name='Collision']")
-    floors=[o for o in coll.findall("object") if o.get("type")=="Solid" and int(float(o.get("width",0)))>500]
-    y=max(int(float(o.get("y"))) for o in floors)
-    assert y==608, f"floor y {y} !=608"
+    tree = ET.parse(STAGE0)
+    el = tree.getroot()
+    coll = el.find(".//objectgroup[@name='Collision']")
+    floors = [o for o in coll.findall("object") if o.get("type") == "Solid" and int(float(o.get("width", 0))) > 500]
+    y = max(int(float(o.get("y"))) for o in floors)
+    assert y == 608, f"floor y {y} !=608"
     # visual terrain y 608..720
-    assert y+112==720
+    assert y + 112 == 720
 
 def test_player_spawn_feet_ground():
     import xml.etree.ElementTree as ET
@@ -83,17 +87,18 @@ def test_player_spawn_feet_ground():
 
 def test_template_is_canonical():
     import xml.etree.ElementTree as ET
-    tree=ET.parse(TEMPLATE)
-    el=tree.getroot()
-    assert int(el.get("width"))==80
-    assert int(el.get("height"))==45
-    assert int(el.get("tilewidth"))==16
-    coll=el.find(".//objectgroup[@name='Collision']")
-    floor=[o for o in coll.findall("object") if int(float(o.get("width")))>500][0]
-    assert int(float(floor.get("y")))==608
-    assert int(float(floor.get("height")))==112
-    spawn=el.find(".//objectgroup[@name='Objects']/object[@type='PlayerSpawn']")
-    assert float(spawn.get("y"))==544
+    tree = ET.parse(TEMPLATE)
+    el = tree.getroot()
+    assert int(el.get("width")) == 80
+    assert int(el.get("height")) == 45
+    assert int(el.get("tilewidth")) == 16
+    coll = el.find(".//objectgroup[@name='Collision']")
+    floors = [o for o in coll.findall("object") if int(float(o.get("width"))) > 500]
+    floor = next(iter(floors))
+    assert int(float(floor.get("y"))) == 608
+    assert int(float(floor.get("height"))) == 112
+    spawn = el.find(".//objectgroup[@name='Objects']/object[@type='PlayerSpawn']")
+    assert float(spawn.get("y")) == 544
 
 def test_checkpoint_next_trigger():
     import xml.etree.ElementTree as ET
@@ -114,9 +119,6 @@ def test_checkpoint_next_trigger():
 
 def test_collision_visual_delta():
     # visual ground == collision ground
-    import xml.etree.ElementTree as ET
-    tree=ET.parse(STAGE0)
-    el=tree.getroot()
     # visual Terrain layer has floor at rows 38-44 (608-720)
     # collision floor at 608, delta 0
-    assert True  # audited via TMX
+    assert True  # auditado vía TMX
