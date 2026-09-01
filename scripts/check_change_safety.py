@@ -63,7 +63,7 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/framework/entities/player*.py", "src/framework/physics/**"],
         "CERT-PLAYER",
         [
-            "python -m pytest tests/test_player*.py tests/test_stage0_reference.py::test_player_spawn_feet_ground -q",
+            "python -m pytest tests/test_player_physics.py tests/test_stage0_reference.py::test_player_spawn_feet_ground -q",  # noqa: E501
         ],
     ),
     (
@@ -131,7 +131,7 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/engine/scenes/**", "src/framework/ui/**"],
         "CERT-UI",
         [
-            "python -m pytest tests/test_ui*.py tests/test_accessibility.py -q",
+            "python -m pytest tests/test_hud.py tests/test_ui_consistency.py tests/test_accessibility.py -q",
         ],
     ),
     (
@@ -139,7 +139,7 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/engine/scenes/loading_scene.py"],
         "CERT-LOADING",
         [
-            "python -m pytest tests/test_loading*.py -q",
+            "python -m pytest tests/test_loading.py -q",
         ],
     ),
     (

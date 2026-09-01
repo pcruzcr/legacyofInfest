@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 1 de septiembre de 2026 · **Documentos:** 127 en `docs/` (126 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
+**Fecha:** 1 de septiembre de 2026 · **Documentos:** 129 en `docs/` (128 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -31,10 +31,10 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 127 (el encabezado de arriba los cuenta). Se retiraron 35
+ficheros y hoy son 129 (el encabezado de arriba los cuenta). Se retiraron 35
 auditorías cerradas, informes de fase, hojas de ruta cumplidas y registros de
-decisiones ya tomadas, y se incorporaron 60 —incluyendo AUD-800 (8) y
-`CHANGE_SAFETY_GUIDE`—. No eran
+decisiones ya tomadas, y se incorporaron 62 —incluyendo AUD-800 (8),
+`CHANGE_SAFETY_GUIDE`, `AUD-803_NATIVE_RENDERING_AUDIT` y `AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION`—. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
 pruebas y símbolos que hace tiempo que no existen. Siguen en el historial de
 git si hace falta consultarlos.
@@ -216,6 +216,8 @@ git si hace falta consultarlos.
 | [`AUD-800_MASTER_SPECIFICATION.md`](AUD-800_MASTER_SPECIFICATION.md) | Especificación maestra — contrato 1280×720 80×45 16 pipeline nativo |
 | [`AUD-800_FINAL_CERTIFICATION.md`](AUD-800_FINAL_CERTIFICATION.md) | Certificación final 88/100 RC — 44 secciones, 0 P0 0 P1 7 P3 |
 | [`CHANGE_SAFETY_GUIDE.md`](CHANGE_SAFETY_GUIDE.md) | Guía de seguridad ante cambios — invariante 9, matriz CERT, validador automático |
+| [`AUD-803_NATIVE_RENDERING_AUDIT.md`](AUD-803_NATIVE_RENDERING_AUDIT.md) | Auditoría native rendering — pipeline 1280×720, camera, HUD, tilemap, pixel-perfect |
+| [`AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md`](AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md) | Certificación visual truth — falsación adversarial de AUD-803, 1.5× no integer |
 
 ---
 

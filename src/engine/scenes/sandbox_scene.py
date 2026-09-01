@@ -92,8 +92,14 @@ class SandboxScene(BaseScene):
 
         if im.is_raw_key_pressed(pygame.K_SPACE):
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            mx = int(mouse_x / settings.DISPLAY_SCALE)
-            my = int(mouse_y / settings.DISPLAY_SCALE)
+            # AUD-NATIVE — mouse display → internal con letterbox (no DISPLAY_SCALE solo)
+            from src.engine.core import display as _display
+
+            dw, dh = pygame.display.get_surface().get_size() if pygame.display.get_surface() else (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)  # noqa: E501
+            vp_x, vp_y, vp_w, vp_h = _display.calculate_viewport(dw, dh)
+            # Conversión display → internal: primero quitar offset letterbox, luego escalar
+            mx = int((mouse_x - vp_x) * settings.INTERNAL_WIDTH / vp_w) if vp_w else int(mouse_x / settings.DISPLAY_SCALE)  # noqa: E501
+            my = int((mouse_y - vp_y) * settings.INTERNAL_HEIGHT / vp_h) if vp_h else int(mouse_y / settings.DISPLAY_SCALE)  # noqa: E501
             if self._mode == 1:
                 self._enemies.append(pygame.Vector2(float(mx), float(my)))
             elif self._mode == 2:
@@ -134,8 +140,12 @@ class SandboxScene(BaseScene):
 
         if pygame.mouse.get_pressed()[0]:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            mx = float(mouse_x / settings.DISPLAY_SCALE)
-            my = float(mouse_y / settings.DISPLAY_SCALE)
+            from src.engine.core import display as _display2
+
+            dw2, dh2 = pygame.display.get_surface().get_size() if pygame.display.get_surface() else (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)  # noqa: E501
+            vp_x2, vp_y2, vp_w2, vp_h2 = _display2.calculate_viewport(dw2, dh2)
+            mx = float((mouse_x - vp_x2) * settings.INTERNAL_WIDTH / vp_w2) if vp_w2 else float(mouse_x / settings.DISPLAY_SCALE)  # noqa: E501
+            my = float((mouse_y - vp_y2) * settings.INTERNAL_HEIGHT / vp_h2) if vp_h2 else float(mouse_y / settings.DISPLAY_SCALE)  # noqa: E501
             dir_vec = pygame.Vector2(mx, my) - self._player_pos
             if dir_vec.length() > 5.0:
                 dir_vec.normalize_ip()
