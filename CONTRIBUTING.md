@@ -90,11 +90,23 @@ columnas — hallazgos que CI nunca te va a pedir que arregles.
 
 1. Parte de `dev` — usa prefijos `fix/`, `feat/`, `docs/`. Las ramas del
    repositorio son `prod`, `pprod` y `dev`; **no existe `main`**.
-2. Ejecuta `pytest` y el `ruff check` de arriba antes de hacer commit.
-3. Commits pequeños y atómicos. Un `AUD-NNN` por corrección; cita el ticket
+2. Ejecuta la regresión que toca tu cambio y declara qué certificación afecta
+   (invariante 9 de `CLAUDE.md`):
+   ```powershell
+   python scripts/check_change_safety.py --run   # te dice CERT-HUD → tests/test_hud.py, etc.
+   ```
+   El mensaje del commit debe citar la certificación:
+   `AUD-800: ajuste HUD — CERT-HUD` o `CERT-RENDERER: ...`. Un cambio en
+   `src/engine/render/` sin `CERT-RENDERER` y sin `tests/test_render_*` está
+   incompleto. Lo vigila `scripts/check_change_safety.py --ci` (gate `change-safety`
+   en CI) y `docs/CHANGE_SAFETY_GUIDE.md`.
+3. Ejecuta además `pytest` y el `ruff check` de arriba antes de hacer commit
+   (CI los repetirá completos de todos modos).
+4. Commits pequeños y atómicos. Un `AUD-NNN` por corrección; cita el ticket
    `GAP-NNN` de `KNOWN_GAPS.md` cuando aplique.
-4. La descripción del PR resume cambios, motivación y qué se probó.
-5. Al menos una revisión antes de fusionar.
+5. La descripción del PR resume cambios, motivación, certificación afectada y
+   salida de `check_change_safety.py --run` (o su equivalente `pytest`).
+6. Al menos una revisión antes de fusionar.
 
 > **AUD-168.** El punto 1 decía «Branch from `main`». Esa rama no existe, y no
 > es un detalle menor: es la misma confusión que dejó el CI de AUD-010

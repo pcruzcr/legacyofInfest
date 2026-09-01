@@ -228,3 +228,10 @@ jobs:
       # entrega», y nadie miraba el numero.
       - name: Grade reference boss
         run: python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --minimo 100
+
+      # AUD-801 — CLAUDE.md §3.9: toda modificación debe demostrar qué certificación
+      # afecta y ejecutar automáticamente la regresión correspondiente.
+      # Este gate mapea el diff contra docs/AUD-800_REGRESSION_MATRIX.md y corre
+      # solo las familias tocadas; el procedimiento vive en docs/CHANGE_SAFETY_GUIDE.md.
+      - name: Change safety — certify affected certification and run its regression
+        run: python scripts/check_change_safety.py --ci
