@@ -184,7 +184,9 @@ def _objetos() -> list[str]:
 
     suelo = SUELO_Y * TS
 
-    obj("PlayerSpawn", 3 * TS, suelo - 48, 16, 32)
+    # AUD-761R — spawn feet == ground: floor 608, player 40×64, feet midbottom = y+64 =608 => y=544 = floor -64
+    # Antes suelo-48 => 560+64=624 16 bajo floor (feet 624 !=608). Ahora 544+64=608 exacto.
+    obj("PlayerSpawn", 3 * TS, suelo - 64, 16, 32)
 
     obj("Objective", 3 * TS, suelo - 80, 0, 0,
         objective_id="llegar_al_final",
