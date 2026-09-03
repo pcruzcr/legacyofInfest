@@ -287,8 +287,15 @@ class LoadGameScene(BaseScene):
                 stage_str = _stage_display_name(data.stage_id)
                 horas = int(data.play_time // 3600)
                 minutos = int((data.play_time % 3600) // 60)
+                # B2 — NG+ badge por slot, derivado de su propio SaveData.ng_plus
+                # (no del slot activo ni del newest): cada slot muestra su nivel.
+                try:
+                    ng = max(0, int(getattr(data, "ng_plus", 0) or 0))
+                except Exception:
+                    ng = 0
+                ng_str = f"  |  NG+{ng}" if ng > 0 else ""
                 info = (f"  {nombre}  |  {stage_str}  |  {horas:d}h {minutos:02d}m"
-                        f"  |  {data.health:.0f}/{data.max_health:.0f}")
+                        f"  |  {data.health:.0f}/{data.max_health:.0f}{ng_str}")
                 info_surf = self._font_small.render(info, True, (160, 160, 180))
                 surface.blit(info_surf, (26, cy + 14))
             else:

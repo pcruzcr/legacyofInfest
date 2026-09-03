@@ -200,6 +200,39 @@ class ActualizacionesDeEscenario:
                     self._hud.set_porcentaje_items(None)
             except Exception:
                 pass
+            # B2 — NG+ badge: deriva de SaveData.ng_plus (single source)
+            # Usa misma resolución que difficulty.get_config (ranura_activa else newest)
+            # y fallback a pending_load para primer frame tras cargar sin save previo.
+            try:
+                ng_level = 0
+                sm = getattr(self.context, "save_manager", None)
+                if sm is not None:
+                    slot = getattr(sm, "ranura_activa", None)
+                    if slot is None:
+                        try:
+                            slot = sm.newest_slot()
+                        except Exception:
+                            slot = None
+                    if slot is not None:
+                        try:
+                            data = sm.load(slot)
+                            if data is not None:
+                                ng_level = max(0, int(getattr(data, "ng_plus", 0) or 0))
+                        except Exception:
+                            ng_level = 0
+                    if ng_level == 0:
+                        pending = getattr(self.context, "pending_load", None)
+                        if pending is not None:
+                            try:
+                                ng_p = int(getattr(pending, "ng_plus", 0) or 0)
+                                if ng_p > 0:
+                                    ng_level = ng_p
+                            except Exception:
+                                pass
+                if hasattr(self._hud, "set_ng_plus_level"):
+                    self._hud.set_ng_plus_level(ng_level)
+            except Exception:
+                pass
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:

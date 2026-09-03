@@ -326,8 +326,38 @@ class TitleScene(BaseScene):
         elif opt == "QUIT":
             self.context.quit()
 
+    def _ng_plus_para_continue(self) -> int:
+        """NG+ del save que CONTINUE reanudaría — B2 single source SaveData.ng_plus.
+
+        Usa la misma resolución que _activate_option CONTINUE:
+        ranura_activa si existe, si no newest_slot. Lee ese SaveData y
+        devuelve su ng_plus (0 si no hay partida o ng_plus==0). No crea
+        estado duplicado: deriva siempre de SaveData.ng_plus.
+        """
+        sm = self.context.save_manager
+        if sm is None:
+            return 0
+        slot = getattr(sm, "ranura_activa", None)
+        if slot is None:
+            try:
+                slot = sm.newest_slot()
+            except Exception:
+                slot = None
+        if slot is None:
+            return 0
+        try:
+            data = sm.load(slot)
+        except Exception:
+            return 0
+        if data is None:
+            return 0
+        try:
+            return max(0, int(getattr(data, "ng_plus", 0) or 0))
+        except Exception:
+            return 0
+
     def _update_options(self) -> None:
-        """Añade o quita CONTINUE según haya partidas guardadas."""
+        """Añade o quita CONTINUE según haya partidas guardadas — B2 expone NG+."""
         sm = self.context.save_manager
         labels = [str(item.value) for item in self._menu.items]
         has_continue = "CONTINUE" in labels
@@ -340,6 +370,15 @@ class TitleScene(BaseScene):
                 )
         elif has_continue:
             self._menu.items.pop(labels.index("CONTINUE"))
+
+        # B2 — NG+ badge en CONTINUE: trailing "NG+X" cuando ng_plus>0,
+        # vacío si 0. Usa trailing (renderizado a la derecha) para no
+        # tocar label/traducción ni navegación/orden/layout.
+        for item in self._menu.items:
+            if str(item.value) == "CONTINUE":
+                ng = self._ng_plus_para_continue()
+                item.trailing = f"NG+{ng}" if ng > 0 else ""
+                break
 
         # Quitar una fila puede dejar el foco fuera de rango.
         self._menu.ensure_valid()

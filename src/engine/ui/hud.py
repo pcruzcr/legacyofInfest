@@ -120,13 +120,19 @@ def _dibujar_barra_moderna(
     """Fondo translúcido redondeado + relleno con degradado + halo opcional.
 
     `pct` ya viene acotado a [0, 1] por quien llama — esta función sólo
-    dibuja, no valida el dato del jugador.
+    dibuja, no valida el dato del jugador. AUD-812 FIX P0-001: defensa en
+    profundidad — pct fuera de [0,1] (boss HUD ratio >1 por health > max)
+    antes causaba `ValueError: subsurface outside surface` en `boss_venado`
+    y `boss_rey` al dibujar la barra de jefe con vida > máximo.
     """
+    # AUD-812 P0-001 — clamp defensivo: pct puede llegar >1 si health > max
+    # (boss fase o curación). Sin clamp, ancho_relleno > rect.width rompe subsurface.
+    pct = max(0.0, min(1.0, float(pct)))
     radio = max(2, min(rect.height // 2, _e(4)))
     surface.blit(_panel_redondeado(rect.width, rect.height, radio), rect.topleft)
 
     if pct > 0.0:
-        ancho_relleno = max(1, int(rect.width * pct))
+        ancho_relleno = max(1, min(rect.width, int(rect.width * pct)))
         relleno_completo = _relleno_redondeado(
             rect.width, rect.height, radio, color_inicio, color_fin)
         surface.blit(relleno_completo.subsurface((0, 0, ancho_relleno, rect.height)),
@@ -455,6 +461,8 @@ class HUD:
         #: AUD-762 — mana celeste. En 0 la barra no se dibuja (mismo que estamina).
         self._mana_actual: float = 0.0
         self._mana_max: float = 0.0
+        #: B2 — NG+ level para badge compacto, 0 = ocultar (deriva de SaveData.ng_plus)
+        self._ng_plus_level: int = 0
         #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
         self._bala_fraccion: float = -1.0
         self._bala_activo: bool = False
@@ -798,6 +806,7 @@ class HUD:
             self._draw_boss_hud(surface)
         if self._combo_count > 0:
             self._draw_combo_indicator(surface)
+        self._draw_ng_plus(surface)
         self._draw_save_notification(surface)
 
     def set_score(self, puntos: int, monedas: int = 0) -> None:
@@ -993,6 +1002,18 @@ class HUD:
         self._mana_max = max_val  # type: ignore[attr-defined]
         self._reflow_bloque_de_identidad()
 
+    def set_ng_plus_level(self, level: int) -> None:
+        """B2 — NG+ level para badge compacto. 0 = ocultar. Deriva de SaveData.ng_plus."""
+        try:
+            lvl = max(0, int(level or 0))
+        except Exception:
+            lvl = 0
+        self._ng_plus_level = lvl  # type: ignore[attr-defined]
+
+    def get_ng_plus_level(self) -> int:
+        """B2 — nivel NG+ actualmente mostrado (0 = oculto). Para tests."""
+        return int(getattr(self, "_ng_plus_level", 0) or 0)
+
     def set_oxigeno(self, ratio: float, avisando: bool) -> None:
         """AUD-575 (GAP-071 resuelto) — el aire del buceo. `ratio < 0`
         significa "no hay agua en juego" y la barra no se dibuja; con el
@@ -1112,6 +1133,40 @@ class HUD:
                 label = self._font.render("CARGA LISTA", True, (255, 220, 50))
                 surface.blit(label, (self._carga_bar_rect.x,
                                      self._carga_bar_rect.y - _e(12)))
+
+    def _draw_ng_plus(self, surface: pygame.Surface) -> None:
+        """B2 — badge compacto NG+X. 0 = oculto. No mueve barras/portrait/reflow."""
+        lvl = int(getattr(self, "_ng_plus_level", 0) or 0)
+        if lvl <= 0:
+            return
+        texto = f"NG+{lvl}"
+        # Fuente pequeña escalada, dorado sobre fondo oscuro como boss rush
+        fuente = font(_e(10))
+        txt = fuente.render(texto, True, (255, 220, 100))
+        pad = _e(4)
+        w = txt.get_width() + pad * 2
+        h = txt.get_height() + pad * 2
+        # Posición: a la derecha del retrato (portrait.right + 6, portrait.top)
+        # No usa _score_region/cronómetro para no solaparlos; es overlay HUD
+        # que respeta INTERNAL 1280/1920 sin reflow. Gap 6 asegura no pegar.
+        try:
+            x0 = self._portrait_frame_rect.right + _e(6)  # type: ignore[attr-defined]
+            y0 = self._portrait_frame_rect.top  # type: ignore[attr-defined]
+        except Exception:
+            x0 = _e(40)
+            y0 = _e(10)
+        # Clamp dentro de pantalla
+        if x0 + w > settings.INTERNAL_WIDTH - _e(4):
+            x0 = settings.INTERNAL_WIDTH - w - _e(4)
+        if y0 + h > settings.INTERNAL_HEIGHT - _e(4):
+            y0 = settings.INTERNAL_HEIGHT - h - _e(4)
+        rect = pygame.Rect(x0, y0, w, h)
+        # Fondo pill semitransparente + borde dorado
+        bg = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(bg, (40, 32, 12, 210), bg.get_rect(), border_radius=_e(4))
+        pygame.draw.rect(bg, (255, 220, 100, 180), bg.get_rect(), width=1, border_radius=_e(4))
+        surface.blit(bg, rect.topleft)
+        surface.blit(txt, (rect.x + pad, rect.y + pad))
 
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
@@ -1257,7 +1312,8 @@ class HUD:
         # jefe tiene margen, rojo cuando queda poco. El halo se apaga aquí
         # a propósito — un jefe a tope de vida no necesita un brillo de
         # "listo", el que sí lo pide es el medidor especial del jugador.
-        ratio = (max(0.0, self._boss_health / self._boss_max_health)
+        # AUD-812 P0-001 — clamp a [0,1]: health puede superar max tras curación o fase
+        ratio = (max(0.0, min(1.0, self._boss_health / self._boss_max_health))
                  if self._boss_max_health > 0 else 0.0)
         color_fin = (210, 70, 50) if ratio < 0.3 else (215, 190, 70)
         rect = pygame.Rect(bar_x, bar_y + _e(10), bar_width, bar_height)
