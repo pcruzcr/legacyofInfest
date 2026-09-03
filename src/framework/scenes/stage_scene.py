@@ -438,6 +438,57 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # que _stage_data y _player nunca queden en estado parcial.
         assert data is not None
         self._stage_data = data
+        # B3 — hidratar ITEMS coleccionados desde SaveData (per-map)
+        try:
+            map_id = str(getattr(self._stage_data, "stage_id", "") or "")
+            save = None
+            sm = getattr(self.context, "save_manager", None)
+            if sm is not None:
+                slot = getattr(sm, "ranura_activa", None)
+                if slot is None:
+                    try:
+                        slot = sm.newest_slot()
+                    except Exception:
+                        slot = None
+                if slot is not None:
+                    try:
+                        save = sm.load(slot)
+                    except Exception:
+                        save = None
+            if save is None:
+                save = getattr(self.context, "pending_load", None)
+            if save is not None and map_id:
+                from src.framework.stage.interactables import (
+                    cofre_key,
+                    recogible_key,
+                    secret_room_key,
+                )
+
+                collected = set((getattr(save, "map_item_collected", {}) or {}).get(map_id, []) or [])
+                if collected:
+                    for r in getattr(self._stage_data, "recogibles", []) or []:
+                        if getattr(r, "tmx_object_id", 0) != 0:
+                            try:
+                                if recogible_key(map_id, r) in collected:
+                                    r.recogido = True
+                            except Exception:
+                                pass
+                    for c in getattr(self._stage_data, "cofres", []) or []:
+                        if getattr(c, "tmx_object_id", 0) != 0 and getattr(c, "contenido", ""):
+                            try:
+                                if cofre_key(map_id, c) in collected:
+                                    c.abierto = True
+                            except Exception:
+                                pass
+                    for s in getattr(self._stage_data, "secret_rooms", []) or []:
+                        if getattr(s, "tmx_object_id", 0) != 0 and getattr(s, "recompensa", ""):
+                            try:
+                                if secret_room_key(map_id, s) in collected:  # type: ignore[arg-type]
+                                    s.descubierto = True  # type: ignore[attr-defined]
+                            except Exception:
+                                pass
+        except Exception:
+            pass
         spawn = self._stage_data.spawn_point
         assert spawn is not None, "spawn_point no puede ser None tras load exitoso"
         self._player = Player(spawn, event_bus=self.context.event_bus)
@@ -544,6 +595,14 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             placas=getattr(self._stage_data, "placas", None),
             fogatas=getattr(self._stage_data, "fogatas", None),
         )
+        # B3 — persistencia per-map para ITEM completion
+        try:
+            self._interactables.set_persistencia(
+                str(getattr(self._stage_data, "stage_id", "") or ""),
+                getattr(self.context, "save_manager", None),
+            )
+        except Exception:
+            pass
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.
         from src.framework.stage.bloques import SistemaDeBloques

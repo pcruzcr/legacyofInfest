@@ -564,6 +564,59 @@ class StageData:
         # Si no, crea en la fachada
         object.__setattr__(self, name, value)
 
+    # ── B3 — Item Completion ───────────────────────────────────────
+    def item_keys(self) -> list[str]:
+        """Lista estable de ITEM keys declarados en este mapa (para persistencia).
+
+        Usa StageData.stage_id como MAP_ID. Cada key es MAP_ID:TMX_ID:ITEM_ID.
+        Sólo incluye Pickup/Key, Chest con contenido y SecretRoom con recompensa
+        cuyo tmx_object_id != 0 (excluye dinámicos y vacíos).
+        """
+        from src.framework.stage.interactables import (
+            cofre_key,
+            es_item_coleccionable_cofre,
+            es_item_coleccionable_recogible,
+            es_item_coleccionable_secret_room,
+            recogible_key,
+            secret_room_key,
+        )
+
+        m = str(getattr(self, "stage_id", "") or "")
+        keys: list[str] = []
+        for r in getattr(self, "recogibles", []) or []:
+            if es_item_coleccionable_recogible(r):
+                keys.append(recogible_key(m, r))
+        for c in getattr(self, "cofres", []) or []:
+            if es_item_coleccionable_cofre(c):
+                keys.append(cofre_key(m, c))
+        for s in getattr(self, "secret_rooms", []) or []:
+            if es_item_coleccionable_secret_room(s):
+                keys.append(secret_room_key(m, s))
+        return keys
+
+    def item_total(self) -> int:
+        """TOTAL determinístico del mapa (cacheable)."""
+        return len(self.item_keys())
+
+    def item_collected_count(self, collected_set: set[str] | None) -> int:
+        """Cuántos ITEMS de este mapa están en el set persistido."""
+        if not collected_set:
+            return 0
+        # Intersección con las keys de este mapa (aisla por map_id)
+        keys = set(self.item_keys())
+        return len(keys & set(collected_set))
+
+    def item_percentage(self, collected_set: set[str] | None) -> float | None:
+        """Porcentaje 0.0-1.0 o None si TOTAL==0. Clamp."""
+        total = self.item_total()
+        if total == 0:
+            return None
+        collected = self.item_collected_count(collected_set)
+        # clamp COLLECTED> TOTAL
+        if collected > total:
+            collected = total
+        return max(0.0, min(1.0, collected / total))
+
     def __dir__(self) -> list[str]:
         base = set(super().__dir__())
         for sub in (self.physics, self.atmosphere, self.progression):

@@ -138,15 +138,15 @@ class TestSaveData:
         assert MAX_SLOTS == 5
 
     def test_version_constant(self) -> None:
-        """AUD-292 la subió a 3 —inventario, marcador y experiencia dentro de
-        la partida—, AUD-438 a 4, que mete además los logros, y AUD-NG+ a 5
-        con `ng_plus`.
+        """AUD-292 la subió a 3 -inventario, marcador y experiencia dentro de
+        la partida-, AUD-438 a 4, que mete además los logros, AUD-NG+ a 5
+        con `ng_plus` y B3 a 6 con `map_item_collected`.
 
         Existe para que subir la versión sea una decisión y no un descuido: si
         falla, hay un escalón nuevo en la escalera y toca comprobar que las
         partidas viejas siguen cargando sin perder nada.
         """
-        assert SAVE_VERSION == 5
+        assert SAVE_VERSION == 6
 
 
 class TestSaveManager:

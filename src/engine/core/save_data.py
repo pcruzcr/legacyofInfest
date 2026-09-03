@@ -12,7 +12,7 @@ from typing import Any, ClassVar
 import orjson
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-SAVE_VERSION = 5
+SAVE_VERSION = 6
 MAX_SLOTS = 5
 
 #: Primera versión que guarda el inventario dentro de la partida (AUD-292).
@@ -121,6 +121,29 @@ class SaveData(BaseModel):
     #: comportamiento correcto para una partida vieja (no había nada que
     #: preservar).
     stage4_1_variante: str = ""
+    #: ZONA 4 — semilla con la que se sorteó la variante (§6, §14, §18).
+    #:
+    #: Aditivo sin subir `SAVE_VERSION`: ``None`` = partida anterior a Zona 4
+    #: sin semilla que preservar — se sortea de nuevo, igual que con
+    #: ``stage4_1_variante`` vacío. Con valor, permite reproducir exactamente
+    #: la misma variante: ``seed = X → misma variante`` (§6).
+    zone4_semilla: int | None = None
+    #: ZONA 4 — identificador de layout de la variante procedural 4_1C (§14).
+    #:
+    #: Para 4_1C, la variante ``aereo`` no basta: el propio nivel cambia de
+    #: plantilla/ruta en cada entrada. ``zone4_layout_id`` conserva cuál se
+    #: generó (``"a"``/``"b"``/``"c"`` para plantillas congeladas, o hash de
+    #: semilla para generación procedural). Vacío = aún no se generó.
+    zone4_layout_id: str = ""
+    #: ZONA 4 — alias de compatibilidad: algunas herramientas leen
+    #: ``stage4_1c_plantilla``; se mantiene sincronizado con ``zone4_layout_id``
+    #: cuando la variante es ``aereo``.
+    stage4_1c_plantilla: str = ""
+    #: ZONA 4 — semilla específica de la generación procedural 4_1C (§13-§14).
+    #:
+    #: Si es ``None``, la plantilla se sorteó con el azar del proceso; con
+    #: valor, la ruta es reproducible vía ``trazado.generar_ruta(semilla)``.
+    stage4_1c_semilla: int | None = None
     #: AUD-438 — los logros, dentro de la partida y no en un fichero global.
     #:
     #: `AchievementSystem` persistía en `achievements.json`, uno por
@@ -135,6 +158,11 @@ class SaveData(BaseModel):
     #: Cada NG+ sube la dificultad (ver difficulty.py). Se incrementa al ver
     #: los créditos tras `hub_backtracking` o `boss_paburu`.
     ng_plus: int = Field(default=0, ge=0)
+    #: B3 — Item Completion — por mapa, qué ítems se han recogido (persistencia per-map).
+    #: La clave es stage_id (MAP_ID), el valor es sorted(list[str]) de ITEM keys
+    #: "MAP_ID:TMX_ID:ITEM_ID". Runtime se usa como set para O(1) y anti-duplicado,
+    #: serializado como lista ordenada para JSON determinista.
+    map_item_collected: dict[str, list[str]] = Field(default_factory=dict)
 
     @field_validator("health", "max_health")
     @classmethod
@@ -152,6 +180,38 @@ class SaveData(BaseModel):
     @classmethod
     def _limpiar_nombre(cls, v: str) -> str:
         return str(v).strip()[: cls.LARGO_MAXIMO_DEL_NOMBRE]
+
+    @field_validator("map_item_collected", mode="before")
+    @classmethod
+    def _normalize_map_item_collected(cls, v: Any) -> Any:
+        """Normaliza map_item_collected a dict[str, list[str]] ordenado.
+
+        Acepta dict[str, list|set|None] y rechaza tipos corruptos con {}.
+        Cada lista se deduplica y ordena para JSON determinista (B3 §46).
+        """
+        if v is None:
+            return {}
+        if not isinstance(v, dict):
+            return {}
+        out: dict[str, list[str]] = {}
+        for k, val in v.items():
+            if not isinstance(k, str):
+                continue
+            if val is None:
+                out[k] = []
+                continue
+            if isinstance(val, (list, set, tuple)):
+                try:
+                    # Filtra no-string y deduplica
+                    lst = [str(x) for x in val if isinstance(x, (str, int, float))]
+                    # Para int/float convertidos, mantener como string
+                    uniq = sorted(set(lst))
+                    out[k] = uniq
+                except Exception:
+                    out[k] = []
+            else:
+                out[k] = []
+        return out
 
     @field_validator("checkpoint_x", "checkpoint_y")
     @classmethod
@@ -200,6 +260,34 @@ class SaveData(BaseModel):
         crudo.setdefault("version_original", crudo.get("version", 0))
         return cls.model_validate(crudo)
 
+    # ── B3 helpers ──────────────────────────────────────────────────
+    def _collected_set(self, map_id: str) -> set[str]:
+        """Set runtime de ítems recogidos en map_id (vacío si no existe)."""
+        lst = self.map_item_collected.get(map_id) or []
+        return set(lst)
+
+    def is_item_collected(self, map_id: str, item_key: str) -> bool:
+        return item_key in self._collected_set(map_id)
+
+    def mark_item_collected(self, map_id: str, item_key: str) -> bool:
+        """Añade item_key a map_id. Devuelve True si era nuevo.
+
+        Mantiene lista ordenada para JSON determinista.
+        """
+        if not map_id or not item_key:
+            return False
+        lst = self.map_item_collected.get(map_id)
+        if lst is None:
+            self.map_item_collected[map_id] = [item_key]
+            return True
+        # Normalizar a set para deduplicar
+        s = set(lst)
+        if item_key in s:
+            return False
+        s.add(item_key)
+        self.map_item_collected[map_id] = sorted(s)
+        return True
+
     def to_dict(self) -> dict[str, Any]:
         """Convierte la instancia a diccionario, asignando timestamp si está vacío.
 
@@ -210,6 +298,16 @@ class SaveData(BaseModel):
         data = self.model_dump()
         if not data["timestamp"]:
             data["timestamp"] = datetime.now(timezone.utc).isoformat()
+        # B3 — asegurar listas ordenadas (determinismo JSON)
+        mic = data.get("map_item_collected")
+        if isinstance(mic, dict):
+            norm: dict[str, list[str]] = {}
+            for k, v in mic.items():
+                if isinstance(v, (list, set, tuple)):
+                    norm[k] = sorted(set(str(x) for x in v))
+                else:
+                    norm[k] = []
+            data["map_item_collected"] = norm
         return data
 
     @staticmethod
@@ -256,6 +354,11 @@ class SaveData(BaseModel):
         if ver < 5:
             data.setdefault("ng_plus", 0)
             data["version"] = 5
+        if ver < 6:
+            # B3 — per-map item completion. Partida vieja sin campo → {} → 0% correcto.
+            # Si viene como set (runtime previo) se normalizará en validator.
+            data.setdefault("map_item_collected", {})
+            data["version"] = 6
         return data
 
     def to_json(self) -> bytes:

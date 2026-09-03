@@ -609,6 +609,7 @@ class ObjetosDeTiled:
             item_id=item_id,
             automatico=cls._bool_de(props.get("automatico"), por_defecto=True),
             mensaje=str(props.get("mensaje", "")),
+            tmx_object_id=int(getattr(obj, "id", 0) or 0),
         ))
 
     @classmethod
@@ -645,6 +646,7 @@ class ObjetosDeTiled:
             key_id=str(props.get("key_id", "")),
             mensaje=str(props.get("mensaje", "")),
             evento_al_abrir=str(props.get("evento", "")),
+            tmx_object_id=int(getattr(obj, "id", 0) or 0),
         ))
 
     @classmethod
@@ -1241,6 +1243,7 @@ class ObjetosDeTiled:
             secret_id=secret_id,
             recompensa=recompensa,
             tell=tell,
+            tmx_object_id=int(getattr(obj, "id", 0) or 0),
         ))
 
     @classmethod

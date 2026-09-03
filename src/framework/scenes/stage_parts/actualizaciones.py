@@ -177,27 +177,50 @@ class ActualizacionesDeEscenario:
             if getattr(self, "_nado", None) is not None and self._nado.aire_maximo > 0.0:
                 ratio = self._nado.aire / self._nado.aire_maximo if self._nado.en_agua else -1.0
                 self._hud.set_oxigeno(ratio, self._nado.avisando)
-            # B2 — % ítems del escenario (Fogata %): recogidos vs total del TMX
+            # B3 — % ítems del escenario: ITEM completion per-map (contrato B3)
+            # TOTAL = Pickup/Key + Chest con contenido + SecretRoom con recompensa, excluye Door/Bonfire/dinámicos
+            # COLLECTED = recogido/abierto/descubierto de esos ITEMS
+            # Cache: StageData.item_total() es determinístico; no recalcular TMX cada frame
             try:
-                total_items = len(
-                    getattr(stage, "recogibles", []) or []
-                ) + len(
-                    getattr(stage, "cerraduras", []) or []
-                ) + len(getattr(stage, "cofres", []) or [])
-                # Contar recogidos: los que tienen recogido/abierto
-                recogidos = 0
-                for r in getattr(stage, "recogibles", []) or []:
-                    if getattr(r, "recogido", False):
-                        recogidos += 1
-                for c in getattr(stage, "cofres", []) or []:
-                    if getattr(c, "abierto", False):
-                        recogidos += 1
-                if total_items > 0:
-                    self._hud.set_porcentaje_items(
-                        min(1.0, recogidos / total_items)
-                    )
+                # Usar StageData.item_total si existe (cache), fallback a cálculo filtrado
+                if hasattr(stage, "item_total"):
+                    try:
+                        total_items = int(stage.item_total())  # type: ignore[operator]
+                    except Exception:
+                        total_items = 0
                 else:
+                    from src.framework.stage.interactables import (
+                        es_item_coleccionable_cofre,
+                        es_item_coleccionable_recogible,
+                    )
+
+                    total_items = sum(
+                        1 for r in getattr(stage, "recogibles", []) or [] if es_item_coleccionable_recogible(r)
+                    ) + sum(1 for c in getattr(stage, "cofres", []) or [] if es_item_coleccionable_cofre(c))
+                if total_items == 0:
                     self._hud.set_porcentaje_items(None)
+                else:
+                    from src.framework.stage.interactables import (
+                        es_item_coleccionable_cofre,
+                        es_item_coleccionable_recogible,
+                        es_item_coleccionable_secret_room,
+                    )
+
+                    recogidos = 0
+                    for r in getattr(stage, "recogibles", []) or []:
+                        if es_item_coleccionable_recogible(r) and getattr(r, "recogido", False):
+                            recogidos += 1
+                    for c in getattr(stage, "cofres", []) or []:
+                        if es_item_coleccionable_cofre(c) and getattr(c, "abierto", False):
+                            recogidos += 1
+                    for s in getattr(stage, "secret_rooms", []) or []:
+                        if es_item_coleccionable_secret_room(s) and getattr(s, "descubierto", False):
+                            recogidos += 1
+                    # clamp COLLECTED > TOTAL (corrupción)
+                    if recogidos > total_items:
+                        recogidos = total_items
+                    pct = max(0.0, min(1.0, recogidos / total_items)) if total_items else 0.0
+                    self._hud.set_porcentaje_items(pct, recogidos, total_items)
             except Exception:
                 pass
             # B2 — NG+ badge: deriva de SaveData.ng_plus (single source)

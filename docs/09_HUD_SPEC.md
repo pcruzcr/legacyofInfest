@@ -526,6 +526,42 @@ self.hud.draw(self.internal_surface)
 Los estudiantes no llaman a `HUD.draw()` directamente. La clase base de escenario lo llama automáticamente después de que termina el `draw()` propio del escenario.
 
 ---
+
+## 12. Item Completion (B3)
+
+**Propósito:** mostrar el porcentaje de colección del mapa actual, per-map,
+derivado de `StageData.item_total()` y `SaveData.map_item_collected`.
+
+### 12.1 Región
+
+| Elemento | X (maqueta 320) | Y | Ancho | Alto | En pantalla 1280 | Notas |
+|---|---|---|---|---|---|---|
+| Barra ítems | 6 | ~73 | 24 | 3 | 15, ~240 96×3 | Debajo de `NIVEL` (carga.bottom+30), mismo ancho que barras de carga/vida; no mueve retrato ni reflow |
+| Texto % | 6 | ~70 | 24 | 5 | 15, ~230 96×12 | `42% (3/4)` o `42%` si no hay conteo; fuente `_e(12)` |
+| Fondo | 6 | ~70 | 24 | 12 | 15, ~230 96×14 | ` (20,25,40,160)` semitransparente, igual que `NIVEL` |
+
+No usa `MARGEN` adicional: reutiliza `carga_bar_rect.x` como ancla. Si
+`TOTAL==0` → `set_porcentaje_items(None)` → `_draw_porcentaje_items` early
+return, no se dibuja nada (evita `0%` falso). Si `TOTAL>0` y `COLLECTED==0` →
+`0%` barra vacía. Si `100%` → barra llena dorada.
+
+### 12.2 Lógica
+
+```python
+# En ActualizacionesDeEscenario._update_hud_ui, cada frame:
+total = stage.item_total()  # cache TMX
+if total == 0: hud.set_porcentaje_items(None)
+else:
+    recogidos = count flags filtrados (recogido/abierto/descubierto)
+    pct = clamp(recogidos/total, 0.0, 1.0)
+    hud.set_porcentaje_items(pct, recogidos, total)
+# HUD._draw_porcentaje_items: round(pct*100) → "42%" + barra _dibujar_barra_moderna
+```
+
+Escala: coordenadas pasan por `theme.escalar` (`_e`), por lo que a 1280
+`_e(3)`=~7 px, a 1920 análogo. No toca `viewport`/`scale`/`INTERNAL`.
+
+---
 ## 🔗 Documentos relacionados
 
 - [[40_DIALOGUE_SYSTEM.md|Sistema de diálogo]]

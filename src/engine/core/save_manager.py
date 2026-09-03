@@ -499,8 +499,11 @@ class SaveManager:
         volcar_estado_en(data)
         return self.save(slot, data)
 
-    def fijar_variante_de_stage4_1(self, variante: str) -> None:
-        """Persiste qué variante de 4-1 le tocó a esta partida (AUD-518).
+    def fijar_variante_de_stage4_1(
+        self, variante: str, semilla: int | None = None, layout_id: str | None = None
+    ) -> None:
+        """Persiste qué variante de 4-1 le tocó a esta partida (AUD-518,
+        ampliado Zona 4 §14/§18 para semilla y layout reproducibles).
 
         Read-modify-write sobre la ranura activa, igual que `auto_save` —
         pero sin pedir el resto del progreso, que aquí no cambia: esto se
@@ -508,6 +511,12 @@ class SaveManager:
         cada checkpoint. Sin ranura que resolver, no hace nada — quien
         llama (`crear_stage4_1`) ya comprobó que hay una partida antes de
         molestarse en sortear algo que guardar.
+
+        Zona 4: además de la variante, persiste ``zone4_semilla`` y
+        ``zone4_layout_id`` / ``stage4_1c_*`` para que toda ejecución
+        procedural conserve ``seed / variant / layout_id`` (§14) y pueda
+        reproducir bugs. ``semilla=None`` mantiene compatibilidad con
+        llamadas antiguas que sólo pasan la variante.
         """
         slot = self.ranura_activa or self.newest_slot()
         if slot is None:
@@ -516,4 +525,73 @@ class SaveManager:
         if data is None:
             return
         data.stage4_1_variante = variante
+        if semilla is not None:
+            data.zone4_semilla = semilla
+        if layout_id is not None:
+            data.zone4_layout_id = layout_id
+            # Sincroniza alias 4_1C si la variante es aérea
+            if variante == "aereo":
+                data.stage4_1c_plantilla = layout_id
+                data.stage4_1c_semilla = semilla
         self.save(slot, data)
+
+    def fijar_layout_de_stage4_1c(
+        self, layout_id: str, semilla: int | None = None
+    ) -> None:
+        """Persiste el layout concreto de 4_1C dentro de la variante aérea.
+
+        Zona 4 §14 — cada ejecución procedural debe conservar
+        ``seed / variant / layout_id`` para reproducir bugs. Se llama desde
+        ``Stage4_1C.__init__`` una vez elegida/fijada la plantilla.
+        """
+        slot = self.ranura_activa or self.newest_slot()
+        if slot is None:
+            return
+        data = self.load(slot)
+        if data is None:
+            return
+        data.zone4_layout_id = layout_id
+        data.stage4_1c_plantilla = layout_id
+        if semilla is not None:
+            data.zone4_semilla = semilla
+            data.stage4_1c_semilla = semilla
+        self.save(slot, data)
+
+    # ── B3 — Item Completion ───────────────────────────────────────
+    def marcar_item_recogido(self, map_id: str, item_key: str) -> bool:
+        """Añade item_key al set de map_id en la partida activa.
+
+        Devuelve True si era nuevo. Guarda en disco si cambió.
+        """
+        if not map_id or not item_key:
+            return False
+        slot = self.ranura_activa or self.newest_slot()
+        if slot is None:
+            # Sin partida activa, no hay dónde persistir (ej. demo --stage)
+            return False
+        data = self.load(slot)
+        if data is None:
+            return False
+        # Usa helper de SaveData que mantiene sorted list
+        try:
+            nuevo = data.mark_item_collected(map_id, item_key)
+        except Exception:
+            return False
+        if not nuevo:
+            return False
+        try:
+            self.save(slot, data)
+        except Exception:
+            return False
+        return True
+
+    def obtener_coleccion(self, map_id: str) -> set[str]:
+        """Set de ítems recogidos en map_id (vacío si no hay partida)."""
+        slot = self.ranura_activa or self.newest_slot()
+        if slot is None:
+            return set()
+        data = self.load(slot)
+        if data is None:
+            return set()
+        lst = data.map_item_collected.get(map_id) or []
+        return set(lst)

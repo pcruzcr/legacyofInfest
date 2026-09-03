@@ -463,6 +463,8 @@ class HUD:
         self._mana_max: float = 0.0
         #: B2 — NG+ level para badge compacto, 0 = ocultar (deriva de SaveData.ng_plus)
         self._ng_plus_level: int = 0
+        #: B3 — porcentaje de ítems del mapa (None = ocultar, no hay ítems)
+        self._porcentaje_items: float | None = None  # type: ignore[no-redef]
         #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
         self._bala_fraccion: float = -1.0
         self._bala_activo: bool = False
@@ -801,6 +803,7 @@ class HUD:
         self._draw_boss_rush(surface)
         self._draw_score(surface)
         self._draw_nivel(surface)
+        self._draw_porcentaje_items(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
@@ -928,9 +931,29 @@ class HUD:
         iy = r.y + (monedas.get_height() - icono.get_height()) // 2
         surface.blit(icono, (ix, iy))
 
-    def set_porcentaje_items(self, pct: float | None) -> None:
-        """B2 — % de ítems del escenario (0.0-1.0). None = no mostrar."""
-        self._porcentaje_items = pct  # type: ignore[attr-defined]
+    def set_porcentaje_items(
+        self, pct: float | None, collected: int | None = None, total: int | None = None
+    ) -> None:
+        """B3 — % de ítems del escenario (0.0-1.0). None = no mostrar (TOTAL==0).
+
+        collected/total opcionales para etiqueta "3/4". Si no se pasan, sólo % se muestra.
+        """
+        if pct is None:
+            self._porcentaje_items = None  # type: ignore[attr-defined]
+        else:
+            try:
+                v = float(pct)
+                v = max(0.0, min(1.0, v))
+                self._porcentaje_items = v  # type: ignore[attr-defined]
+            except Exception:
+                self._porcentaje_items = None  # type: ignore[attr-defined]
+        # Guardar conteo para etiqueta detallada
+        try:
+            self._porcentaje_items_collected = int(collected) if collected is not None else None  # type: ignore[attr-defined]
+            self._porcentaje_items_total = int(total) if total is not None else None  # type: ignore[attr-defined]
+        except Exception:
+            self._porcentaje_items_collected = None  # type: ignore[attr-defined]
+            self._porcentaje_items_total = None  # type: ignore[attr-defined]
 
     def _draw_nivel(self, surface: pygame.Surface) -> None:
         """Barra de nivel / XP — compacta bajo retrato, no centro dominante."""
@@ -971,7 +994,69 @@ class HUD:
                 fill_w = int(bar_w * max(0.0, min(1.0, pct)))
                 if fill_w > 0:
                     pygame.draw.rect(surface, (90, 160, 255), (bx, by, fill_w, bar_h), border_radius=1)
-                pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
+                    pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
+        except Exception:
+            pass
+
+    def _draw_porcentaje_items(self, surface: pygame.Surface) -> None:
+        """B3 — barra de ítems del mapa. None = ocultar (TOTAL==0)."""
+        pct = getattr(self, "_porcentaje_items", None)
+        if pct is None:
+            return
+        try:
+            pct_f = max(0.0, min(1.0, float(pct)))
+        except Exception:
+            return
+        # Coordenadas: debajo de NIVEL (que ya está bajo carga), o bajo carga si NIVEL no dibujó
+        # Usar carga_bar_rect como ancla; si no existe, usar vida
+        try:
+            bx0 = self._carga_bar_rect.x
+            # NIVEL ocupa ~12+bar_h debajo de carga; porcentaje va un poco más abajo
+            # NIVEL's bg_y = carga.bottom+6, bg_h ~14, bar_h 3 → NIVEL termina en ~ carga.bottom+26
+            # Colocamos porcentaje en carga.bottom + 30 para no solapar NIVEL
+            by0 = self._carga_bar_rect.bottom + _e(30)
+            if self._carga_bar_rect.width == 0:
+                bx0 = self._vida_bar_rect.x
+                by0 = self._vida_bar_rect.bottom + _e(30)
+            # Si se sale de pantalla, no dibujar (fallback 800)
+            if by0 + _e(12) >= settings.INTERNAL_HEIGHT:
+                return
+            f = self._font
+            # Texto: "42% (3/4)" si tenemos conteo, si no sólo "42%"
+            pct_int = round(pct_f * 100)
+            coll = getattr(self, "_porcentaje_items_collected", None)
+            tot = getattr(self, "_porcentaje_items_total", None)
+            if coll is not None and tot is not None and tot > 0:
+                txt = f"{pct_int}%  {coll}/{tot}"
+            else:
+                txt = f"{pct_int}%"
+            surf = f.render(txt, True, (180, 220, 255))
+            bg_w = self._carga_bar_rect.width
+            # Fallback ancho si carga es 0
+            if bg_w == 0:
+                bg_w = self._vida_bar_rect.width
+            bg_h = surf.get_height() + _e(2)
+            bg_x = bx0
+            bg_y = by0
+            bg_surf = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+            bg_surf.fill((20, 25, 40, 160))
+            surface.blit(bg_surf, (bg_x, bg_y))
+            surface.blit(surf, (bg_x + _e(4), bg_y + _e(2)))
+            # Barra fina debajo del texto (mismo estilo que NIVEL)
+            bar_w = bg_w - _e(8)
+            bar_h = _e(3)
+            bx = bg_x + _e(4)
+            by = bg_y + bg_h + _e(1)
+            pygame.draw.rect(surface, (40, 45, 60), (bx, by, bar_w, bar_h), border_radius=1)
+            fill_w = int(bar_w * pct_f)
+            if fill_w > 0:
+                # Color: dorado al 100%, azul ítem en otro caso
+                if pct_f >= 1.0:
+                    col = (255, 220, 80)
+                else:
+                    col = (90, 200, 120)
+                pygame.draw.rect(surface, col, (bx, by, fill_w, bar_h), border_radius=1)
+            pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
         except Exception:
             pass
 

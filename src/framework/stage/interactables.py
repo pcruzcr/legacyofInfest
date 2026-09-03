@@ -72,6 +72,8 @@ class Recogible:
     #: enemigo al morir.
     cantidad: int = 1
     recogido: bool = False
+    #: B3 — TMX object id para identidad estable (0 = dinámico, no cuenta para TOTAL)
+    tmx_object_id: int = 0
 
 
 @dataclass
@@ -152,6 +154,8 @@ class Cofre:
     mensaje: str = ""
     abierto: bool = False
     evento_al_abrir: str = ""
+    #: B3 — TMX object id estable (0 = dinámico/no TMX)
+    tmx_object_id: int = 0
 
 
 @dataclass
@@ -312,6 +316,8 @@ class SecretRoom:
     #: Tell visual: "sparkle" (default), "particles", "sound", "none".
     tell: str = "sparkle"
     descubierto: bool = False
+    #: B3 — TMX object id para ITEM (si recompensa != "")
+    tmx_object_id: int = 0
 
     def intentar_descubrir(self, player: Player) -> bool:
         """Si el jugador entra en el rectángulo y no está descubierto, lo revela."""
@@ -373,3 +379,41 @@ def alcanza(jugador: pygame.Rect, objetivo: pygame.Rect, margen: int = ALCANCE_D
     alcance no depende del tamaño del personaje, que cambia al agacharse.
     """
     return objetivo.inflate(margen * 2, margen * 2).colliderect(jugador)
+
+
+# ── B3 — Item Completion helpers ─────────────────────────────────────
+
+def es_item_coleccionable_recogible(r: Recogible) -> bool:
+    """B3 — ¿Este Recogible cuenta para TOTAL?
+
+    Todo Pickup/Key declarado en TMX es ITEM, salvo dinámicos (tmx_object_id==0)
+    que vienen de soltar_botin y no tienen TOTAL determinístico.
+    """
+    return r.tmx_object_id != 0 and bool(r.item_id)
+
+
+def es_item_coleccionable_cofre(c: Cofre) -> bool:
+    """B3 — ¿Este Cofre cuenta para TOTAL? Sólo si tiene contenido."""
+    return c.tmx_object_id != 0 and bool(c.contenido)
+
+
+def es_item_coleccionable_secret_room(s: SecretRoom) -> bool:
+    """B3 — SecretRoom cuenta sólo si tiene recompensa."""
+    return s.tmx_object_id != 0 and bool(s.recompensa)
+
+
+def item_key(map_id: str, tmx_object_id: int, item_id: str) -> str:
+    """B3 — identidad estable legible: MAP_ID:TMX_ID:ITEM_ID."""
+    return f"{map_id}:{tmx_object_id}:{item_id}"
+
+
+def recogible_key(map_id: str, r: Recogible) -> str:
+    return item_key(map_id, r.tmx_object_id, r.item_id)
+
+
+def cofre_key(map_id: str, c: Cofre) -> str:
+    return item_key(map_id, c.tmx_object_id, c.contenido)
+
+
+def secret_room_key(map_id: str, s: SecretRoom) -> str:
+    return item_key(map_id, s.tmx_object_id, s.recompensa)

@@ -90,12 +90,30 @@ class InteractableSystem:
         self.fogatas: list[Fogata] = list(fogatas or [])
         self.llavero = Llavero()
         self._bus = bus
+        #: B3 — persistencia per-map
+        self._stage_id: str = ""
+        self._save_manager = None  # type: ignore[var-annotated]
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
         #: mixin de señales porque es estado del mundo: se va con el escenario.
         self._botin_soltado: set[str] = set()
         #: Último mensaje para la interfaz. La escena lo lee y lo muestra.
         self.mensaje: str = ""
         self.mensaje_timer: float = 0.0
+
+    # -- B3 persistencia per-map -----------------------------------------
+    def set_persistencia(self, stage_id: str, save_manager) -> None:
+        """B3 — fija MAP_ID y SaveManager para persistir colección."""
+
+        self._stage_id = str(stage_id or "")
+        self._save_manager = save_manager
+
+    def _persistir_item(self, item_key: str) -> None:
+        if not self._stage_id or not item_key or self._save_manager is None:
+            return
+        try:
+            self._save_manager.marcar_item_recogido(self._stage_id, item_key)
+        except Exception:
+            pass
 
     # -- consulta --------------------------------------------------
     def rects_solidos(self) -> list[pygame.Rect]:
@@ -309,6 +327,15 @@ class InteractableSystem:
                 # escuchaba sólo podía sumar al inventario.
                 pos=objeto.rect.center,
             )
+            # B3 — persistencia per-map (solo TMX, no dinámicos con id 0)
+            if getattr(objeto, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import recogible_key
+
+                    k = recogible_key(self._stage_id, objeto)
+                    self._persistir_item(k)
+                except Exception:
+                    pass
 
     def soltar_botin(self, entity_id: str, recogible: Recogible) -> bool:
         """Deja el botín de `entity_id` en el suelo. `False` si ya pagó.
@@ -408,6 +435,15 @@ class InteractableSystem:
             self._emitir(EVENTO_COFRE, contenido=cofre.contenido)
             if cofre.evento_al_abrir:
                 self._emitir(cofre.evento_al_abrir)
+            # B3 — persistencia per-map sólo si tiene contenido y id TMX
+            if cofre.contenido and getattr(cofre, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import cofre_key
+
+                    k = cofre_key(self._stage_id, cofre)
+                    self._persistir_item(k)
+                except Exception:
+                    pass
 
     def _disparar(self, jugador: pygame.Rect, usar: bool) -> None:
         for disparador in self.disparadores:
@@ -452,6 +488,19 @@ class InteractableSystem:
                 continue
             room.descubierto = True  # type: ignore[attr-defined]
             self._emitir(Events.SECRET_FOUND, secret_id=getattr(room, "secret_id", ""))
+            # B3 — si tiene recompensa y id TMX, persistir como ITEM
+            if getattr(room, "recompensa", "") and getattr(room, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import secret_room_key
+
+                    k = secret_room_key(self._stage_id, room)  # type: ignore[arg-type]
+                    self._persistir_item(k)
+                    # Otorgar recompensa al llavero si es ítem conocido
+                    recomp = str(getattr(room, "recompensa", "") or "")
+                    if recomp:
+                        self.llavero.coger(recomp)
+                except Exception:
+                    pass
 
     def _usar_fogata(self, jugador: pygame.Rect, usar: bool) -> None:
         """B4 — bonfire: cura, guarda y marca checkpoint."""
