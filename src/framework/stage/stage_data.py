@@ -42,6 +42,7 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    EstacionDeRecarga,
     Fogata,
     PlacaDePresion,
     Recogible,
@@ -472,6 +473,8 @@ class StageProgression:
     secret_rooms: list[SecretRoom] = field(default_factory=list)
     #: B4 — fogatas reutilizables (bonfire) — Dark Souls/Hollow Knight
     fogatas: list[Fogata] = field(default_factory=list)  # type: ignore[name-defined]
+    #: B4.3 — estaciones de recarga (recharge) — restaura estamina/mana
+    estaciones_recarga: list[EstacionDeRecarga] = field(default_factory=list)  # type: ignore[name-defined]
     #: Placas de presión (PressurePlate)
     placas: list[PlacaDePresion] = field(default_factory=list)  # type: ignore[name-defined]
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.

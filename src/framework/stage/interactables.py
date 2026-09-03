@@ -170,6 +170,19 @@ class Fogata:
 
 
 @dataclass
+class EstacionDeRecarga:
+    """Recharge Station — B4.3: restaura estamina/mana/especial, reutilizable.
+
+    Vista-agnóstico: rect + mensaje. No es ITEM, no persiste, no checkpoint.
+    Restaura recursos de combate (estamina, medidor especial, mana) al usar.
+    """
+
+    rect: pygame.Rect
+    mensaje: str = "Estación — pulsa para recargar"
+    usada: bool = False
+
+
+@dataclass
 class Disparador:
     """Emite un evento del bus. El escenario decide qué significa.
 

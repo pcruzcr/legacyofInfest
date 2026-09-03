@@ -30,6 +30,7 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    EstacionDeRecarga,
     Fogata,
     Llavero,
     PlacaDePresion,
@@ -75,6 +76,7 @@ class InteractableSystem:
         secret_exits: list[SecretExit] | None = None,
         secret_rooms: list[SecretRoom] | None = None,
         fogatas: list[Fogata] | None = None,
+        estaciones_recarga: list[EstacionDeRecarga] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
@@ -88,11 +90,14 @@ class InteractableSystem:
         self.secret_exits: list[SecretExit] = list(secret_exits or [])
         self.secret_rooms: list[SecretRoom] = list(secret_rooms or [])
         self.fogatas: list[Fogata] = list(fogatas or [])
+        self.estaciones_recarga: list[EstacionDeRecarga] = list(estaciones_recarga or [])
         self.llavero = Llavero()
         self._bus = bus
         #: B3 — persistencia per-map
         self._stage_id: str = ""
         self._save_manager = None  # type: ignore[var-annotated]
+        #: B4.3 — player ref for direct recharge
+        self._player_ref = None  # type: ignore[var-annotated]
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
         #: mixin de señales porque es estado del mundo: se va con el escenario.
         self._botin_soltado: set[str] = set()
@@ -114,6 +119,10 @@ class InteractableSystem:
             self._save_manager.marcar_item_recogido(self._stage_id, item_key)
         except Exception:
             pass
+
+    def set_player_ref(self, player) -> None:
+        """B4.3 — referencia al Player para recarga directa (estamina etc.)."""
+        self._player_ref = player
 
     # -- consulta --------------------------------------------------
     def rects_solidos(self) -> list[pygame.Rect]:
@@ -144,6 +153,7 @@ class InteractableSystem:
         self._cerrar_las_cronometradas(dt, jugador)
         self._revelar_secretos(jugador, usar)
         self._usar_fogata(jugador, usar)
+        self._usar_estacion(jugador, usar)
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
@@ -521,6 +531,46 @@ class InteractableSystem:
                 # Hint cuando estás cerca pero no pulsas
                 if self.mensaje_timer <= 0:
                     self._avisar(fogata.mensaje, duracion=1.0)
+            break
+
+    def _usar_estacion(self, jugador: pygame.Rect, usar: bool) -> None:
+        """B4.3 — recharge station: restaura estamina/mana/especial."""
+        for estacion in self.estaciones_recarga:
+            if not alcanza(jugador, estacion.rect):
+                continue
+            if usar:
+                # Restaurar recursos del player si hay referencia
+                player = getattr(self, "_player_ref", None)
+                if player is not None:
+                    try:
+                        # Estamina
+                        if hasattr(player, "estamina") and hasattr(player, "estamina_max"):
+                            try:
+                                player.estamina = float(player.estamina_max)
+                                if hasattr(player, "_espera_estamina_restante"):
+                                    player._espera_estamina_restante = 0.0
+                            except Exception:
+                                pass
+                        # Mana si existe (HUD mana) — player no tiene mana aún, no-op
+                        # Special meter
+                        if hasattr(player, "special_meter") and hasattr(player, "special_meter_max"):
+                            try:
+                                player.special_meter = float(player.special_meter_max)
+                            except Exception:
+                                pass
+                        # Oxigeno si existe (nado)
+                    except Exception:
+                        pass
+                self._avisar("Recargado — recursos restaurados!")
+                self._emitir(Events.RECHARGE_STATION_USED, pos=estacion.rect.center)
+                try:
+                    self._emitir(Events.SFX_CHECKPOINT, pos=estacion.rect.center)
+                except Exception:
+                    pass
+                estacion.usada = True
+            else:
+                if self.mensaje_timer <= 0:
+                    self._avisar(estacion.mensaje, duracion=1.0)
             break
 
     def _warpear(self, dt: float, jugador: pygame.Rect, usar: bool) -> None:

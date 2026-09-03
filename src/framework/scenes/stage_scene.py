@@ -594,6 +594,7 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             warps=self._stage_data.warps,
             placas=getattr(self._stage_data, "placas", None),
             fogatas=getattr(self._stage_data, "fogatas", None),
+            estaciones_recarga=getattr(self._stage_data, "estaciones_recarga", None),
         )
         # B3 — persistencia per-map para ITEM completion
         try:
@@ -601,6 +602,11 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
                 str(getattr(self._stage_data, "stage_id", "") or ""),
                 getattr(self.context, "save_manager", None),
             )
+        except Exception:
+            pass
+        # B4.3 — player ref para recarga
+        try:
+            self._interactables.set_player_ref(getattr(self, "_player", None))
         except Exception:
             pass
         self._montar_director_de_escenas()

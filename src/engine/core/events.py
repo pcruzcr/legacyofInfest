@@ -226,6 +226,10 @@ class Events:
     después volvería a anunciar el final.
     """
 
+    # ── Recharge station (B4.3) ───────────────────────────────────────
+    RECHARGE_STATION_USED: str = "RECHARGE_STATION_USED"
+    """Emitted by RechargeStation. Payload: pos, station_rect."""
+
     # ── Save / persist ──────────────────────────────────────────────
     SAVE_REQUESTED: str = "SAVE_REQUESTED"
     """Emitted when a save should be persisted. Payload: stage_id, stage_index,

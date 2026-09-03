@@ -771,6 +771,19 @@ class ObjetosDeTiled:
         ))
 
     @classmethod
+    @register("RechargeStation")
+    @register("EstacionRecarga")
+    @register("EstacionDeRecarga")
+    def _handle_estacion_recarga(cls, stage: StageData, obj: Any, props: dict[str, Any]) -> None:
+        """`RechargeStation`/`EstacionRecarga` — B4.3: restaura estamina/mana."""
+        from src.framework.stage.interactables import EstacionDeRecarga
+
+        stage.estaciones_recarga.append(EstacionDeRecarga(  # type: ignore[attr-defined]
+            rect=cls._rect_de(obj),
+            mensaje=str(props.get("mensaje", "Estación — pulsa para recargar")),
+        ))
+
+    @classmethod
     @register("ScrollZone")
     def _handle_scroll_forzado(
         cls, stage: StageData, obj: Any, props: dict[str, Any],
