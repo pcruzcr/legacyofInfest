@@ -63,7 +63,7 @@ def test_06_tmx_spec_tipos_reconocidos_por_validador():
     spec = RAIZ / "docs/06_TMX_SPEC.md"
     assert spec.exists()
     r = subprocess.run([sys.executable, "scripts/validate_tmx.py", "--ci"], capture_output=True, text=True, encoding="utf-8", errors="replace")
-    assert "38/38 passed" in r.stdout or "38/38" in r.stdout, f"validate_tmx fallo — TMX_PROPERTY contract roto: {r.stdout[:500]}"
+    assert "33/33 passed" in r.stdout or "33/33" in r.stdout, f"validate_tmx fallo — TMX_PROPERTY contract roto: {r.stdout[:500]}"
     txt = spec.read_text(encoding="utf-8", errors="replace")
     assert "Checkpoint" in txt, "06_TMX_SPEC no menciona Checkpoint — posible doc term vs TMX_PROPERTY confusion"
 

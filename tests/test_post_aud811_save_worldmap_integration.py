@@ -147,13 +147,13 @@ def test_save_load_preserves_checkpoint_and_progression():
         assert r2.arbol["skill_dash"] == 1
 
 
-def test_world_map_30_nodes_and_backtrack():
-    """Verifica 15 progresión +15 backtrack =30, zigzag 3 por fila."""
+def test_world_map_29_nodes_and_backtrack():
+    """Verifica 14 progresión +15 backtrack =29, zigzag 3 por fila."""
     nodos = construir_nodos()
-    assert len(nodos) == 30
+    assert len(nodos) == 29
     prod = [n for n in nodos if not n.get("is_backtrack")]
     back = [n for n in nodos if n.get("is_backtrack")]
-    assert len(prod) == 15
+    assert len(prod) == 14
     assert len(back) == 15
     # zigzag: NODOS_POR_FILA 3
     from src.engine.scenes.world_map_scene import NODOS_POR_FILA

@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 2 de septiembre de 2026 · **Documentos:** 141 en `docs/` (140 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
+**Fecha:** 2 de septiembre de 2026 · **Documentos:** 134 en `docs/` (133 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
