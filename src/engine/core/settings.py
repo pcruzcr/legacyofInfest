@@ -113,7 +113,7 @@ PLAYER_SKILLS_REQUIRE_UNLOCK: bool = True
 ESCENARIOS_CON_HABILIDADES_LIBRES: frozenset[str] = frozenset({
     "stage0", "stage1_1", "stage1_2_la_soda", "stage1_3_las_aulas",
     "stage2_1", "stage2_2", "3-1", "stage3_3_el_patio",
-    "stage3_4_boss_gavilan", "stage4_1", "hall", "stage_template",
+    "stage3_4_boss_gavilan", "hall", "stage_template",
     "stage_mecanicas", "boss_venado", "boss_rey", "boss_paburu",
 })
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15

@@ -13,7 +13,7 @@ from src.framework.stage.stage_loader import StageLoader
 from src.framework.entities.player import Player
 
 TMX_ROOT = pathlib.Path("assets/maps")
-PRINCIPAL = ["stage0","stage1_1","stage1_2_la_soda","stage1_3_las_aulas","stage2_1_oficinas","stage2_2","stage3_1_la_entrada_de_piedra","stage3_3_el_patio","stage3_4_boss_gavilan","stage4_1","stage4_1b","hall","boss_venado","boss_rey","boss_paburu","lobby_datacenter","tutorial_hub","stage_mecanicas"]
+PRINCIPAL = ["stage0","stage1_1","stage1_2_la_soda","stage1_3_las_aulas","stage2_1_oficinas","stage2_2","stage3_1_la_entrada_de_piedra","stage3_3_el_patio","stage3_4_boss_gavilan","hall","boss_venado","boss_rey","boss_paburu","lobby_datacenter","tutorial_hub","stage_mecanicas"]
 
 def _load(name):
     cands = list(TMX_ROOT.rglob(f"{name}.tmx"))

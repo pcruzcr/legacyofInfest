@@ -65,11 +65,6 @@ NIVELES: list[tuple[str, str, bool, bool, bool]] = [
     ("hall", "hall/hall.tmx", True, False, False),
     ("stage3_3_el_patio", "stage3_3_el_patio/stage3_3_el_patio.tmx", True, False, False),
     ("stage3_4_boss_gavilan", "stage3_4_boss_gavilan/stage3_4_boss_gavilan.tmx", False, True, False),
-    ("stage4_1", "stage4_1/stage4_1.tmx", True, False, False),
-    ("stage4_1b", "stage4_1b/stage4_1b.tmx", True, False, False),
-    ("stage4_1c_a", "stage4_1c/stage4_1c_a.tmx", True, False, False),
-    ("stage4_1c_b", "stage4_1c/stage4_1c_b.tmx", True, False, False),
-    ("stage4_1c_c", "stage4_1c/stage4_1c_c.tmx", True, False, False),
     ("boss_venado", "boss_venado/boss_venado.tmx", False, True, False),
     ("boss_rey", "boss_rey/boss_rey.tmx", False, True, False),
     ("boss_paburu", "boss_paburu/boss_paburu.tmx", False, True, False),
@@ -89,8 +84,7 @@ _MECANICAS_DINAMICAS = {
 #: Niveles con tramos largos sin checkpoint POR DECISIÓN documentada del
 #: dueño (AUD-516: checkpoints 32→6 en el slot 4-1, 14 km de mapa).
 _SIN_CHECKPOINT_POR_DECISION = {
-    "stage4_1", "stage4_1b", "stage4_1c_a", "stage4_1c_b", "stage4_1c_c",
-}
+    }
 
 
 @pytest.fixture(scope="module")
@@ -356,8 +350,7 @@ def test_densidad_y_poblacion_medidas(stage_id, tmx_rel, _, __, ___) -> None:
     jefes = [e for e in data.entity_list if isinstance(e, BossBase)]
     assert 0.0 < dens <= 1.0
     sin_enemigos_esperados = {
-        "stage_cenital", "stage4_1", "stage4_1b",
-        "stage4_1c_a", "stage4_1c_b", "stage4_1c_c",
+        "stage_cenital",
         "boss_venado", "boss_rey", "boss_paburu",
     }
     if stage_id in sin_enemigos_esperados:

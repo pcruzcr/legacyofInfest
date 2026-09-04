@@ -143,9 +143,6 @@ git si hace falta consultarlos.
 | [`16_WORLD_DESIGN.md`](16_WORLD_DESIGN.md) | Documento de diseño del mundo |
 | [`07_STAGE0_DESIGN.md`](07_STAGE0_DESIGN.md) | Diseño del Escenario 0 |
 | [`86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`](86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md) | Especificación de Niveles y Jefes |
-| [`ZONA4_DESIGN_SPEC.md`](ZONA4_DESIGN_SPEC.md) | Zona 4 — Arquitectura de experiencia experimental (random seed, variantes, progresión) |
-| [`ZONA4_PLAYTEST.md`](ZONA4_PLAYTEST.md) | Zona 4 — Protocolo de playtest humano y métricas |
-| [`ZONA4_PROCEDURAL_GENERATION.md`](ZONA4_PROCEDURAL_GENERATION.md) | Zona 4 — Generación procedural 4_1C (GENERATE→VALIDATE→SPAWN) |
 | [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrativa y trasfondo |
 | [`65_EL_LORE_EXTENSO.md`](65_EL_LORE_EXTENSO.md) | El Lore Extenso |
 
@@ -209,7 +206,6 @@ git si hace falta consultarlos.
 | [`HYBRID_RENDERER_RC_CERTIFICATION.md`](HYBRID_RENDERER_RC_CERTIFICATION.md) | Certificación Hybrid Renderer — 1920 work 9.47 P95 10.50 P99 12.25 readback 0 |
 | [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) | Baseline de rendimiento — 1280×720 work 6.5 y 1920×1080 9.47 comparativa |
 | [`RELEASE_NOTES_RENDERER_RC.md`](RELEASE_NOTES_RENDERER_RC.md) | Notas de release Renderer RC — 1920@60 work 9.47 vs CPU 39.54 |
-| [`informe_stage4_1b_gates_8_9_10.md`](informe_stage4_1b_gates_8_9_10.md) | Informe stage4_1b gates 8-10 — validación de arte/QA/polish |
 | [`AUD-800_REPOSITORY_INVENTORY.md`](AUD-800_REPOSITORY_INVENTORY.md) | Inventario forense — 8.350 ficheros relevantes, 518 src, 6.556 tests, 854 assets, 37 TMX |
 | [`AUD-800_ENEMY_MATRIX.md`](AUD-800_ENEMY_MATRIX.md) | Matriz enemigos 35 — propósito, IA, daño, hitbox, niveles, fairness |
 | [`AUD-800_INPUT_MATRIX.md`](AUD-800_INPUT_MATRIX.md) | Matriz entrada 31 acciones — bindings, focus, leakage, accesibilidad |
@@ -222,11 +218,8 @@ git si hace falta consultarlos.
 | [`AUD-803_NATIVE_RENDERING_AUDIT.md`](AUD-803_NATIVE_RENDERING_AUDIT.md) | Auditoría native rendering — pipeline 1280×720, camera, HUD, tilemap, pixel-perfect |
 | [`AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md`](AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md) | Certificación visual truth — falsación adversarial de AUD-803, 1.5× no integer |
 | [`AUD-805_LEVEL_COMPOSITION_AUDIT.md`](AUD-805_LEVEL_COMPOSITION_AUDIT.md) | Auditoría composición niveles — 37 TMX, player 40×64, ground 608, HUD 128, parallax |
-| [`AUD-811_FORENSIC_VISUAL_PIPELINE.md`](AUD-811_FORENSIC_VISUAL_PIPELINE.md) | Auditoría forense pipeline visual - Pygame CE / ModernGL / FBO / viewport / MAE 0@1280 |
-| [`AUD-811_INSPECTION_CHECKPOINT.md`](AUD-811_INSPECTION_CHECKPOINT.md) | Checkpoint de inspección segura - baseline df16c61, branch feature/master-plan, renderer congelado |
 | [`PROJECT_IMPROVEMENT_REGISTER.md`](PROJECT_IMPROVEMENT_REGISTER.md) | Registro de mejoras del proyecto - 12 mejoras I-001..I-012 priorizadas WHY->COST->RISK |
 | [`RELEASE_READINESS.md`](RELEASE_READINESS.md) | Preparación para release - matriz RC 15 áreas, P0=0 P1=0, renderer FROZEN |
-| [`AUD-813_ZONE4_RUNTIME_CERTIFICATION.md`](AUD-813_ZONE4_RUNTIME_CERTIFICATION.md) | Certificación Zona 4 — integración real ENTRY→VARIANT, reproducibilidad, persistencia, procedural, World Map |
 | [`B3_ITEM_COMPLETION_CONTRACT_REVIEW.md`](B3_ITEM_COMPLETION_CONTRACT_REVIEW.md) | B3 item completion - revision de contrato CODE+DATA+TEST |
 | [`B4_2_HEART_PIECE_CONTRACT_REVIEW.md`](B4_2_HEART_PIECE_CONTRACT_REVIEW.md) | B4.2 heart piece - revision de contrato, modo analisis |
 | [`B4_MASTER_CERTIFICATION.md`](B4_MASTER_CERTIFICATION.md) | B4 master certification - bonfire, heart piece, recharge station COMPLETE |

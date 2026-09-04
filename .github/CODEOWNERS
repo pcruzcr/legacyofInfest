@@ -2,11 +2,11 @@
 #
 # Por qué existe este archivo
 # ============================
-# El repositorio es privado y cada estudiante tiene acceso `Read` (modo
-# lectura, sin permiso de escritura directa): pueden clonar y ver las
-# ~26 entregas del curso, pero no pueden empujar una rama aquí. Para
+# El repositorio es público (visible a cualquiera) y cada estudiante tiene
+# acceso `Read` (modo lectura, sin permiso de escritura directa). Para
 # proponer un cambio hacen fork y abren un Pull Request contra `dev`
-# (ver `CONTRIBUTING.md`, sección "Proceso de PR").
+# (ver `CONTRIBUTING.md`, sección "Proceso de PR"). Stage 4_1/4_1b/4_1c
+# vive en repo privado aparte y aquí no hay ni rastro.
 #
 # Este archivo es la otra mitad del control de acceso: con la regla de
 # rama protegida en `dev` que exige revisión del "code owner" antes de
