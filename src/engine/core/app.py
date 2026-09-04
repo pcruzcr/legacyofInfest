@@ -718,15 +718,21 @@ class App:
                     medidas = dict(
                         self.scene_manager.current.medidas_de_depuracion())
                 except Exception:
-                    # Una escena de estudiante que falle al contarse no puede
-                    # tumbar el fotograma: la consola es una herramienta, no
-                    # parte del juego.
                     logger.exception("medidas_de_depuracion falló")
                     medidas = {"medidas": "error (ver el registro)"}
-            # AUD-377 — esta fila la pone `App` y no la escena, porque la
-            # tubería es del motor: una escena no sabe cuántas pasadas de
-            # post-procesado están encendidas, que es justo lo que hace subir
-            # el número. Va aparte de `medidas_de_depuracion` por eso.
+            # AUD-806 — Visual Forensics: recolectar estado WORLD→DISPLAY si F8 activo
+            if getattr(self.debug_overlay, "_forensics", False):
+                try:
+                    from src.engine.render.visual_forensics import collect_forensics
+                    cam = getattr(escena, "_camera", None) if escena is not None else None  # type: ignore[attr-defined]
+                    pl = getattr(escena, "_player", None) if escena is not None else None  # type: ignore[attr-defined]
+                    st = getattr(escena, "_stage_data", None) if escena is not None else None  # type: ignore[attr-defined]
+                    hud = getattr(escena, "_hud", None) if escena is not None else None  # type: ignore[attr-defined]
+                    f_state = collect_forensics(camera=cam, player=pl, stage=st, hud=hud)
+                    self.debug_overlay.set_forensics_state(f_state)
+                except Exception:
+                    logger.debug("forensics collect failed", exc_info=True)
+            # AUD-377 — esta fila la pone `App` y no la escena
             if self._gl_renderer is not None:
                 medidas["Llamadas de dibujo"] = (
                     self._gl_renderer.llamadas_de_dibujo)

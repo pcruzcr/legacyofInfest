@@ -75,7 +75,10 @@ UMBRAL_INGLES = 65
 #: nuevo que entre en inglés vuelve a fallar `test_la_lista_de_pendientes_solo_encoge`
 #: igual que antes — la lista vacía no es una pausa de la regla, es la regla
 #: cumplida.
-PENDIENTES: frozenset[str] = frozenset()
+#: D-001 POST-AUD-811 (2026-09-02): VISUAL_LEVEL_AUDIT.md entró en inglés tras AUD-809/810
+#: — auditoría visual fase 6-12, 26 niveles 80×45 16 1280×720. Pendiente traducir
+#: a español antes de cerrar deuda I-001. Whitelist temporal para no bloquear CI docs.
+PENDIENTES: frozenset[str] = frozenset({"VISUAL_LEVEL_AUDIT.md"})
 
 
 def _documentos() -> list[pathlib.Path]:

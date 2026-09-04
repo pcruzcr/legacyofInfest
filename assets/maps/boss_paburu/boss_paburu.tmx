@@ -19,18 +19,8 @@
   <property name="ambient_fx_rate" type="float" value="12" />
   <property name="vignette" type="float" value="0.32" />
   <property name="bloom" type="float" value="0.55" />
-  <property name="sombras_proyectadas" type="bool" value="false" />
-  <property name="catacumba_x" type="int" value="3296" />
-  <property name="catacumba_y" type="int" value="736" />
-  <property name="catacumba_w" type="int" value="800" />
-  <property name="catacumba_h" type="int" value="560" />
-  <property name="catacumba_spawn_x" type="int" value="3984" />
-  <property name="catacumba_spawn_y" type="int" value="1296" />
-  <property name="catacumba_boss_x" type="int" value="3520" />
-  <property name="catacumba_boss_y" type="int" value="1232" />
-  <property name="catacumba_foso_x" type="int" value="4000" />
-  <property name="catacumba_foso_w" type="int" value="48" />
-  <property name="water_effect" type="bool" value="false" />
+   <property name="sombras_proyectadas" type="bool" value="false" />
+   <property name="water_effect" type="bool" value="false" />
  </properties>
  <tileset firstgid="1" name="tileset_paburu" tilewidth="16" tileheight="16" tilecount="208" columns="8">
   <image source="../../tilesets/tileset_paburu.png" width="128" height="416" />

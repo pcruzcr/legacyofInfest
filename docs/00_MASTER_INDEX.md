@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 1 de septiembre de 2026 · **Documentos:** 130 en `docs/` (129 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
+**Fecha:** 2 de septiembre de 2026 · **Documentos:** 141 en `docs/` (140 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -31,7 +31,7 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 130 (el encabezado de arriba los cuenta). Se retiraron 35
+ficheros y hoy son 149 (el encabezado de arriba los cuenta). Se retiraron 35
 auditorías cerradas, informes de fase, hojas de ruta cumplidas y registros de
 decisiones ya tomadas, y se incorporaron 63 —incluyendo AUD-800 (8),
 `CHANGE_SAFETY_GUIDE`, `AUD-803_NATIVE_RENDERING_AUDIT`, `AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION` y `AUD-805_LEVEL_COMPOSITION_AUDIT`—. No eran
@@ -143,6 +143,9 @@ git si hace falta consultarlos.
 | [`16_WORLD_DESIGN.md`](16_WORLD_DESIGN.md) | Documento de diseño del mundo |
 | [`07_STAGE0_DESIGN.md`](07_STAGE0_DESIGN.md) | Diseño del Escenario 0 |
 | [`86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`](86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md) | Especificación de Niveles y Jefes |
+| [`ZONA4_DESIGN_SPEC.md`](ZONA4_DESIGN_SPEC.md) | Zona 4 — Arquitectura de experiencia experimental (random seed, variantes, progresión) |
+| [`ZONA4_PLAYTEST.md`](ZONA4_PLAYTEST.md) | Zona 4 — Protocolo de playtest humano y métricas |
+| [`ZONA4_PROCEDURAL_GENERATION.md`](ZONA4_PROCEDURAL_GENERATION.md) | Zona 4 — Generación procedural 4_1C (GENERATE→VALIDATE→SPAWN) |
 | [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrativa y trasfondo |
 | [`65_EL_LORE_EXTENSO.md`](65_EL_LORE_EXTENSO.md) | El Lore Extenso |
 
@@ -219,6 +222,14 @@ git si hace falta consultarlos.
 | [`AUD-803_NATIVE_RENDERING_AUDIT.md`](AUD-803_NATIVE_RENDERING_AUDIT.md) | Auditoría native rendering — pipeline 1280×720, camera, HUD, tilemap, pixel-perfect |
 | [`AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md`](AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md) | Certificación visual truth — falsación adversarial de AUD-803, 1.5× no integer |
 | [`AUD-805_LEVEL_COMPOSITION_AUDIT.md`](AUD-805_LEVEL_COMPOSITION_AUDIT.md) | Auditoría composición niveles — 37 TMX, player 40×64, ground 608, HUD 128, parallax |
+| [`AUD-811_FORENSIC_VISUAL_PIPELINE.md`](AUD-811_FORENSIC_VISUAL_PIPELINE.md) | Auditoría forense pipeline visual - Pygame CE / ModernGL / FBO / viewport / MAE 0@1280 |
+| [`AUD-811_INSPECTION_CHECKPOINT.md`](AUD-811_INSPECTION_CHECKPOINT.md) | Checkpoint de inspección segura - baseline df16c61, branch feature/master-plan, renderer congelado |
+| [`PROJECT_IMPROVEMENT_REGISTER.md`](PROJECT_IMPROVEMENT_REGISTER.md) | Registro de mejoras del proyecto - 12 mejoras I-001..I-012 priorizadas WHY->COST->RISK |
+| [`RELEASE_READINESS.md`](RELEASE_READINESS.md) | Preparación para release - matriz RC 15 áreas, P0=0 P1=0, renderer FROZEN |
+| [`AUD-813_ZONE4_RUNTIME_CERTIFICATION.md`](AUD-813_ZONE4_RUNTIME_CERTIFICATION.md) | Certificación Zona 4 — integración real ENTRY→VARIANT, reproducibilidad, persistencia, procedural, World Map |
+| [`B3_ITEM_COMPLETION_CONTRACT_REVIEW.md`](B3_ITEM_COMPLETION_CONTRACT_REVIEW.md) | B3 item completion - revision de contrato CODE+DATA+TEST |
+| [`B4_2_HEART_PIECE_CONTRACT_REVIEW.md`](B4_2_HEART_PIECE_CONTRACT_REVIEW.md) | B4.2 heart piece - revision de contrato, modo analisis |
+| [`B4_MASTER_CERTIFICATION.md`](B4_MASTER_CERTIFICATION.md) | B4 master certification - bonfire, heart piece, recharge station COMPLETE |
 
 ---
 

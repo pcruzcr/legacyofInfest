@@ -24,6 +24,14 @@
 # estudiante — si todavía no se sabe su usuario, el correo funciona
 # igual una vez que lo verifique).
 
+# ── CONGELADO — motor y framework (2026-09-04) ──
+# El motor y el framework están congelados mientras se trabaja solo en
+# stage 4_1 / 4_1b / 4_1c. Verán el historial (lectura) pero ningún PR
+# que toque estas rutas se fusiona sin el dueño del repo.
+# Requiere branch protection en dev/prod con "Require review from Code Owners".
+/src/engine/                @pcruzcr
+/src/framework/             @pcruzcr
+
 # ── Stage 1-1 ──
 /src/stages/stage1_1/            fabrizioespinozaarce@gmail.com
 /assets/maps/stage1_1/           fabrizioespinozaarce@gmail.com

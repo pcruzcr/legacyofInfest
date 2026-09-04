@@ -642,9 +642,39 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
     #    exigentes que den variedad. Un nivel sin ningún salto difícil es
     #    correcto y aburrido; uno con un tramo larguísimo sin checkpoint
     #    castiga al jugador por un error.
+    #
+    # ZONA 4 §10 — NO usar 500 px = regla universal para Zona 4. Las métricas
+    # de grade_stage son VALIDATION METRIC, no DESIGN RULE para Zona 4. Los
+    # checkpoints se colocan según tensión/riesgo/repetición/duración/
+    # recuperación/narrativa/ritmo/experiencia, no por distancia. Por eso un
+    # gap grande en 4_1/4_1B/4_1C no es error bloqueante sino métrica para
+    # playtest (TIME_TO_COMPLETE, BACKTRACK, etc. §11).
+    es_zona4 = "stage4_1" in str(path)
     peor = max(informe.checkpoint_gaps, default=0.0)
     exigentes = len(informe.demanding_gaps)
-    if peor > MAX_CHECKPOINT_GAP:
+    if es_zona4:
+        # Zona 4: gap como métrica, no como regla. Aviso, no error.
+        if peor > MAX_CHECKPOINT_GAP:
+            poner("design_pacing", RUBRIC["design_pacing"],
+                  f"Zona 4: {peor:.0f} px sin checkpoint — métrica, no regla (ver ZONA4_DESIGN_SPEC §10)")
+            result["warnings"].append(
+                f"Zona 4: {peor:.0f} px entre checkpoints — VALIDATION METRIC, no DESIGN RULE. "
+                "Los checkpoints de Zona 4 se colocan por tensión/ritmo/narrativa (§10), no por "
+                "distancia. Ver docs/ZONA4_DESIGN_SPEC.md y docs/ZONA4_PLAYTEST.md"
+            )
+            # Guardar métrica para §11
+            result["design"]["zona4_worst_checkpoint_gap"] = peor
+            result["design"]["zona4_checkpoint_gaps"] = informe.checkpoint_gaps
+        elif exigentes == 0:
+            poner("design_pacing", RUBRIC["design_pacing"] - 3,
+                  "el recorrido no tiene ningún salto exigente (Zona 4: puede ser intencional si el terror es el reto)")
+            result["warnings"].append(
+                "ningún salto exigente — en Zona 4 el desafío puede ser atmósfera/percepción, no salto"
+            )
+        else:
+            poner("design_pacing", RUBRIC["design_pacing"],
+                  f"Zona 4: checkpoints según experiencia, {exigentes} salto(s) exigente(s)")
+    elif peor > MAX_CHECKPOINT_GAP:
         poner("design_pacing", 0,
               f"{peor:.0f} px sin checkpoint (máximo recomendado "
               f"{MAX_CHECKPOINT_GAP})")
