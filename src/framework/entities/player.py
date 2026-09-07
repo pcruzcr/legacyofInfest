@@ -725,10 +725,46 @@ class Player(BaseEntity):
         golpe *acertó*: llenar el medidor al lanzarlo premiaría dar palos al
         aire, que es exactamente el hábito que no interesa recompensar.
         """
+        # AUD-818 (P13) — el combo progresa al CONECTAR, no al pulsar.
+        # `CollisionSystem` sólo llama aquí con `connected=True`, una vez por
+        # tajo aunque toque a varios enemigos (`_hit_this_swing` ya dedupica
+        # por entidad): un tajo, un paso de combo. La guarda de hitbox viva
+        # impide el doble conteo si alguien llama dos veces.
+        if self._active_hitbox is not None and not self._hitbox_consumed:
+            self._progresar_combo_al_conectar()
         self._hitbox_consumed = True
         self._active_hitbox = None
         self.gain_special(self.special_gain_per_hit)
         self.arco.recargar()
+
+    def _progresar_combo_al_conectar(self) -> None:
+        """Avanza `combo_count` un paso por tajo conectado (AUD-818, P13).
+
+        Sólo los ataques corto/largo de suelo progresan el combo: los
+        aéreos y especiales nunca lo tocaron (`_start_attack` no los cubre)
+        y se conserva ese comportamiento. Un fallo (sin llamada) no mueve
+        nada: el combo lo cierran el daño recibido y el temporizador.
+        """
+        estado = self._state_instance.state_enum
+        if estado == PlayerState.SHORT_ATTACK:
+            atk_name = "SHORT_ATTACK"
+        elif estado == PlayerState.LONG_ATTACK:
+            atk_name = "LONG_ATTACK"
+        else:
+            return
+        import src.engine.core.settings as settings
+        from src.engine.core.difficulty import get_config
+        if (self.combo_active
+                and self.combo_timer > 0
+                and self.last_attack_type == atk_name
+                and self.combo_count < settings.COMBO_MAX):
+            self.combo_count += 1
+        else:
+            self.combo_count = 1
+        self.combo_timer = float(
+            getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+        self.last_attack_type = atk_name
+        self.combo_active = True
 
     def gain_special(self, amount: float) -> None:
         """Sube el medidor de especial, con tope."""

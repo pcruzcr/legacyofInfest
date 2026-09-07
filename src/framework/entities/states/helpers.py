@@ -159,27 +159,20 @@ def _reset_air_jumps(player: Player) -> None:
 
 
 def _start_attack(player: Player, attack_type: object) -> None:
-    atk_name = "SHORT_ATTACK" if attack_type == player.SHORT_ATTACK else "LONG_ATTACK"
-
-    # AUD-COMBO: el conteo no debe quedar condicionado a `changed`.
-    # Antes `if changed:` hacía que un ataque denegado (cooldown, mismo estado)
-    # dejara el combo congelado y el siguiente golpe retomara con el contador
-    # viejo: el conteo "seguía" aunque el ataque no salió. Ahora avanza siempre
-    # que se pulsa, y si el estado no cambia el siguiente golpe igual resetea
-    # por `last_attack_type`/ventana.
-    if (player.combo_active
-            and player.combo_timer > 0
-            and player.last_attack_type == atk_name
-            and player.combo_count < settings.COMBO_MAX):
-        player.combo_count += 1
-    else:
-        player.combo_count = 1
+    # AUD-818 (P13) — el arranque sólo REFRESCA la ventana
+    # (`combo_timer`); el conteo y `last_attack_type` progresan en
+    # `Player.consume_hitbox`, que es donde se sabe que el golpe conectó.
+    # `last_attack_type` guarda el último tipo CONECTADO a propósito: si el
+    # arranque lo sobrescribiera, en el impacto coincidiría siempre con el
+    # estado actual y el cambio de tipo (corto→largo) nunca reiniciaría.
+    # Contar aquí premiaba abanicar el aire y, como `current_attack_damage`
+    # escala con `combo_count`, regalaba daño gratis por pulsar sin pegar.
+    # AUD-COMBO ya había descondicionado el conteo de `changed`; esto
+    # completa ese trabajo moviendo el incremento del arranque al impacto.
     from src.engine.core.difficulty import get_config
 
     player.combo_timer = float(
         getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
-    player.last_attack_type = atk_name
-    player.combo_active = True
 
     from src.framework.entities.states import (
         LongAttackState,
