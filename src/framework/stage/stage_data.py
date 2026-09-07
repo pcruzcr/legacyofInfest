@@ -400,6 +400,11 @@ class StageAtmosphere:
 
     #: AUD-426 — cielo procedural
     cielo: bool = False
+    #: AUD-822 (P19) — el mapa es un interior (cueva, hub bajo techo).
+    #: Opt-in, por defecto exterior. NO se deduce de `cielo`: usar la
+    #: ausencia de cielo como «bajo techo» convertía en interior a todo
+    #: mapa que no declaraba `cielo`, apagando su ciclo de día y su clima.
+    interior: bool = False
     background_layers: list[pygame.Surface] = field(default_factory=list)
     background_factors: list[float] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)

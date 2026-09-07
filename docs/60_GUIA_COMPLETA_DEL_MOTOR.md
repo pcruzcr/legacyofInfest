@@ -214,6 +214,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica. Actualizado
 | `fog_of_war` | float | `0` | radio de visión en píxeles. `0` = apagado. Con `220` el jugador sólo ve su entorno |
 | `god_rays` | float | `0` | rayos de luz que bajan desde arriba, de `0` a `1`. Se nota con `ambient_light` baja |
 | `cielo` | bool | `false` | **cielo procedural** (AUD-426): el degradado sale de la altura del sol en vez de un PNG. Enciéndelo si tu mapa **no** trae fondo con cielo pintado; si lo trae, el degradado queda debajo y no se ve |
+| `interior` | bool | `false` | **bajo techo** (AUD-822): luz cálida fija, sin ciclo de día ni clima. Se DECLARA; sin ella el mapa es exterior aunque no pida `cielo`. No confundir: `cielo` dibuja, `interior` ambienta |
 | `habilidades_libres` | bool | `false` | exime a este escenario del candado de habilidades: el jugador entra con todo desbloqueado. Para laboratorios y pruebas |
 | `water_effect` | bool | `false` | ondulación y refracción sobre las `WaterZone` |
 

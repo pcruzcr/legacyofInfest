@@ -375,10 +375,14 @@ class SimulacionDeEscenario:
             player = getattr(self, "_player", None)
             if player is None or not hasattr(player, "rect"):
                 return False
-            # Si el mapa no declara cielo (cielo=False) es indoor global
-            if not getattr(self._stage_data, "cielo", True):
-                # Cielo apagado = interior puro (ej. caverna, hub interior)
-                # Pero si no hay IndoorZone, se respeta; si hay, se usa el rect
+            # AUD-822 (P19) — el interior se DECLARA (`interior=true`),
+            # no se deduce de la ausencia de `cielo`. `cielo` decide si se
+            # dibuja el cielo procedural (AUD-426, opt-in); `interior`
+            # decide luz cálida fija, sin ciclo ni clima. Son independientes:
+            # un exterior puede no pedir cielo, sin dejar de ser exterior.
+            if getattr(self._stage_data, "interior", False):
+                # Interior declarado = bajo techo en todo el mapa, salvo que
+                # haya IndoorZone: entonces manda el rect.
                 zones = getattr(self._stage_data, "indoor_zones", []) or []
                 if not zones:
                     return True
