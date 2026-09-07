@@ -104,9 +104,12 @@ class EnemyFlying(EnemyBase):
                 pygame.Vector2(cx, cy + 48),
             ]
 
-        # Rect size
-        self.rect.width = 40
-        self.rect.height = 28
+        # Rect size — AUD-821 (P16): la colisión va a la escala del
+        # frame (14×10, ver `_load_zone_sprites` abajo), no al doble. d1676cf
+        # duplicó el rect sin tocar sprites ni dibujo y el murciélago mordía
+        # a 20 px de donde se veía.
+        self.rect.width = 20
+        self.rect.height = 14
 
         # Cached surfaces
         self._dive_warn_surf: pygame.Surface | None = None

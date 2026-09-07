@@ -39,8 +39,10 @@ class EnemyCharger(EnemyBase):
         # AUD-455: el y del TMX es la esquina superior (semántica nativa de
         # Tiled); el descuento de altura hacía flotar a todos los enemigos de
         # suelo. Ver `enemy_walker` para el porqué completo.
-        self.rect.width = 56
-        self.rect.height = 48
+        # AUD-821 (P16): 28×24, a la escala del frame (14×12). El apoyo en
+        # el suelo (`EnemyBase`: apoyo con `rect.height`) se adapta solo.
+        self.rect.width = 28
+        self.rect.height = 24
 
         # Charge state
         self._charge_speed: float = charge_speed
