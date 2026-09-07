@@ -1304,8 +1304,19 @@ class Player(BaseEntity):
         # «el personaje no nada»). `_apply_physics` es el integrador del
         # perfil; los estados acuáticos declaran su eje Y completo y el
         # integrador se lo deja.
+        # AUD-820 (P12) — ZIPLINE y CLIMBING no reciben gravedad del
+        # perfil, como SWIMMING/SWIM_ATTACK. El estado corre ANTES que la
+        # física (`update`: estado → física → colisión) y la tirolesa mueve
+        # `position` a mano por el cable: si el integrador sumaba gravedad
+        # encima, `velocity.y` crecía sin freno y el jinete describía una
+        # parábola por debajo del cable (~80 px a media bajada). `Trepando`
+        # reescribe su velocidad cada fotograma y sólo se notaba como un
+        # hundimiento leve, pero era la misma causa. Los estados que
+        # necesitan su propia vertical (péndulo del gancho, flotación del
+        # nado) la declaran ellos; el integrador no la duplica.
         if not self.is_grounded and self._state_instance.state_enum not in (
             PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
+            PlayerState.ZIPLINE, PlayerState.CLIMBING,
         ):
             gm = self.gravity_multiplier
             # AUD-333 — gravedad, caída máxima y factores de muro salen del
