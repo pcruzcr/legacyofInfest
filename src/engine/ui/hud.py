@@ -1338,10 +1338,14 @@ class HUD:
 
         anillo = _anillo_del_retrato(r.width, 3, color_anillo)
         surface.blit(anillo, r.topleft)
-        # Highlight superior (PS4: brillo)
+        # Highlight superior (PS4: brillo) — AUD-824 (P17): blit normal,
+        # sin `BLEND_RGBA_ADD`. El aditivo suma el RGB sin ponderar por el
+        # alfa: el 18 no atenuaba nada y saturaba un disco blanco opaco
+        # sobre medio retrato. El blit normal respeta el alfa y da el
+        # brillo sutil que el comentario promete.
         highlight = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
         pygame.draw.circle(highlight, (255, 255, 255, 18), (centro[0] - r.x, centro[1] - r.y - radio//3), radio//2)
-        surface.blit(highlight, r.topleft, special_flags=pygame.BLEND_RGBA_ADD)
+        surface.blit(highlight, r.topleft)
 
     def _draw_barra_de_vida(self, surface: pygame.Surface) -> None:
         """AUD-535 — reemplaza la fila de corazones: "se eliminan los
