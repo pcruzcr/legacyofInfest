@@ -4079,3 +4079,25 @@ tanto, el código no cambia: el fallback es el contrato.
   `tests/test_la_pantalla_del_prestigio.py` (nivel insuficiente no
   pregunta; dos pulsaciones ejecutan y resetean exp/árbol; Cancelar
   deshace y luego sale; el camino por `update` llega al mismo sitio).
+
+## [GAP-074] El zoom de cámara no existe en la ruta de GPU
+
+- **File:** `src/framework/scenes/stage_parts/dibujo.py`
+  (`DibujoDeEscenario.dibujar_mundo`), `src/engine/core/app.py` (`_draw`),
+  `src/engine/render/gl_pipeline.py`, `src/engine/render/shaders.py`
+- **Phase:** Gameplay & Runtime Hardening P12–P20 (AUD-825, 2026-09-07).
+- **Reason:** La composición del zoom (AUD-601) vive en la escena y sólo
+  corre en el camino software: `dibujar_mundo` dibuja a tamaño alterno y
+  reescala cuando `usar_gl` es falso. Con tarjeta, `App` sube el mundo 1:1
+  y la luz viaja alineada a ese mundo (superficie `light_surface` +
+  definiciones en coords de mundo): escalar la superficie en CPU
+  desalinearía ambas, así que por software no se puede sin romper la luz.
+  Ninguna pasada del pipeline lee `camera.zoom`.
+- **Impact:** Un nivel con `CameraZoomZone` se ve con zoom en CPU y sin
+  zoom con tarjeta. El comportamiento diverge según el renderer.
+- **Prescription (fase R, NO hacer ahora):** uniform de zoom + centro en
+  la pasada de composición del renderer (el mundo ya sube 1:1 y la luz ya
+  viaja alineada; sólo falta escalar UVs en el sombreador). Exige GPU
+  física para verificarlo — en CI headless no hay GL — y toca el renderer
+  CONGELADO (POST-AUD-811) con su presupuesto de 8,33 ms. Test existente
+  del lado software: `tests/test_el_zoom_llega_al_mundo.py`.

@@ -46,31 +46,10 @@ class DibujoDeEscenario:
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
             return
-        # AUD-601 — GAP-072.3: el zoom cinematográfico. El mundo se dibuja
-        # a tamaño alterno y se reescala sobre el lienzo; la UI sigue a
-        # tamaño completo — es interfaz, no mundo.
-        # Fix reporte Guillermo 3: antes recortaba desde la esquina superior
-        # izquierda de la cámara, dejando al jugador fuera del cuadro con zoom
-        # >1.2 y suelo cerca del borde inferior. Ahora el recorte se centra en
-        # el mismo punto que el viewport original.
-        zoom = getattr(self._camera, "zoom", 1.0)
-        if abs(zoom - 1.0) < 1e-3:
-            self.dibujar_mundo(surface)
-        else:
-            w, h = surface.get_size()
-            base_w, base_h = max(1, int(w / zoom)), max(1, int(h / zoom))
-            base = pygame.Surface((base_w, base_h))
-            # Centrar el recorte: mismo centro que el viewport original
-            # (evita que el jugador desaparezca con zoom 1.25 en borde inferior)
-            orig_cx = self._camera.offset.x + w / 2.0
-            orig_cy = self._camera.offset.y + h / 2.0
-            saved_offset = pygame.Vector2(self._camera.offset)
-            self._camera.offset.x = orig_cx - base_w / 2.0
-            self._camera.offset.y = orig_cy - base_h / 2.0
-            self.dibujar_mundo(base)
-            self._camera.offset = saved_offset
-            escalado = pygame.transform.smoothscale(base, (w, h))
-            surface.blit(escalado, (0, 0))
+        # AUD-825 (P18) — la composición del zoom vive en `dibujar_mundo`
+        # (camino software); aquí sólo mundo + interfaz. `App` respeta el
+        # `draw` de las subclases como punto de extensión: sigue existiendo.
+        self.dibujar_mundo(surface)
         self.dibujar_ui(surface)
 
     def _contexto_de_dibujo(self, surface: pygame.Surface):
@@ -125,7 +104,46 @@ class DibujoDeEscenario:
         a la tarjeta, la luz se multiplica allí, y la interfaz (que nunca fue
         iluminada en el camino software, AUD-090) se compone después — igual
         que aquí abajo en el camino de CPU.
+
+        AUD-825 (P18) — la composición del zoom cinematográfico (AUD-601,
+        GAP-072.3) vive AQUÍ y no en `draw`: el camino software de `App`
+        llama a `dibujar_mundo` + `dibujar_ui` directamente y nunca pasaba
+        por `draw`, así que el zoom no existía en producción. El mundo se
+        dibuja a tamaño alterno y se reescala; la UI sigue a tamaño completo.
         """
+        if self._stage_data is None or self._player is None:
+            return
+        # AUD-601 — GAP-072.3: el zoom cinematográfico.
+        # Fix reporte Guillermo 3: antes recortaba desde la esquina superior
+        # izquierda de la cámara, dejando al jugador fuera del cuadro con zoom
+        # >1.2 y suelo cerca del borde inferior. Ahora el recorte se centra en
+        # el mismo punto que el viewport original.
+        zoom = getattr(self._camera, "zoom", 1.0)
+        if abs(zoom - 1.0) < 1e-3 or getattr(self.context, "usar_gl", False):
+            # zoom 1.0: identidad (los goldens no cambian). Con GL el zoom
+            # NO se aplica aquí: la luz viaja a la tarjeta como superficie
+            # alineada al mundo 1:1 y como definiciones en coords de mundo;
+            # escalar la superficie en CPU desalinearía ambas — ver GAP-074
+            # (uniform de zoom en la pasada de composición, fase R).
+            self._pintar_mundo(surface)
+            return
+        w, h = surface.get_size()
+        base_w, base_h = max(1, int(w / zoom)), max(1, int(h / zoom))
+        base = pygame.Surface((base_w, base_h))
+        # Centrar el recorte: mismo centro que el viewport original
+        # (evita que el jugador desaparezca con zoom 1.25 en borde inferior)
+        orig_cx = self._camera.offset.x + w / 2.0
+        orig_cy = self._camera.offset.y + h / 2.0
+        saved_offset = pygame.Vector2(self._camera.offset)
+        self._camera.offset.x = orig_cx - base_w / 2.0
+        self._camera.offset.y = orig_cy - base_h / 2.0
+        self._pintar_mundo(base)
+        self._camera.offset = saved_offset
+        escalado = pygame.transform.smoothscale(base, (w, h))
+        surface.blit(escalado, (0, 0))
+
+    def _pintar_mundo(self, surface: pygame.Surface) -> None:
+        """El mundo 1:1 con luz. Lo que `dibujar_mundo` compone con zoom."""
         if self._stage_data is None or self._player is None:
             return
         self._drawing.draw(self._contexto_de_dibujo(surface))
