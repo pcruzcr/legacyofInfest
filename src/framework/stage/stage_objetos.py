@@ -177,7 +177,11 @@ class ObjetosDeTiled:
     @classmethod
     @register("PlayerSpawn")
     def _handle_player_spawn(cls, stage: StageData, obj: Any) -> None:
-        stage.spawn_point = pygame.Vector2(obj.x, obj.y - 32)
+        # AUD-819 (P14) — la Y del TMX son los pies (`test_referencia_tmx`);
+        # se resta la altura LÓGICA de pie, no un literal: el cuerpo nace de
+        # 20×32 (`Player.__init__`) y los pies quedan en `obj.y`.
+        from src.framework.entities.player import Player
+        stage.spawn_point = pygame.Vector2(obj.x, obj.y - Player.ALTO_DE_PIE)
 
     @classmethod
     @register("MessageTrigger","MessageTrigger_Once")

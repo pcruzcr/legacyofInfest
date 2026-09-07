@@ -76,8 +76,13 @@ def test_player_spawn_feet_ground():
         player=Player(stage.spawn_point)
         cam.follow(player)
         cam.snap_to_target()
-        # feet should be near floor 608 within 40 (covers spawn 512-544)
-        assert abs(player.rect.bottom - 608) <=40, f"feet {player.rect.bottom} !=608"
+        # feet should be near floor 608 within 70. AUD-819 (P14): el
+        # cuerpo nace de 20×32 (antes 40×64), así que los pies nacen en
+        # 544 = spawn 512 + 32 (antes 576 = 512 + 64). El spawn de stage0
+        # flota por autoría (y=544, suelo 608: caída de bienvenida) y el
+        # motor ya no lo compensa con un cuerpo más alto: cae 64 px en vez
+        # de 32. La banda sigue expresando «cerca del suelo, sin enterrar».
+        assert abs(player.rect.bottom - 608) <=70, f"feet {player.rect.bottom} !=608"
         assert cam.offset.x==0
         assert cam.offset.y==0
         assert 0 <= player.rect.centerx <= settings.INTERNAL_WIDTH

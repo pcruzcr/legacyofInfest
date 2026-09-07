@@ -313,7 +313,9 @@ def _spawn_player(prefab: dict[str, Any], stage: StageData, props: dict[str, Any
 
 
 
-    stage.spawn_point = pygame.Vector2(prefab.get("x", 0), prefab.get("y", 0) - 32)
+    # AUD-819 (P14) — como `_handle_player_spawn`: altura lógica, no literal.
+    from src.framework.entities.player import Player
+    stage.spawn_point = pygame.Vector2(prefab.get("x", 0), prefab.get("y", 0) - Player.ALTO_DE_PIE)
 
 
 

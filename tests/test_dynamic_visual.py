@@ -82,12 +82,21 @@ def test_player_anchor_stability(name):
     stage = _load(name)
     spawn = stage.spawn_point
     player = Player(spawn)
-    # idle vs walk frames deben mantener feet estable (midbottom)
+    # idle vs walk frames deben mantener feet estable (midbottom).
+    # AUD-819 (P14): antes se fijaba `rect.height = 64` y se exigía el
+    # mismo `bottom`, lo que sólo pasaba con el cuerpo inicial roto de
+    # 40×64. Ahora se ejercita el mecanismo real: `_update_rect_size`
+    # conserva los pies al cambiar de tamaño (de pie ↔ agachado).
+    from src.framework.entities.states import CrouchingState, IdleState
     feet0 = player.rect.bottom
-    # simular cambio de estado walk (no cambia rect size para player)
-    player.rect.height = 64
-    feet1 = player.rect.bottom
-    assert feet0 == feet1
+    player._update_rect_size()
+    assert player.rect.bottom == feet0
+    player._change_state_instance(CrouchingState(), force=True)
+    player._update_rect_size()
+    assert player.rect.bottom == feet0
+    player._change_state_instance(IdleState(), force=True)
+    player._update_rect_size()
+    assert player.rect.bottom == feet0
     # hurtbox debe estar dentro
     hurt = player.hurtbox
     assert hurt.left >= player.rect.left

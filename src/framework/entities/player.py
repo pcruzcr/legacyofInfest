@@ -417,12 +417,18 @@ class Player(BaseEntity):
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
 
-        # --- Rect setup --- HD nativo 40×64 (2× 20×32 sin escalado)
+        # --- Rect setup --- AUD-819 (P14): el cuerpo NACE con su tamaño
+        # lógico de pie (ANCHO/ALTO_DE_PIE, 20×32), no con el 40×64 del
+        # arte. El `spawn_point` resta ALTO_DE_PIE para dejar los pies en
+        # `obj.y` y `_update_rect_size` conserva los pies: con 40×64 al
+        # nacer, los pies quedaban 32 px dentro del suelo y el resolutor
+        # expulsaba al jugador de lado. El sprite se dibuja a su tamaño
+        # (SPRITE_W/H anclado abajo) sin depender de este rect.
         self.rect = pygame.Rect(
             int(self.position.x),
             int(self.position.y),
-            40,
-            64,
+            self.ANCHO_DE_PIE,
+            self.ALTO_DE_PIE,
         )
 
         # --- Sprite frames ---
@@ -1535,12 +1541,12 @@ class Player(BaseEntity):
         """Update rect size based on current state (crouching vs standing).
         Shifts position.y so the rect bottom (feet) stays at the same height."""
         old_bottom = self.position.y + self.rect.height
-        target_h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else 32
+        target_h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else self.ALTO_DE_PIE
         if self.rect.height == target_h:
             self.rect.x = int(self.position.x)
             self.rect.y = int(self.position.y)
             return
-        self.rect.width = 20
+        self.rect.width = self.ANCHO_DE_PIE
         self.rect.height = target_h
         self.position.y += old_bottom - (self.position.y + self.rect.height)
         self.rect.x = int(self.position.x)
