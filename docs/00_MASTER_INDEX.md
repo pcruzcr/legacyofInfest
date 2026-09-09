@@ -223,6 +223,7 @@ git si hace falta consultarlos.
 | [`B3_ITEM_COMPLETION_CONTRACT_REVIEW.md`](B3_ITEM_COMPLETION_CONTRACT_REVIEW.md) | B3 item completion - revision de contrato CODE+DATA+TEST |
 | [`B4_2_HEART_PIECE_CONTRACT_REVIEW.md`](B4_2_HEART_PIECE_CONTRACT_REVIEW.md) | B4.2 heart piece - revision de contrato, modo analisis |
 | [`B4_MASTER_CERTIFICATION.md`](B4_MASTER_CERTIFICATION.md) | B4 master certification - bonfire, heart piece, recharge station COMPLETE |
+| [`100_VERIFICACION_DE_BUGS_REPORTADOS.md`](100_VERIFICACION_DE_BUGS_REPORTADOS.md) | Verificación y cierre AUD-826 a AUD-834 — pausa, ritmo, enemigos, audio, tirolesa, liana, menús |
 
 ---
 

@@ -432,3 +432,59 @@ tienda/teclas/partidas/quiz sin excepciones. Baterías menús/demos/academia
 PREEXISTING (AUD-533: sin partida ignora input).
 
 **CERT:** AUD-800 UI (legibilidad de menús).
+
+---
+
+## Matriz final (§26) — estado 2026-09-09, rama `feature/master-plan`
+
+| AUD | Problema | Estado inicial | Cambio | Tests | Runtime | Regresión | Estado |
+| --- | -------- | -------------- | ------ | ----- | ------- | --------- | ------ |
+| 826 | Pausa UI pegada | REAL | Tira 20→40 px con `MARGIN`, lista en panel del kit con `theme.font()`; extracción a `pausa_dibujo.py` (presupuesto 850) | `test_pausa_dimensionada` 2/2 (fallaban antes) | Lienzo 1280x720: franja y panel verificados por píxel | UI/render 117 PASS, `change_safety` 17/17 | VERIFIED |
+| 827 | Lentitud | REAL doble | Medición A–G; `TARGET_FPS` 120→60, marcha 90→120 (decisión dueño), caché de rejilla de sombras | `test_aud827_ritmo` 3/3 + `test_luz_rejilla_cache` 2/2 (fallaban antes) | P50/P95 medidos; marcha 120 px/s con `Player` real | Física/jugador 197 PASS, `change_safety` 15/15 | VERIFIED |
+| 828 | Enemigos flotantes | PARTIAL | Clasificación sin gravedad universal; `_mantener_en_suelo(dt)`: escalón ≤16 px o caída 600/500 | `test_enemigos_caen_y_bajan` 5/5 (3 fallaban antes) | Caída, escalón, tope y controles en arnés | Enemigos 99/99; 8 fallos = baseline −1 arreglado | VERIFIED |
+| 829 | Ruido + música | REAL | `stop_ambient()` en `on_exit`; loop de viento 8 s (`wind_loop.wav` generado) para fog/snow | `test_aud829_ambiente` 2/2 (fallaban antes) | stage1_1 entra con música+ambiente y sale limpio | Audio 118/118, `validate_assets` 0 errores | VERIFIED |
+| 830 | Tirolesa stage0 | REAL triple | Cartel zona G, radio 14→30, salida con abajo; TMX regenerado (línea ajena preservada) | `test_aud830_tirolesa` 5/5 (4 fallaban antes) | Monta/viaja/suelta sin enterrar; `validate_tmx` 35/35, stage0 100 % | Mecánicas 26/26 | VERIFIED |
+| 831 | Liana stage0 | PARTIAL | G sostenida (no subiendo) + flanco JUMP gastado al salir (3 estados) | `test_aud831_liana` 4/4 (2 fallaban antes, 1 verificada sin fix) | Agarre/salida/sin rebote en arnés | Cuerdas 134/134 | VERIFIED |
+| 832 | Opciones | DESCUBRIMIENTO | Flechas con `filas_visibles()` del kit; `_scroll_offset` muerto eliminado; ruta intacta | `test_aud832_titulo` 2/2 (1 fallaba antes) | Título real: flecha arriba en OPTIONS | Navegación 95+2 (2 preexistentes AUD-721) | VERIFIED |
+| 833 | Retornos | PARTIAL | Progress/UnitTheory `pop()`; Keybinding con `origen` + `push` desde Opciones; EXAMEN fijado intencional | `test_aud833_retornos` 4/4 (3 fallaban antes) | Mismas instancias reanudadas | Navegación 231/234 (3 preexistentes mapa) | VERIFIED |
+| 834 | Textos pegados | REAL | 6 escenas con espaciado desde métricas + ventana/clip en tienda; `filter_demo` y `unit_theory` intactos documentados | `test_aud834_textos` 5/5 (fallaban antes) | Escenas reales 1280x720 sin solapes | Menús/demos 268 PASS (1 preexistente mapa) | VERIFIED |
+
+Commits: `c4c97dc` (826), `e48de5b` (827), `fa36821` (828), `0aedfe3`
+(829), `65b46d7` (830), `fbf0b7e` (831), `c540a04` (832), `e36844b` (833),
+`bd45b0e` (834) — un AUD por commit, staging explícito, sin `git add .`.
+
+## Regresión global (§23)
+
+| Comando | Resultado |
+| --- | --- |
+| `ruff check` (alcance CI) | PASS |
+| `validate_tmx.py --ci` | 35/35 PASS |
+| `check_tmx_coverage.py --ci` | PASS |
+| `generate_tmx_reference.py --check` | PASS (`STAGE_CREATION.md` al día) |
+| `check_translations.py --ci` | PASS (catálogos en orden) |
+| `check_change_safety.py --ci` | 15/15 PASS |
+| `tests/test_change_safety.py` + 9 ficheros AUD | 42/42 PASS |
+| `pytest tests/` completa (6415) | TRUNCADA al 26 % en 40 min (sin `xdist`): 4 fallos en el tramo, los 4 idénticos en baseline pre-workstream → PREEXISTING (docs CJK ajenos, día/noche, centro de combo-demo, regeneración de TMX de mecánicas) |
+
+Fallos preexistentes encontrados y atribuidos con baseline (ninguno de este
+workstream): rects de enemigos (AUD-821), daño/mitigación e IA (árbol sucio
+ajeno), nodos del mapa del mundo, reloj musical (TMX ajeno), tutorial→hub
+(AUD-721), `stage_data` sin dataclass, sombras en boss_paburu.
+
+## Matriz de deudas (§27)
+
+| Deuda | Tipo | Estado |
+| --- | --- | --- |
+| Combos sin evidencia | DECLARED | Abierta, sin fabricar |
+| Altura 224 px (`09_STAGE_3_1.md` vs TMX 720) | DESIGN DEBT | Abierta, decisión explícita pendiente |
+| Coordinación de numeración (826+ en workstreams) | COORDINATION DEBT | Este lote usa doc100 como autoridad; sin colisión en `git log` |
+| Marcha 120: huida más fácil, saltos más largos | DESIGN DEBT | Abierta: revalidar saltos ajustados nivel por nivel |
+| Foso sin suelo bajo enemigo que cae | CODE DEBT | Abierta: cae fuera de vista, la escena limpia al salir |
+| Suite completa no ejecutable en sesión | TEST DEBT | Abierta: sin `xdist`; regresión por bloques + matriz de cambio |
+
+## Certificación (§28)
+
+**DOCUMENTATION VERIFIED WITH MINOR DEBT.** Los nueve bugs describen ahora
+el mismo sistema en código, tests, TMX/assets, generadores, runtime,
+documentación y Git. Queda sólo deuda menor explícita arriba; no se declara
+ningún 100 % PASS.
