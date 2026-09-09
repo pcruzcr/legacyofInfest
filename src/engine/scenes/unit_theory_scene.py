@@ -201,8 +201,10 @@ class UnitTheoryScene(BaseScene):
         self._modo = RESULTADO
 
     def _volver(self) -> None:
-        from src.engine.scenes.demo_menu_scene import DemoMenuScene
-        self.context.scene_manager.replace(DemoMenuScene(self.context))
+        # AUD-833 — `pop`, no `replace`: el temario abre con `push` y abajo
+        # hay un DemoMenu vivo que reanudar. (En EXAMEN, ESC vuelve a TEORIA
+        # sin contar intento: intencional y documentado en `update`.)
+        self.context.scene_manager.pop()
 
     # -- dibujado --------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:

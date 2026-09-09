@@ -376,6 +376,29 @@ antes de este AUD.
 
 ---
 
+## Cierre AUD-833 — retornos a la madre real
+
+**Jerarquía verificada:** DemoMenu abre Progress y UnitTheory con `push`
+(`demo_menu_scene.py:227,253`); Options abre Keybinding con `replace`
+(`options_scene.py:287`).
+
+**Cambios:** Progress y UnitTheory vuelven con `pop()` (reaniman el temario
+vivo con su selección, en vez de destruirlo y construir una copia).
+Keybinding recibe `origen` (`"titulo"` por defecto): Opciones lo abre con
+`push` + `origen="opciones"` y ESC reanuda esas Opciones (o las reconstruye
+si se abrió suelto). EXAMEN con ESC→TEORIA sin contar intento: intencional y
+comentado en el código —se fija con prueba, no se cambia. No se tocan rutas
+que ya volvían, CANCEL de dos niveles ni embebidos (AUD-533).
+
+**Evidencia:** `tests/test_aud833_retornos.py` (4: 3 fallaban antes) pasa.
+Batería de navegación/opciones/academia 231/234; los 3 fallos
+(`TestElMapaDelMundoTieneLosEscenariosDeVerdad`) son idénticos en baseline
+sin mis cambios → PREEXISTING de otros workstreams (deriva registro/nodos).
+
+**CERT:** AUD-800 UI (navegación de menús).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.
