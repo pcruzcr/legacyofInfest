@@ -286,7 +286,7 @@ que siempre queda por delante del jugador.
 Constantes del motor (`src/engine/core/settings.py`):
 
 ```
-GRAVITY = 800.0    PLAYER_JUMP_FORCE = -380.0    PLAYER_WALK_SPEED = 90.0
+GRAVITY = 800.0    PLAYER_JUMP_FORCE = -380.0    PLAYER_WALK_SPEED = 120.0
 ```
 
 Altura máxima de un salto:

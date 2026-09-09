@@ -361,7 +361,7 @@ seguimiento cambia, que es lo que pide el documento de diseño.
 #### Geometría derivada de la física
 
 Las alturas no son estéticas. De `settings.py` (`PLAYER_JUMP_FORCE = −380.0`,
-`GRAVITY = 800.0`, `PLAYER_WALK_SPEED = 90.0`):
+`GRAVITY = 800.0`, `PLAYER_WALK_SPEED = 120.0` — 90 hasta AUD-827):
 
 ```
 h_max   = v² / (2g)    = 380² / (2 × 800)  = 90.25 px
@@ -864,8 +864,8 @@ reconoce las especies (defecto 6).
 
 Los primeros 560 px del parqueo quedan **sin enemigos**: es la caminata de
 apertura, y el jugador necesita aprender a moverse antes de recibir presión.
-`alert_speed` se baja a 55 px/s (contra `PLAYER_WALK_SPEED = 90`) para que huir
-sea posible, y `damage_on_contact` a 0.25.
+`alert_speed` se baja a 55 px/s (contra `PLAYER_WALK_SPEED = 120` desde AUD-827,
+90 antes) para que huir sea posible, y `damage_on_contact` a 0.25.
 
 ---
 

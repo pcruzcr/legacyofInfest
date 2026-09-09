@@ -232,6 +232,44 @@ Toda modificación futura declara su `AUD-800:` / `CERT-` y ejecuta `python scri
 
 ---
 
+## Cierre AUD-827 — ritmo a 60 FPS, marcha a 120 y rejilla de sombras cacheada
+
+**Medición A–G (Stage0 real, 1280x720 headless):** A: 90 px/s = 14,2 s/pantalla.
+B: TARGET 120, budget 8,33 ms. C: frame 15,5 ms P50 / 22,4 P95. D: lighting
+5,10 ms. E: postfx 3,15 ms. F: vsync no medible headless. G: pasos 1/120
+correctos. Descartado con evidencia: IO por frame (era warmup de numba, 0
+opens en 60 frames estables) y `dt` mal usado.
+
+**Cambios (decisión del dueño 2026-09-09):** `TARGET_FPS` 120→60
+(`settings.py`, `clock.py`: `FIXED_DT` 1/60 = el paso que AUD-390 suponía para
+los mapas; mitad de pasos de simulación por segundo; presupuesto vigente
+16,67 ms) y `PLAYER_WALK_SPEED` 90→120 (10,7 s/pantalla, verificado en runtime
+con `Player` real: 120 px en 60 pasos). `PLAYER_SLOPE_SLIDE_SPEED` conserva 90
+(tacto de cuestas intacto; comentario sincronizado). Rejilla de sombras:
+`obs_h` cacheada e invalidada en `set_obstaculos` (antes ~4,5 construcciones
+por fotograma). Coyote/buffer son temporales y no cambian. Comentarios de
+playtests fechados (venado B-039) se conservan como historia.
+
+**Evidencia:** `tests/test_aud827_ritmo.py` (3, fallaban antes) y
+`tests/test_luz_rejilla_cache.py` (2, una fallaba antes) pasan. Frame tras el
+cambio ≈ mismo P50 (el draw domina; el ahorro está en update y en coherencia
+con vsync 60 Hz).
+
+**Tests:** ritmo 3/3, rejilla 2/2, paso_fijo, perfiles_física, player_physics,
+state_machine, mecanicas_f5, lianas, combo — PASS. `ruff` limpio.
+`check_change_safety.py --ci` 17/17 PASS. Fallos en corrida masiva
+(rects/daño/IA/reloj-musical) reproducidos en baseline sin mis cambios o
+aislados 49/49 con mis cambios → PREEXISTING/infraestructura de orden, no de
+este AUD (archivos ajenos en árbol sucio: `enemy_base.py`, TMX de mecánicas).
+
+**Deuda de diseño explícita:** con 120 px/s huir de enemigos es más fácil
+(`alert_speed` 55 sin re-balancear) y los saltos llegan más lejos; si algún
+salto ajustado se rompe, revalidar nivel por nivel.
+
+**CERT:** AUD-800 PERFORMANCE (medición) + PHYSICS (paso fijo).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.

@@ -18,11 +18,14 @@ from typing import Final
 # (camera zoom * display_scale). Ver NATIVE_RENDER_AUDIT.md.
 INTERNAL_WIDTH: int = 1280
 INTERNAL_HEIGHT: int = 720
-TARGET_FPS: int = 120  # nativo 720p@120 — ver clock.py FIXED_DT
+TARGET_FPS: int = 60  # AUD-827 — 60 es el objetivo real (decisión del dueño):
+  # medido 15,5 ms P50 por fotograma en CPU, el presupuesto de 8,33 ms de 120
+  # era inalcanzable; además AUD-390 diseñó los mapas para FIXED_DT = 1/60.
+  # Ver clock.py FIXED_DT.
 #: Presupuesto de fotograma: 8.33 ms a 120 / 16.67 ms a 60. Ver
 #: docs/62_ESTADO_DEL_PROYECTO.md §B1 para el reparto medido (AUD-762).
-FRAME_BUDGET_120: float = 1000.0 / 120  # 8.33 ms
-FRAME_BUDGET_60: float = 1000.0 / 60  # 16.67 ms
+FRAME_BUDGET_120: float = 1000.0 / 120  # 8.33 ms (referencia histórica)
+FRAME_BUDGET_60: float = 1000.0 / 60  # 16.67 ms (presupuesto vigente)
 #: El juego apunta a 60 FPS estables a 1280×720 con lightmap a media
 #: resolución; 120 es sin sombras o 1280. Ver docs/74.
 TARGET_FPS_RECOMENDADO: int = 60
@@ -59,13 +62,18 @@ STUDENT_TEMPLATES_DIR: Path = _PROJECT_ROOT / "student_templates"
 
 PLAYER_MAX_HEALTH: float = 5.0
 GRAVITY: float = 800.0
-PLAYER_WALK_SPEED: float = 90.0
+# AUD-827 — 90 → 120 px/s (decisión del dueño): 90 px/s = 14,2 s por pantalla
+# de 1280 y el juego se sentía pesado; 120 px/s = 10,7 s. Revisar saltos
+# ajustados al límite si alguno deja de salir.
+PLAYER_WALK_SPEED: float = 120.0
 #: Base del deslizamiento sostenido en cuesta (AUD-326): sin entrada
 #: horizontal, la gravedad desliza al jugador cuesta abajo a
 #: `PLAYER_SLOPE_SLIDE_SPEED * sin(fi) * cos(fi)` px/s — la componente
 #: paralela de la gravedad a lo largo de la hipotenusa, como la proyección
 #: de aterrizaje de AUD-324, pero acotada: velocidad constante, no una
-#: aceleración en fuga. La mitad de `PLAYER_WALK_SPEED` como máximo (45°).
+#: aceleración en fuga. 90 px/s fijos (AUD-827: ya no es la mitad de la
+#: marcha desde que esta subió a 120; se conserva el valor para no cambiar
+#: el tacto de las cuestas).
 PLAYER_SLOPE_SLIDE_SPEED: float = 90.0
 PLAYER_JUMP_FORCE: float = -380.0
 PLAYER_MAX_FALL_SPEED: float = 500.0

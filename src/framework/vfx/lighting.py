@@ -223,6 +223,10 @@ class LightSystem:
     def __init__(self, ambient_brightness: float = 0.3) -> None:
         #: AUD-278 — geometría que proyecta sombra. Vacía = apagado.
         self._obstaculos: list[pygame.Rect] = []
+        #: AUD-827 — la misma geometría escalada a mitad de resolución, para
+        #: no reconstruirla por foco y por fotograma. La invalida
+        #: `set_obstaculos`, que es el único sitio que cambia la geometría.
+        self._obs_media_cache: list[pygame.Rect] | None = None
         self._proyector = ProyectorDeSombras()
         self.lights: list[LightSource] = []
         self.ambient_brightness = ambient_brightness
@@ -261,8 +265,13 @@ class LightSystem:
         Se recibe la lista ya hecha en vez de buscarla: este sistema no sabe
         de escenarios, y la escena ya tiene los sólidos que le pasa al jugador
         cada fotograma.
+
+        AUD-827 — además se invalida la lista escalada a mitad de resolución:
+        `render_map` la cachea porque la geometría no cambia entre fotogramas,
+        y sin invalidación la sombra reusaría muros viejos.
         """
         self._obstaculos = list(rects) if rects else []
+        self._obs_media_cache: list[pygame.Rect] | None = None
 
     def add_light(self, light: LightSource) -> None:
         self.lights.append(light)
@@ -372,10 +381,19 @@ class LightSystem:
                     continue
                 if half:
                     foco_h = pygame.Vector2(light.position.x / 2, light.position.y / 2)
-                    obs_h = [
-                        pygame.Rect(int(rr.x/2), int(rr.y/2), max(1,int(rr.width/2)), max(1,int(rr.height/2)))
-                        for rr in self._obstaculos
-                    ]
+                    # AUD-827 — la lista escalada se construía nueva por foco y
+                    # por fotograma, y el proyector invalida su índice por
+                    # identidad de lista: la rejilla se reconstruía ~4,5 veces
+                    # por fotograma en Stage0. La geometría no cambia entre
+                    # fotogramas; `set_obstaculos` invalida la caché.
+                    if self._obs_media_cache is None:
+                        self._obs_media_cache = [
+                            pygame.Rect(int(rr.x / 2), int(rr.y / 2),
+                                        max(1, int(rr.width / 2)),
+                                        max(1, int(rr.height / 2)))
+                            for rr in self._obstaculos
+                        ]
+                    obs_h = self._obs_media_cache
                     self._proyector.proyectar(work, foco_h, r, obs_h, cam, piso_ambiente=piso)
                 else:
                     self._proyector.proyectar(

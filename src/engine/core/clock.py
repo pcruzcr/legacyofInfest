@@ -67,20 +67,20 @@ from src.engine.core import settings
 # Longest simulation step we will ever report. Protects the fixed-ish
 # integrators in the player/enemy state machines from tunnelling through
 # geometry after a stall (breakpoint, window drag, GC pause, disk hitch).
-# 720p@120: 0.05 sigue siendo 6 frames a 120, cubre tirón sin tunel.
-MAX_FRAME_TIME: float = 0.05  # 20 FPS floor parejo para 60 y 120
+# 720p@60 (AUD-827): 0.05 son 3 pasos de 1/60, cubre tirón sin tunel.
+MAX_FRAME_TIME: float = 0.05  # 20 FPS floor
 
-#: AUD-390 — el paso de simulación. Cierra GAP-036. Nativo 1280×720@120.
+#: AUD-390 — el paso de simulación. Cierra GAP-036. Nativo 1280×720@60
+#: desde AUD-827 (decisión del dueño): es el paso con el que se midieron los
+#: mapas, así que a 60 fps hay un paso por fotograma del mismo tamaño y ningún
+#: mapa cambia.
 #:
-#: Es `1/TARGET_FPS` y no otro número. A 120Hz `FIXED_DT 1/120=0.0083` mantiene
-#: `72 px` de salto idéntico (medido a 60 y 120, delta <0.3px) porque la
-#: integración es por acumulación, no por `dt` variable. A 60 fps son 2 pasos
-#: por frame, a 120 es 1 — mismo resultado, doble suavidad.
+#: Es `1/TARGET_FPS` y no otro número.
 FIXED_DT: float = 1.0 / settings.TARGET_FPS
 
-#: Tope de pasos por fotograma, contra la espiral de la muerte: a 120Hz
-#: con 10 pasos se cubre tirón de 83 ms (10×8.3ms) —más que `MAX_FRAME_TIME`—
-#: y por encima se prefiere cámara lenta.
+#: Tope de pasos por fotograma, contra la espiral de la muerte: a 60Hz
+#: con 10 pasos se cubre un tirón de 166 ms (10×16,6ms) —más que
+#: `MAX_FRAME_TIME`— y por encima se prefiere cámara lenta.
 MAX_PASOS_POR_FOTOGRAMA: int = 10
 
 #: Cuántos fotogramas guarda el historial para los cuantiles de F11 (AUD-346).

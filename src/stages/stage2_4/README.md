@@ -831,7 +831,7 @@ de la escena, así que la niebla se integra con el fondo en vez de ensuciarlo.
 El presupuesto de salto sale de `settings.py`, no de estimación:
 
 ```
-GRAVITY = 800    PLAYER_JUMP_FORCE = −380    PLAYER_WALK_SPEED = 90
+GRAVITY = 800    PLAYER_JUMP_FORCE = −380    PLAYER_WALK_SPEED = 120
 
 tiempo de vuelo = 2·380 / 800            = 0.950 s
 altura máxima   = 380² / (2·800)         = 90.2 px
