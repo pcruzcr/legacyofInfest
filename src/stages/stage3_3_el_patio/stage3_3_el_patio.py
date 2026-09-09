@@ -18,6 +18,7 @@ import pygame
 
 from src.framework.scenes.stage_scene import StageScene
 from src.stages.stage3_3_el_patio.fountain import Fountain
+from src.stages.stage3_3_el_patio.camara_objetivo import CamaraObjetivo, Objetivo
 from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
 
 if TYPE_CHECKING:
@@ -40,10 +41,20 @@ class Stage3_3ElPatio(StageScene):
     # width=64) -> centro en x = 1168 + 64/2 = 1200.
     FOUNTAIN_POS = pygame.Vector2(1200, 544)
 
+    # Camara de objetivo: (x, y) del punto que se ensena, y el x del jugador
+    # que dispara la cinematica. Los dos primeros son los muros de bloqueo
+    # (Solid_MuroBloqueo01/02, en x=576 y x=1696); el tercero es la salida.
+    OBJETIVOS = [
+        (624, 430, 380, "SUBE AQUI"),
+        (1744, 430, 1500, "OTRO MURO"),
+        (2352, 500, 2150, "SALIDA"),
+    ]
+
     def __init__(self, context: GameContext) -> None:
         super().__init__(context, Path(self.TMX_PATH))
         self._fountain: Fountain | None = None
         self._moneda_fx: MonedaFxController | None = None
+        self._camara_obj: CamaraObjetivo | None = None
 
     # ── Optional lifecycle hooks ────────────────────────────────────
     # Override any of these to add custom behavior:
@@ -55,6 +66,12 @@ class Stage3_3ElPatio(StageScene):
         # evento del framework que se emite al recoger un Pickup, y anima un
         # destello con easing en el punto exacto donde se recogio.
         self._moneda_fx = MonedaFxController(self.events)
+        # El ancho del mapa sale del propio TMX, no de una constante: si
+        # vuelvo a alargar el nivel, el encuadre se ajusta solo.
+        ancho, alto = self._stage_data.map_pixel_size
+        self._camara_obj = CamaraObjetivo(
+            [Objetivo(x, y, disparo, rotulo)
+             for x, y, disparo, rotulo in self.OBJETIVOS], ancho, alto)
 
     def update(self, dt: float) -> None:
         super().update(dt)
@@ -62,6 +79,10 @@ class Stage3_3ElPatio(StageScene):
             self._fountain.update(dt, self._player)
         if self._moneda_fx is not None:
             self._moneda_fx.update(dt)
+        # Va de ultimo a proposito: pisa el offset que acaba de calcular
+        # `super().update()`, y asi manda la cinematica mientras dura.
+        if self._camara_obj is not None:
+            self._camara_obj.update(dt, self._player, self._camera)
 
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
@@ -69,6 +90,8 @@ class Stage3_3ElPatio(StageScene):
             self._fountain.draw(surface, self._camera.offset)
         if self._moneda_fx is not None:
             self._moneda_fx.draw(surface, self._camera.offset)
+        if self._camara_obj is not None:
+            self._camara_obj.draw(surface, self._camera.offset)
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.

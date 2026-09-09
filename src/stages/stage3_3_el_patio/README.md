@@ -104,8 +104,11 @@ porque a diferencia del cuarto del jefe, El Patio no tiene pared de fondo.
 | Objeto TMX (`type`) | Nombre narrativo | Cantidad | Notas |
 |---|---|---|---|
 | `Walker` | WalkerPalom | 7 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
-| `Flying` | FlyingHalcon | 15 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
+| `Flying` | FlyingHalcon | 5 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
 | `Shooter` | ShooterQuetzal | 8 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
+| `FlyingBomber` | Dron | 3 | Suelta bombas cada 2,5 s (daño 1,0, radio 48). Dos vigilan los muros |
+| `Climber` | Trepador | 2 | Sube y baja por las lianas: te disputa la ruta de ascenso |
+| `Medusa` | Medusa | 2 | Fauna: deriva en vaivén, no daña ni se deja dañar |
 
 Todos con la propiedad `zone=3` para cargar los sprites de zona correctos automáticamente.
 
@@ -301,6 +304,64 @@ Puntaje del calificador automático con el nivel v4: **124/130 (95,4%)**, con
 queda es el de `Solid_MuroBloqueo` explicado en 4d — ahora aparece dos veces,
 una por zona de ascenso, por la misma razón conocida.
 
+## 4g. Migración al motor de septiembre y rediseño de enemigos (2026-09-08)
+
+**La migración.** El profesor rehízo el historial del repositorio, así que su
+rama `dev` y la mía ya no comparten antepasado y `git merge` responde
+*"refusing to merge unrelated histories"*. La migración se hizo al revés:
+esta rama sale de `origin/dev` y encima se restauran mis 10 archivos. Hubo
+que arreglar una cosa: su `tileset_gavilan_ciudad` creció de 60 a 64 tiles,
+así que su rango de GIDs (1-64) pisaba el `firstgid=61` de mis props y
+`validate_tmx` fallaba con *"Rangos de tileset superpuestos"*. Mis props
+pasaron a `firstgid=65` y sus GIDs de la capa `Terrain` subieron +4.
+
+**Menos saturación, misma dificultad.** Los 15 halcones llenaban el aire de
+sprites iguales: costaba leer la pantalla, no jugarla. Bajan a **5**, y en su
+lugar entran tipos nuevos del motor actualizado, que ocupan menos y se
+distinguen entre sí:
+
+| | Antes | Ahora |
+|---|---|---|
+| `Flying` (halcones) | 15 | **5** |
+| Cosas en el aire, en total | 15 | **10** (5 halcones + 3 drones + 2 medusas) |
+| Tipos de enemigo distintos | 3 | **6** |
+| Total de enemigos | 30 | **27** |
+
+**Los drones (`FlyingBomber`).** Dos de ellos vigilan justo los muros de
+bloqueo (`Solid_MuroBloqueo01/02`). Como el muro obliga a subir, y subir es
+lento, el dron convierte el ascenso en la parte difícil del nivel en vez de
+un trámite: bombardea cada 2,5 s con daño 1,0 y radio 48 px.
+
+**Las lianas (`Vine`) y los trepadores (`Climber`).** En la entrega anterior
+escribí que no existía un objeto de trepar y que había que fingirlo con
+plataformas de nube. En el motor actualizado **sí existe**: `Vine` crea un
+componente `Liana` y el jugador trepa de verdad. Hay una liana pegada al lado
+izquierdo de cada muro (`x=560` y `x=1680`, 176 px de alto, que rebasan el
+muro), y en cada una un `Climber` que sube y baja disputándote el paso. Las
+escaleras de nubes siguen ahí como ruta alternativa.
+
+**Cámara de objetivo** (`camara_objetivo.py`) — Unidades III y VI. El patio
+mide 2400 px y el muro no se ve hasta tenerlo encima. Al cruzar ciertos
+puntos (`x=380`, `1500` y `2150`) la cámara se despega del jugador, viaja
+hasta el siguiente obstáculo, lo señala con un anillo que se cierra y un
+rótulo, y vuelve. Dura 2,3 s en tres fases (ida 0,9 s / espera 0,5 s /
+vuelta 0,9 s), la ida recorre 24 muestras de una spline **Catmull-Rom** con
+un punto intermedio elevado (para que sea un arco y no un barrido plano) y
+las tres fases van suavizadas con `ease_in_out_quad`.
+
+El motor trae `Camera.set_cinematica_path()`, pero no servía: su
+`_seguir_spline()` es un esbozo que interpola en línea recta —el comentario
+del propio motor dice *"stub — real usaría CurveTools.catmull_rom"*—, corre
+en bucle infinito con `% 1.0` y exige poner la cámara en modo `cinematica`,
+que secuestraría el nivel entero. La mía devuelve el control sola.
+
+Verificado en el motor nuevo: `validate_tmx` 1/1, `grade_stage` **124/130
+(95,4%)**, el juego 40 s sin un solo error de consola, los 27 enemigos
+instanciados de verdad (`StageLoader.load()` devuelve 5 `EnemyFlying`,
+3 `EnemyFlyingBomber`, 2 `EnemyClimber`, 2 `EnemyMedusa`, 8 `EnemyShooter`,
+7 `EnemyWalker`) y las 3 cinemáticas disparando en su sitio en una
+simulación del recorrido completo.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
@@ -313,6 +374,7 @@ una por zona de ascenso, por la misma razón conocida.
 | `HazardZone_01/02/03` | Daño 0.25 | Tres zonas de peligro repartidas por el recorrido |
 | `Solid_Planter01/02` | Sólido (32 px) | Jardineras — también sirven de cobertura contra las aves |
 | `Platform_Fountain` | Un solo sentido | Plataforma de piedra de la fuente, en el centro del nivel |
+| `Liana_01/02` (`Vine`) | Trepable | Pegadas a cada muro; ruta de ascenso real, no simulada |
 
 ## 6. Notas de lógica personalizada
 
