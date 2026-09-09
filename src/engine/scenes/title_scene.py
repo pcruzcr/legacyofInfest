@@ -100,7 +100,6 @@ class TitleScene(BaseScene):
             MenuItem("OPTIONS", value="OPTIONS"),
             MenuItem("QUIT", value="QUIT"),
         ])
-        self._scroll_offset: int = 0
         self._recalc_layout()
 
         self._bar_surf: pygame.Surface | None = None
@@ -161,7 +160,6 @@ class TitleScene(BaseScene):
 
     def on_enter(self) -> None:
         self._menu.index = 0
-        self._scroll_offset = 0
         self._recalc_layout()
         self._update_options()
         self.context.scene_manager.transition.start_fade_in(0.5)
@@ -463,13 +461,17 @@ class TitleScene(BaseScene):
             ("Esc", "Salir"),
         ])
 
-        if self._scroll_offset > 0:
+        # AUD-832 — las flechas leían `_scroll_offset`, fijo en 0 y sin
+        # actualizar: la de subida no salía nunca aunque hubiera opciones
+        # encima. Ahora leen la ventana real del kit.
+        visibles = self._menu.filas_visibles()
+        if visibles and visibles[0] > 0:
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, start_y - 4),
                 (settings.INTERNAL_WIDTH // 2 - 6, start_y - 10),
                 (settings.INTERNAL_WIDTH // 2 + 6, start_y - 10),
             ])
-        if self._scroll_offset + self._max_visible < len(self._menu.items):
+        if visibles and visibles[-1] < len(self._menu.items) - 1:
             bot = BOTTOM_BAR_Y - 2
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, bot),

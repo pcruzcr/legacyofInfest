@@ -362,6 +362,20 @@ verificada también sin el fix) pasa. Batería de cuerdas 134/134.
 
 ---
 
+## Cierre AUD-832 — indicador de scroll honesto en el título
+
+**Cambio:** las flechas de `title_scene.py` leen `MenuList.filas_visibles()`
+en vez del `_scroll_offset` muerto (eliminado: sólo se escribía 0). La ruta
+Title→Options no se toca (funcionaba). `test_menu_navigation.py` sigue con
+sus 2 fallos preexistentes de AUD-721 (`TUTORIAL→TutorialHub`), verificados
+antes de este AUD.
+
+**Evidencia:** `tests/test_aud832_titulo.py` (2: 1 fallaba antes) pasa.
+
+**CERT:** AUD-800 UI (navegación de menús).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.
