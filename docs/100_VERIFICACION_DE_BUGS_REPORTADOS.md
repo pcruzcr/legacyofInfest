@@ -109,7 +109,7 @@ has_floor = any(r.collidepoint(probe_x, probe_y) for r in all_ground)
 if not has_floor: self.facing_direction *= -1
 ```
 
-Es el único rayo hacia abajo en todo `enemy_*.py`. `Charger` (`enemy_charger.py:68-74`), `Brute` (`enemy_brute.py:65-81`), `Caster`, `Archer`, `Shooter`, `Assassin` y `Shielded` mueven `x` y revierten por distancia o muro, sin mirar suelo delante. Herencias como `EnemyCeibo(EnemyBrute)` propagan el defecto.
+Es el único rayo hacia abajo en todo `enemy_*.py`. `Charger` (`enemy_charger.py:68-74`), `Brute` (`enemy_brute.py:65-81`), `Caster`, `Archer`, `Shooter`, `Assassin` y `Shielded` mueven `x` y revierten por distancia o muro, sin mirar suelo delante. Herencias como `EnemyCeibo(EnemyBrute)` propagan el defecto. (Corrección de verificación: `Caster` y `Shooter` sí heredan `EnemyBase` —comprobado por MRO en runtime—, así que el anclaje base les llega; lo que les falta es gravedad y borde, igual que al resto.)
 
 **Evidencia 3 — anclaje insuficiente para bajadas:**
 
@@ -267,6 +267,36 @@ este AUD (archivos ajenos en árbol sucio: `enemy_base.py`, TMX de mecánicas).
 salto ajustado se rompe, revalidar nivel por nivel.
 
 **CERT:** AUD-800 PERFORMANCE (medición) + PHYSICS (paso fijo).
+
+---
+
+## Cierre AUD-828 — terrestres con caída y bajada de escalones
+
+**Clasificación previa (sin gravedad universal):** terrestres con `_hug_slopes`
+(`walker/cangrejo/hormiga` con borde, `archer/assassin/brute/ceibo/cerbatana/
+caster/charger/parry_teacher/shielded/shooter/summoner/terrain_shaper` sin
+borde) frente a aéreos/deliberados con `hug=False` (`flying/bomber/dron/
+medusa/oropel/pez_abismal/climber/ice_skater/swimmer/buddies`, más cenital).
+Sólo se toca el primer grupo, y sólo en `EnemyBase`.
+
+**Cambio:** `_mantener_en_suelo(dt)` en `src/framework/entities/enemy_base.py`
+—si no hay anclaje, busca el techo más cercano debajo: a ≤16 px desciende el
+escalón, si no cae con gravedad 600 y tope 500 (las de LAUNCHED/HURT) vía el
+nuevo `_caida_vy`, que se pone a cero al anclar. El aterrizaje lo caza el snap
+existente. `LAUNCHED/DYING/aéreo/cenital` no entran; `Walker` conserva su
+inversión en borde.
+
+**Evidencia:** `tests/test_enemigos_caen_y_bajan.py` (5: 3 fallaban antes, 2
+controles pasaban) — 5/5 ahora. Batería enemiga relacionada 99/99.
+`test_enemigos_respetan_la_y_del_tmx` + `test_enemigos_en_pendientes`: 8
+fallos idénticos en baseline sin mis cambios (expectativas viejas de AUD-821
+y TMX de mecánicas de otro workstream) menos 1 que este fix arregla
+(`Brute` apoya a 480 exacto) y 0 nuevos.
+
+**Deuda explícita:** foso sin suelo debajo → el enemigo cae fuera de vista (la
+escena lo limpia al salir); no hay `DeathPit` para enemigos.
+
+**CERT:** AUD-800 ENEMIES (física de anclaje).
 
 ---
 

@@ -145,6 +145,11 @@ class EnemyBase(BaseEntity):
         self._telegraph_duration: float = 0.4
         self._ground_y: float = spawn_position.y
         self._is_airborne: bool = False
+        #: AUD-828 — velocidad vertical de caída libre de terrestres. Los
+        #: enemigos no tienen gravedad propia en patrulla; cuando no hay suelo
+        #: debajo, `_mantener_en_suelo` la integra (600, tope 500, como
+        #: LAUNCHED/HURT) y la pone a cero al anclar o bajar un escalón.
+        self._caida_vy: float = 0.0
 
         #: AUD-387 — resistencias por canal de daño. Multiplicadores: 0,5 es
         #: resistencia, 2,0 debilidad, 0,0 inmunidad. **Vacío por defecto**, y
@@ -285,7 +290,8 @@ class EnemyBase(BaseEntity):
         # `rect.bottom`. Evita que el cambio de sprite o el retroceso deje al
         # enemigo levitando por un decimales de colisión. No afecta a
         # LAUNCHED/DYING ni a voladores.
-        self._mantener_en_suelo()
+        # AUD-828 — además cae y baja escalones (ver `_mantener_en_suelo`).
+        self._mantener_en_suelo(dt)
         # AUD-325 — el suelo inclinado, al final: las subclases mueven la
         # posición en distintos puntos (estado, knockback, `_post_update`),
         # y éste es el único lugar que las ve a todas.
@@ -763,7 +769,12 @@ class EnemyBase(BaseEntity):
             position=(self.position.x, self.position.y),
             skill_drop=",".join(s for s in sueltas if s),
         )
-        is_large = self.rect.width > 24 or self.rect.height > 28
+        # AUD-828 — el umbral estaba calibrado a los rects viejos (24×28 base).
+        # Tras el reescalado a sprite (Walker 48×56, Brute 64×56), el Walker
+        # caía en LARGE y sonaba igual que el Brute. El Walker es el enemigo
+        # pequeño de referencia y el Brute el grande: el borde es inclusivo
+        # para que 48×56 siga siendo SMALL y sólo lo mayor sea LARGE.
+        is_large = self.rect.width > 48 or self.rect.height > 56
         # AUD-489 — mismo `pos` que `ENEMY_DIED` dos líneas arriba: sin él,
         # `sonido.py._make_sfx_handler` cae al canal ciego (`_play_sfx_named`)
         # en vez del posicional (`_play_sfx_spatial`) que ya sabe usar cuando
@@ -906,8 +917,17 @@ class EnemyBase(BaseEntity):
         if superficie is not None:
             self.position.y = float(superficie) - self.rect.height
 
-    def _mantener_en_suelo(self) -> None:
-        """Mantiene `rect.bottom` anclado al suelo plano (AUD-667)."""
+    def _mantener_en_suelo(self, dt: float) -> None:
+        """Ancla al suelo plano, baja escalones y cae al vacío (AUD-667/828).
+
+        AUD-828 — antes sólo anclaba a 2-4 px y no integraba gravedad: un
+        terrestre que salía de su losa conservaba su `y` para siempre y un
+        escalón de una baldosa (16 px) ni bajaba ni caía. Ahora, si no hay
+        anclaje, se busca el techo más cercano debajo de los pies: a 16 px o
+        menos se desciende (un escalón no es un precipicio) y si no, se cae
+        con la misma gravedad de LAUNCHED/HURT (600, tope 500). Sólo
+        terrestres (`_hug_slopes`); LAUNCHED/DYING/aéreo/cenital no entran.
+        """
         if not self._hug_slopes:
             return
         if self.state in (EnemyState.LAUNCHED, EnemyState.DYING):
@@ -919,20 +939,37 @@ class EnemyBase(BaseEntity):
             return
         feet_y = self.position.y + self.rect.height
         cx = self.rect.centerx
+        suelo_debajo = None
         for r in todos:
             if r.left < cx < r.right:
                 if abs(feet_y - r.top) <= 2.0 or (r.top <= feet_y < r.bottom):
                     self.position.y = float(r.top - self.rect.height)
                     self.rect.y = int(self.position.y)
                     self._knockback_velocity.y = 0.0
+                    self._caida_vy = 0.0
                     self._update_rects()
-                    break
+                    return
                 if feet_y > r.top and feet_y - r.top < 4.0:
                     self.position.y = float(r.top - self.rect.height)
                     self.rect.y = int(self.position.y)
                     self._knockback_velocity.y = 0.0
+                    self._caida_vy = 0.0
                     self._update_rects()
-                    break
+                    return
+                if r.top >= feet_y and (
+                    suelo_debajo is None or r.top < suelo_debajo
+                ):
+                    suelo_debajo = r.top
+        if suelo_debajo is None:
+            self._caida_vy = min(500.0, self._caida_vy + 600.0 * dt)
+            self.position.y += self._caida_vy * dt
+            self.rect.y = int(self.position.y)
+            self._update_rects()
+        elif suelo_debajo - feet_y <= 16.0:
+            self.position.y += suelo_debajo - feet_y
+            self.rect.y = int(self.position.y)
+            self._caida_vy = 0.0
+            self._update_rects()
 
     def _update_invincibility(self, dt: float) -> None:
         """Tick down invincibility timer and toggle flash."""
