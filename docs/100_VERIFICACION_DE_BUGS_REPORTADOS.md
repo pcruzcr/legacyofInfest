@@ -320,6 +320,26 @@ ambas en `None`/`False`, título limpio. Batería de audio 118/118.
 
 ---
 
+## Cierre AUD-830 — tirolesa usable: cartel, radio 30 y salida con abajo
+
+**Cambios:** `TirolesaState` (`src/framework/entities/states/rope.py`) sale
+también con agacharse/abajo mantenido (`_t > 0,08`, conserva impulso 0,6 como
+al final; el salto keeps prioridad). `tools/generate_stage0_tmx.py`:
+`Zipline_246` con `radio_de_enganche=30.0` (precedente Paburu R18) + cartel en
+la zona G junto a la repisa ("G para agarrarte, salto para soltarla, abajo
+para dejarte caer"). TMX regenerado desde el generador; la línea ajena
+`Walker_243 y=552` del árbol se preservó. No se creó segunda tirolesa: sólo
+hay una en el TMX (verificado).
+
+**Evidencia:** `tests/test_aud830_tirolesa.py` (5: 4 fallaban antes) pasa.
+Runtime con TMX real: monta desde la repisa, salida con abajo en frame 11,
+viaje termina en pies ≤608. `validate_tmx --ci` 35/35, `grade_stage`
+stage0 100 %.
+
+**CERT:** AUD-800 MECHANICS (cuerdas) + LEVEL (stage0).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.

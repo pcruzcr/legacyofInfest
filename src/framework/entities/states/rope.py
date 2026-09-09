@@ -179,9 +179,10 @@ class TirolesaState(PlayerStateBase):
             player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
                                    pos=(player.position.x, player.position.y))
 
-        # Soltarse: saltando, o al llegar al final del cable.
+        # Soltarse: saltando, dejándose caer con abajo, o al final del cable.
         llego = self._cable.progreso(pygame.Vector2(player.rect.center)) >= 0.995
-        if (inp.jump_pressed and self._t > 0.08) or llego:
+        quiere_caer = inp.crouch_held and self._t > 0.08
+        if (inp.jump_pressed and self._t > 0.08) or quiere_caer or llego:
             if inp.jump_pressed and self._t > 0.08:
                 player.velocity.y = player.perfil.salto_impulso * 0.8
                 player._event_bus.emit(Events.SFX_PLAYER_JUMP)
@@ -189,6 +190,8 @@ class TirolesaState(PlayerStateBase):
                 # Al llegar al final se conserva el impulso del cable. Frenar en
                 # seco convertiría el final de la tirolesa en una caída vertical
                 # y desperdiciaría toda la velocidad que el tramo acumuló.
+                # AUD-830 — dejarse caer con abajo usa la misma salida: el
+                # jugador pidió bajar, no frenar.
                 player.velocity.update(direccion * self._cable.velocidad * 0.6)
             from src.framework.entities.states import FallingState, JumpingState
             player._change_state_instance(

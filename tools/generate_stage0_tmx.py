@@ -294,7 +294,14 @@ def _objetos() -> list[str]:
     obj("Chest", 94 * TS, (SUELO_Y - 10) * TS, TS, TS,
         contenido="reliquia_prologo", mensaje="Una reliquia del prologo.")
     obj("Zipline", 93 * TS, (SUELO_Y - 10) * TS, 8, 8,
-        destino_dx=5 * TS, destino_dy=8 * TS, velocidad=200.0)
+        destino_dx=5 * TS, destino_dy=8 * TS, velocidad=200.0,
+        # AUD-830 — radio 30 como Paburu R18: con el defecto de 14 había que
+        # saltar y pulsar G en una franja mínima a 160 px del suelo.
+        radio_de_enganche=30.0)
+    # AUD-830 — la tirolesa era contenido mudo: ningún cartel enseñaba G ni
+    # cómo soltarse. Va junto a la repisa desde la que se monta.
+    obj("MessageTrigger_Once", 90 * TS, suelo - 96, 48, 48,
+        text="Tirolesa: sube a la repisa y pulsa G para agarrarte. Salto para soltarla, abajo para dejarte caer.")
     obj("CameraLock", 86 * TS, 0, 14 * TS, MH * TS, lock_y=True)
     obj("Checkpoint", 89 * TS, suelo - 32, 16, 32, checkpoint_id=4)
     obj("NextTrigger", 97 * TS, suelo - 3 * TS, 2 * TS, 3 * TS)
