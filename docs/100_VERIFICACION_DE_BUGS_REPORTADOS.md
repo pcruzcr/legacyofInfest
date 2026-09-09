@@ -340,6 +340,28 @@ stage0 100 %.
 
 ---
 
+## Cierre AUD-831 — liana usable: G sostenida y salto que sí suelta
+
+**Re-medición:** la liana cae sobre la colina (suelo local 512): parada en la
+colina SÍ engancha; desde el suelo 608 no (64 px de gap). Geométricamente
+correcta; el defecto era de entrada/salida, no de posición (se elige la
+alternativa B sin agarres absurdos).
+
+**Cambios:** `_actualizar_agarres` (`mundo_ecs.py`) acepta `GRAB` sostenido
+para liana clásica y tirolesa —pero no subiendo (`velocity.y >= 0`), para que
+saltar de la cuerda con G mantenida no re-enganche al subir—. Hallazgo mayor
+en el camino: saltar de la cuerda con pulsación fresca re-enganchaba EN EL
+MISMO frame (la escena corre el agarre después del jugador con el flanco
+vivo); los 3 estados de cuerda (`rope.py`) gastan el flanco JUMP al salir,
+con `getattr` defensivo para dobles mínimos de tests.
+
+**Evidencia:** `tests/test_aud831_liana.py` (4: 2 fallaban antes, una
+verificada también sin el fix) pasa. Batería de cuerdas 134/134.
+
+**CERT:** AUD-800 MECHANICS (cuerdas).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.

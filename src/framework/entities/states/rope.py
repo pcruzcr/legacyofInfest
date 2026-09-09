@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core.events import Events
+from src.engine.input.action_map import Action
 from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 
 if TYPE_CHECKING:
@@ -110,6 +111,14 @@ class TrepandoState(PlayerStateBase):
                 self.IMPULSO_AL_SALTAR
             )
             player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            # AUD-831 — gastar el flanco: la escena corre `_actualizar_agarres`
+            # DESPUÉS del jugador en el mismo fotograma, y con el flanco vivo
+            # más la liana cerca, re-engancha al instante y el salto no sale
+            # nunca ("no puedo saltar de la cuerda"). Con `getattr` porque los
+            # dobles mínimos de pruebas de estados no traen `consume`.
+            gastar = getattr(input_manager, "consume", None)
+            if callable(gastar):
+                gastar(Action.JUMP)
             from src.framework.entities.states import JumpingState
             player._change_state_instance(JumpingState())
             return
@@ -186,6 +195,12 @@ class TirolesaState(PlayerStateBase):
             if inp.jump_pressed and self._t > 0.08:
                 player.velocity.y = player.perfil.salto_impulso * 0.8
                 player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+                # AUD-831 — igual que en `TrepandoState`: gastar el flanco
+                # para que el agarre posterior del mismo fotograma no
+                # re-enganche al instante.
+                gastar = getattr(input_manager, "consume", None)
+                if callable(gastar):
+                    gastar(Action.JUMP)
             else:
                 # Al llegar al final se conserva el impulso del cable. Frenar en
                 # seco convertiría el final de la tirolesa en una caída vertical
@@ -361,6 +376,11 @@ class BalanceoEnLianaSaltoState(PlayerStateBase):
             player.velocity.x = dir_x * self.IMPULSO_SALTO + v_liana * 0.5
             player.velocity.y = player.perfil.salto_impulso * self.IMPULSO_VERTICAL
             player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            # AUD-831 — igual que en `TrepandoState`: gastar el flanco para
+            # que el agarre posterior del mismo fotograma no re-enganche.
+            gastar = getattr(input_manager, "consume", None)
+            if callable(gastar):
+                gastar(Action.JUMP)
             from src.framework.entities.states import JumpingState
             player._change_state_instance(JumpingState())
             return
