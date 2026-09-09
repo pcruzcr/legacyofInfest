@@ -408,3 +408,27 @@ sin mis cambios → PREEXISTING de otros workstreams (deriva registro/nodos).
 **Tests:** `test_pausa_dimensionada` 2/2, `test_reported_ui_bugs` 15/15, `test_particion_de_drawing_system`, `test_ui_consistency`, `test_las_llamadas_de_dibujo`, `test_native_rendering` 17+3 SKIP — PASS. `ruff` limpio. `check_change_safety.py --ci` 17/17 PASS.
 
 **CERT:** AUD-800 RENDERER (dibujado de UI de stage).
+
+---
+
+## Cierre AUD-834 — espaciado desde métricas y ventana en tienda
+
+**Cambios:** `demo_menu` (`altura_de_fila()`/`filas_visibles()`: 34→49 px a
+1280, escala con `text_scale`), `pattern_demo` (pasos de `_render_inference`,
+`_render_feature_compare` y `_render_pipeline` desde alturas reales; solapes
+de hasta 11 px eliminados), `keybinding` (`altura_de_fila()` 40→36 y tecla
+bajo la etiqueta por métrica), `load_game` (`altura_de_slot()` 28→42, dos
+líneas con aire), `quiz` (caja desde el contenido con `caja()` expuesta, sin
+320x160 fijos), `shop` (ventana desplazante con `set_clip` que sigue al
+índice para un catálogo que crece; filas ya eran métricas). `filter_demo`
+intacto (cicla con TAB, no es lista). `unit_theory` revisado sin cambio:
+máx 4 opciones y enunciados de hasta 77 caracteres caben; teoría y "porque"
+ya recortan.
+
+**Evidencia:** `tests/test_aud834_textos.py` (5, fallaban antes) pasa. Visual
+1280x720 con escenas reales: filas en ventana con scroll al final,
+tienda/teclas/partidas/quiz sin excepciones. Baterías menús/demos/academia
+218+50 PASS; 1 fallo (`WorldMapScene` sin input) idéntico en baseline →
+PREEXISTING (AUD-533: sin partida ignora input).
+
+**CERT:** AUD-800 UI (legibilidad de menús).

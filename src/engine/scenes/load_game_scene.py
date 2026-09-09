@@ -18,10 +18,20 @@ from src.engine.scenes.demo_common import (
     draw_bottom_bar,
     draw_top_bar,
 )
-from src.engine.ui.theme import font
+from src.engine.ui.theme import Theme, font
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
+
+
+def altura_de_slot(fuente) -> int:
+    """Alto de un slot de partida, desde las métricas reales.
+
+    AUD-834 — antes caja de 28 px fijos con dos líneas SMALL (17 px) en
+    `cy + 2` y `cy + 14`: la segunda ya invadía 3 px, y con `text_scale` > 1
+    se pisaban. Ahora caben las dos líneas más aire del tema.
+    """
+    return fuente.get_height() * 2 + Theme.SPACE_XS * 2
 
 
 def _stage_display_name(stage_id: str) -> str:
@@ -262,7 +272,8 @@ class LoadGameScene(BaseScene):
             data = self._slots[i]
             selected = i == self._selected
 
-            slot_rect = pygame.Rect(20, cy, settings.INTERNAL_WIDTH - 40, 28)
+            slot_h = altura_de_slot(self._font_small)
+            slot_rect = pygame.Rect(20, cy, settings.INTERNAL_WIDTH - 40, slot_h)
             if selected:
                 pygame.draw.rect(surface, (40, 40, 80), slot_rect, border_radius=3)
 
@@ -270,7 +281,7 @@ class LoadGameScene(BaseScene):
 
             slot_num = self._font_small.render(f"  SLOT {i + 1}", True,
                                                COLOR_HIGHLIGHT if selected else COLOR_TEXT)
-            surface.blit(slot_num, (26, cy + 2))
+            surface.blit(slot_num, (26, cy + Theme.SPACE_XS))
 
             if self._creando and selected:
                 # AUD-443 — la fila que se está creando muestra lo que se
@@ -279,7 +290,7 @@ class LoadGameScene(BaseScene):
                 cursor = "_" if int(pygame.time.get_ticks() / 400) % 2 == 0 else " "
                 escrito = self._font_small.render(
                     f"  Nombre: {self._nombre}{cursor}", True, COLOR_HIGHLIGHT)
-                surface.blit(escrito, (26, cy + 14))
+                surface.blit(escrito, (26, cy + Theme.SPACE_XS + self._font_small.get_height()))
             elif data is not None:
                 # AUD-442 — el nombre primero: es lo que distingue una partida
                 # de otra. Sin él, elegir era elegir por marca de tiempo.
@@ -297,13 +308,13 @@ class LoadGameScene(BaseScene):
                 info = (f"  {nombre}  |  {stage_str}  |  {horas:d}h {minutos:02d}m"
                         f"  |  {data.health:.0f}/{data.max_health:.0f}{ng_str}")
                 info_surf = self._font_small.render(info, True, (160, 160, 180))
-                surface.blit(info_surf, (26, cy + 14))
+                surface.blit(info_surf, (26, cy + Theme.SPACE_XS + self._font_small.get_height()))
             else:
                 vacia = self._font_small.render(
                     "  (vacía — pulsa Enter para empezar aquí)", True, (100, 100, 100))
-                surface.blit(vacia, (26, cy + 14))
+                surface.blit(vacia, (26, cy + Theme.SPACE_XS + self._font_small.get_height()))
 
-            cy += 34
+            cy += slot_h + Theme.SPACE_S
 
         if self._error_msg:
             err = self._font_small.render(self._error_msg, True, COLOR_ERROR)

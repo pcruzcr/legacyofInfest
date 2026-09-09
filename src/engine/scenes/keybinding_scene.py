@@ -62,6 +62,17 @@ _ACTION_LABELS: dict[Action, str] = {
 }
 
 
+def altura_de_fila(fuente_etiqueta, fuente_tecla) -> int:
+    """Alto de una fila de la rejilla, desde las métricas reales.
+
+    AUD-834 — antes `row_h = 40` fijo para etiqueta SMALL + tecla TINY con la
+    tecla en `y + 18`: con `text_scale` > 1 se solapaban. Ahora es la suma
+    más un hueco del tema.
+    """
+    return (fuente_etiqueta.get_height() + fuente_tecla.get_height()
+            + Theme.SPACE_XS)
+
+
 class KeybindingScene(BaseScene):
     """Key rebinding screen. Select an action, press a key to rebind."""
 
@@ -198,7 +209,7 @@ class KeybindingScene(BaseScene):
 
         cols = self._num_cols
         col_w = settings.INTERNAL_WIDTH // cols
-        row_h = 40
+        row_h = altura_de_fila(self._font_label, self._font_text)
 
         for i, action in enumerate(self._actions):
             col = i % cols
@@ -235,7 +246,7 @@ class KeybindingScene(BaseScene):
                 key_str = "— PULSA UNA TECLA —" if blinking else ""
                 key_colour = Theme.WARNING
             key_display = self._font_text.render(key_str, True, key_colour)
-            surface.blit(key_display, (x, y + 18))
+            surface.blit(key_display, (x, y + label.get_height() + 2))
 
         if self._waiting_for_key:
             draw_key_hints(surface, [

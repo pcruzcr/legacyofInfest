@@ -69,6 +69,9 @@ class ShopScene(BaseScene):
         self._font_row = font(Theme.FONT_SMALL)
         self._font_desc = font(Theme.FONT_TINY)
         self._menu = MenuList(items=self._construir_filas())
+        #: AUD-834 — desplazamiento de la ventana de filas (el catálogo es
+        #: dato y puede crecer): sigue al índice como en el temario.
+        self._scroll_offset: int = 0
 
     # ── datos ──────────────────────────────────────────────────────
     def _articulos(self) -> list[str]:
@@ -161,6 +164,37 @@ class ShopScene(BaseScene):
             self._menu, im, on_confirm=self._operar, on_cancel=self._volver,
         )
 
+    def _dibujar_fila(self, surface: pygame.Surface, item,
+                      idx: int, y: float, fila_h: float) -> None:
+        """Una fila del catálogo (extraída del `draw` en AUD-834)."""
+        item_id = str(item.value)
+        foco = idx == self._menu.index
+        fila = pygame.Rect(16, int(y), settings.INTERNAL_WIDTH - 32, int(fila_h))
+        if foco:
+            pygame.draw.rect(
+                surface, Theme.SURFACE_RAISED, fila,
+                border_radius=Theme.RADIUS,
+            )
+        color = Theme.ACCENT if foco else Theme.TEXT
+        surface.blit(self._font_row.render(item.label, True, color),
+                     (fila.x + 8, fila.y + 2))
+
+        # A la derecha, el precio de la operación y cuántos se tienen: son
+        # las dos cifras que deciden la compra, y buscarlas en otra
+        # pantalla es lo que hace tediosa una tienda.
+        tengo = self._inventory.count(item_id)
+        precio = self._font_row.render(
+            f"{self._precio(item_id)}", True, (255, 215, 0),
+        )
+        surface.blit(precio, (fila.right - precio.get_width() - 8, fila.y + 2))
+        if tengo:
+            marca = self._font_desc.render(f"x{tengo}", True, Theme.TEXT_MUTED)
+            surface.blit(
+                marca,
+                (fila.right - precio.get_width() - marca.get_width() - 16,
+                 fila.y + 4),
+            )
+
     # ── dibujo ─────────────────────────────────────────────────────
     def draw(self, surface: pygame.Surface) -> None:
         top = draw_screen(surface, "TIENDA", "Ropa y equipo")
@@ -177,35 +211,28 @@ class ShopScene(BaseScene):
 
         y = top + Theme.SPACE_M + modo_surf.get_height()
         fila_h = self._font_row.get_height() + Theme.SPACE_S
-        for idx, item in enumerate(self._menu.items):
-            item_id = str(item.value)
-            foco = idx == self._menu.index
-            fila = pygame.Rect(16, y, settings.INTERNAL_WIDTH - 32, fila_h)
-            if foco:
-                pygame.draw.rect(
-                    surface, Theme.SURFACE_RAISED, fila,
-                    border_radius=Theme.RADIUS,
-                )
-            color = Theme.ACCENT if foco else Theme.TEXT
-            surface.blit(self._font_row.render(item.label, True, color),
-                         (fila.x + 8, fila.y + 2))
-
-            # A la derecha, el precio de la operación y cuántos se tienen: son
-            # las dos cifras que deciden la compra, y buscarlas en otra
-            # pantalla es lo que hace tediosa una tienda.
-            tengo = self._inventory.count(item_id)
-            precio = self._font_row.render(
-                f"{self._precio(item_id)}", True, (255, 215, 0),
-            )
-            surface.blit(precio, (fila.right - precio.get_width() - 8, fila.y + 2))
-            if tengo:
-                marca = self._font_desc.render(f"x{tengo}", True, Theme.TEXT_MUTED)
-                surface.blit(
-                    marca,
-                    (fila.right - precio.get_width() - marca.get_width() - 16,
-                     fila.y + 4),
-                )
-            y += fila_h
+        # AUD-834 — ventana desplazante con recorte: hoy caben las 11 filas,
+        # pero el catálogo es dato y si crece no debe pintar sobre la barra
+        # inferior. El desplazamiento sigue al índice.
+        alto_ventana = max(fila_h, BOTTOM_BAR_Y - 70 - y)
+        visibles = max(1, int(alto_ventana // fila_h))
+        if self._menu.index < self._scroll_offset:
+            self._scroll_offset = self._menu.index
+        elif self._menu.index >= self._scroll_offset + visibles:
+            self._scroll_offset = self._menu.index - visibles + 1
+        self._scroll_offset = max(
+            0, min(self._scroll_offset, max(0, len(self._menu.items) - visibles)))
+        fin = min(self._scroll_offset + visibles, len(self._menu.items))
+        anterior = surface.get_clip()
+        surface.set_clip(pygame.Rect(0, int(y), settings.INTERNAL_WIDTH,
+                                     int(alto_ventana) + fila_h))
+        try:
+            for idx in range(self._scroll_offset, fin):
+                item = self._menu.items[idx]
+                y_fila = y + (idx - self._scroll_offset) * fila_h
+                self._dibujar_fila(surface, item, idx, y_fila, fila_h)
+        finally:
+            surface.set_clip(anterior)
 
         actual = self._menu.current
         if actual is not None and actual.hint:

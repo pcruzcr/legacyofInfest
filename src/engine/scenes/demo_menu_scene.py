@@ -50,7 +50,7 @@ from src.engine.scenes.demo_common import (
     draw_top_bar,
 )
 from src.engine.scenes.scene_registry import get_registry
-from src.engine.ui.theme import font
+from src.engine.ui.theme import Theme, font
 from src.framework.academic.curriculum import PLAN
 from src.framework.academic.progress import ACIERTOS_PARA_APROBAR, PREGUNTAS_POR_UNIDAD
 from src.framework.academic.sesion import SesionAcademica
@@ -61,10 +61,25 @@ if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
 
 
-ITEM_H = 34
+def altura_de_fila() -> int:
+    """Alto de una fila del temario, desde las métricas reales.
+
+    AUD-834 — antes `ITEM_H = 34` fijo para rótulo MEDIUM + descripción SMALL:
+    a 1280 daban 23+18 = 41 px en 34 (1 px de aire) y con `text_scale` > 1 se
+    pisaban. Ahora es la suma más un hueco del tema, así que escala con la
+    resolución y la accesibilidad.
+    """
+    return (font(FONT_MEDIUM).get_height() + font(FONT_SMALL).get_height()
+            + Theme.SPACE_S)
+
+
 VISIBLE_Y_START = TOP_BAR_H + 30
 VISIBLE_Y_END = BOTTOM_BAR_Y - 26
-VISIBLE_ITEMS = max(1, (VISIBLE_Y_END - VISIBLE_Y_START) // ITEM_H)
+
+
+def filas_visibles() -> int:
+    """Cuántas filas caben en la ventana, con la fila de verdad."""
+    return max(1, (VISIBLE_Y_END - VISIBLE_Y_START) // altura_de_fila())
 
 #: Color de una unidad que todavía no se puede abrir.
 COLOR_BLOQUEADO = (96, 96, 110)
@@ -159,13 +174,14 @@ class DemoMenuScene(BaseScene):
         pass
 
     def _max_scroll(self) -> int:
-        return max(0, len(self._entradas) - VISIBLE_ITEMS)
+        return max(0, len(self._entradas) - filas_visibles())
 
     def _ajustar_scroll(self) -> None:
+        visibles = filas_visibles()
         if self._selected < self._scroll_offset:
             self._scroll_offset = self._selected
-        elif self._selected >= self._scroll_offset + VISIBLE_ITEMS:
-            self._scroll_offset = self._selected - VISIBLE_ITEMS + 1
+        elif self._selected >= self._scroll_offset + visibles:
+            self._scroll_offset = self._selected - visibles + 1
         self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
 
     def update(self, dt: float) -> None:
@@ -304,7 +320,7 @@ class DemoMenuScene(BaseScene):
 
         self._dibujar_resumen(surface)
 
-        fin = min(self._scroll_offset + VISIBLE_ITEMS, len(self._entradas))
+        fin = min(self._scroll_offset + filas_visibles(), len(self._entradas))
         for i in range(self._scroll_offset, fin):
             self._dibujar_fila(surface, i)
 
@@ -331,7 +347,8 @@ class DemoMenuScene(BaseScene):
     def _dibujar_fila(self, surface: pygame.Surface, i: int) -> None:
         entrada = self._entradas[i]
         idx = i - self._scroll_offset
-        y = VISIBLE_Y_START + idx * ITEM_H
+        item_h = altura_de_fila()
+        y = VISIBLE_Y_START + idx * item_h
         seleccionada = i == self._selected
         bloqueada = self.esta_bloqueada(entrada)
         aprobada = bool(entrada.unidad_id) and self._sesion.progreso.esta_aprobada(entrada.unidad_id)
@@ -339,12 +356,12 @@ class DemoMenuScene(BaseScene):
         if seleccionada:
             pygame.draw.rect(
                 surface, (40, 40, 80),
-                pygame.Rect(8, y - 3, settings.INTERNAL_WIDTH - 16, ITEM_H - 2),
+                pygame.Rect(8, y - 3, settings.INTERNAL_WIDTH - 16, item_h - 2),
                 border_radius=3,
             )
             pygame.draw.rect(
                 surface, COLOR_HIGHLIGHT if not bloqueada else COLOR_BLOQUEADO,
-                pygame.Rect(8, y - 3, 3, ITEM_H - 2), border_radius=1,
+                pygame.Rect(8, y - 3, 3, item_h - 2), border_radius=1,
             )
 
         if bloqueada:

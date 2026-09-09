@@ -490,24 +490,30 @@ class PatternDemoScene(BaseScene):
         surf.fill((5, 5, 15))
         y = 10
 
+        # AUD-834 — los pasos salen de las métricas: antes eran fijos
+        # (16/14/10) para fuentes de 27/23/18 px y todo se solapaba.
+        paso_grande = self._font_large.get_height() + 8
+        paso_medio = self._font_medium.get_height() + 8
+        paso_chico = self._font_small.get_height() + 6
+
         # Class label
         lc = self._class_color(label)
         cls_text = self._font_large.render(f"  CLASS: {label}", True, lc)
         surf.blit(cls_text, (10, y))
-        y += 16
+        y += paso_grande
 
         # Confidence
         conf = max(probas.values()) if probas else 0.0
         conf_text = self._font_medium.render(f"  Confidence: {conf:.2f}", True, COLOR_TEXT)
         surf.blit(conf_text, (10, y))
-        y += 14
+        y += paso_medio
 
         # Top 3 predictions
         sorted_p = sorted(probas.items(), key=lambda x: -x[1])[:3]
         y += 4
         section_label = self._font_small.render("  TOP 3 PREDICTIONS", True, COLOR_ACCENT)
         surf.blit(section_label, (10, y))
-        y += 10
+        y += paso_chico
         for p_label, p_val in sorted_p:
             pc = self._class_color(p_label)
             bar_w = int(p_val * 120)
@@ -517,13 +523,13 @@ class PatternDemoScene(BaseScene):
                 pygame.draw.rect(surf, pc, (80, y + 1, bar_w, 6))
             pct_t = self._font_small.render(f" {p_val * 100:.0f}%", True, COLOR_TEXT)
             surf.blit(pct_t, (210, y))
-            y += 10
+            y += paso_chico
 
         # Feature vector bar chart
         y += 4
         fv_label = self._font_small.render("  FEATURE VECTOR", True, COLOR_ACCENT)
         surf.blit(fv_label, (10, y))
-        y += 10
+        y += paso_chico
         self._draw_feature_bars(surf, features, 10, y, 140, 30, _method_color(method))
 
         # Info
@@ -541,16 +547,18 @@ class PatternDemoScene(BaseScene):
         surf = pygame.Surface(PANEL_SIZE)
         surf.fill((5, 5, 15))
         y = 10
+        # AUD-834 — paso desde la métrica (ver `_render_inference`).
+        paso_chico = self._font_small.get_height() + 6
 
         src_label = self._font_small.render(_("ui.pattern_demo.labels.source_feature_vector"), True, COLOR_ACCENT)
         surf.blit(src_label, (10, y))
-        y += 10
+        y += paso_chico
         self._draw_feature_bars(surf, features, 10, y, 140, 25, _method_color(method))
 
         y += 30
         nrst_label = self._font_small.render(_("ui.pattern_demo.labels.nearest_training_sample"), True, COLOR_ACCENT)
         surf.blit(nrst_label, (10, y))
-        y += 10
+        y += paso_chico
         self._draw_feature_bars(surf, nearest_feat, 10, y, 140, 25,
                                 self._class_color(nearest_label))
 
@@ -680,7 +688,7 @@ class PatternDemoScene(BaseScene):
 
             label_t = self._font_small.render(f"  {step_name}", True, COLOR_ACCENT)
             surf.blit(label_t, (4, y))
-            y += 10
+            y += self._font_small.get_height() + 4
             if hasattr(step_surf, 'get_width'):
                 surf.blit(step_surf, (20, y))
                 y += step_surf.get_height() + 8
@@ -691,7 +699,7 @@ class PatternDemoScene(BaseScene):
             if step_name != "Class Label":
                 arr_t = self._font_small.render("     v", True, COLOR_DIVIDER)
                 surf.blit(arr_t, (4, y))
-                y += 10
+                y += self._font_small.get_height() + 4
 
         return surf
 
