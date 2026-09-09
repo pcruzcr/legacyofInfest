@@ -10,6 +10,7 @@ from src.engine.core import settings
 from src.engine.render.sprite_batch import SpriteBatch
 from src.framework.stage import culling
 from src.framework.stage.gizmos import GizmosDeDepuracion
+from src.framework.stage.pausa_dibujo import dibujar_menu_de_pausa, dibujar_tira_de_pestanas
 from src.framework.stage.profundidad import EscalaPorProfundidad
 from src.framework.vfx.sombras import Sombra
 
@@ -119,8 +120,7 @@ class DrawContext:
 class DrawingSystem(GizmosDeDepuracion):
     def __init__(self) -> None:
         self._bg_tiles: dict[tuple[int, int, int], pygame.Surface] = {}
-        self._pause_overlay: pygame.Surface | None = None
-        self._pause_font = pygame.font.Font(None, 20)
+        # AUD-826 — la pausa salió a `pausa_dibujo` con `theme.font()`.
         self._debug_font = pygame.font.Font(None, 14)
         #: AUD-426 — el cielo procedural, perezoso: sólo existe si algún mapa
         #: lo pide. El módulo tampoco se importa hasta entonces.
@@ -840,68 +840,11 @@ class DrawingSystem(GizmosDeDepuracion):
         ))
 
     def _draw_pause_panel(self, surface: pygame.Surface, ctx: DrawContext) -> None:
-        """AUD-555 — el panel de pausa con pestañas.
-
-        Orden importante: una pestaña de consulta embebida (Equipo/
-        Habilidades/Mapa) dibuja su propia pantalla completa —empieza con
-        un `fill()` de fondo, como cualquier pantalla del kit compartido—
-        así que la tira de pestañas se pinta **después**, encima, o
-        desaparecería debajo del `fill()`. La pestaña "Menú" no tiene
-        escena embebida (la Tienda sigue siendo una escena aparte, ver
-        `PausaDeEscenario`), así que se dibuja aquí mismo con el mismo
-        fondo sólido para que las cuatro pestañas se vean como una sola
-        aplicación, no tres pantallas sólidas y una superposición
-        traslúcida.
-        """
+        # AUD-555 — orden: las embebidas pintan pantalla completa, la tira va
+        # encima. AUD-826 — tira y lista viven en `pausa_dibujo`.
         if ctx.pausa_pestana_activa is not None:
             ctx.pausa_pestana_activa.draw(surface)
         else:
-            if self._pause_overlay is None:
-                self._pause_overlay = pygame.Surface(
-                    (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-                )
-            # AUD-555 — antes esto se usaba translúcido (alpha 160) sobre
-            # el mundo del juego; ahora es opaco, a juego con el fondo
-            # sólido que ya pintan las otras tres pestañas
-            # (`Theme.BG = (14, 15, 28)`, repetido aquí en vez de importar
-            # `engine.ui.theme` — este módulo no depende de ese paquete).
-            self._pause_overlay.set_alpha(255)
-            self._pause_overlay.fill((14, 15, 28))
-            surface.blit(self._pause_overlay, (0, 0))
-            self._draw_menu_de_pausa(
+            dibujar_menu_de_pausa(
                 surface, ctx.pausa_menu_seleccion, ctx.pausa_menu_opciones or ())
-        self._draw_tira_de_pestanas(surface, ctx.pausa_tabs or (), ctx.pausa_tab_index)
-
-    def _draw_tira_de_pestanas(
-        self, surface: pygame.Surface, tabs: tuple[str, ...], activa: int,
-    ) -> None:
-        if not tabs:
-            return
-        alto_franja = 20
-        ancho_pestana = settings.INTERNAL_WIDTH // len(tabs)
-        pygame.draw.rect(
-            surface, (10, 10, 16),
-            (0, 0, settings.INTERNAL_WIDTH, alto_franja),
-        )
-        for i, nombre in enumerate(tabs):
-            es_activa = i == activa
-            color = (255, 255, 100) if es_activa else (170, 170, 170)
-            texto = self._pause_font.render(nombre, True, color)
-            cx = i * ancho_pestana + ancho_pestana // 2
-            surface.blit(texto, (cx - texto.get_width() // 2, 1))
-            if es_activa:
-                pygame.draw.rect(
-                    surface, (255, 255, 100),
-                    (i * ancho_pestana, alto_franja - 2, ancho_pestana, 2),
-                )
-
-    def _draw_menu_de_pausa(
-        self, surface: pygame.Surface, seleccion: int, opciones: tuple[str, ...],
-    ) -> None:
-        cx = settings.INTERNAL_WIDTH // 2
-        cy = settings.INTERNAL_HEIGHT // 2 - (len(opciones) * 30) // 2
-        for i, opt in enumerate(opciones):
-            color = (255, 255, 100) if i == seleccion else (200, 200, 200)
-            label = f"> {opt}" if i == seleccion else f"  {opt}"
-            text = self._pause_font.render(label, True, color)
-            surface.blit(text, (cx - text.get_width() // 2, cy + i * 30))
+        dibujar_tira_de_pestanas(surface, ctx.pausa_tabs or (), ctx.pausa_tab_index)
