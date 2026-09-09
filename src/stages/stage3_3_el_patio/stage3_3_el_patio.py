@@ -20,6 +20,7 @@ from src.framework.scenes.stage_scene import StageScene
 from src.stages.stage3_3_el_patio.fountain import Fountain
 from src.stages.stage3_3_el_patio.camara_objetivo import CamaraObjetivo, Objetivo
 from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
+from src.stages.stage3_3_el_patio.onda_fuente import OndaFuenteController
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -55,6 +56,7 @@ class Stage3_3ElPatio(StageScene):
         self._fountain: Fountain | None = None
         self._moneda_fx: MonedaFxController | None = None
         self._camara_obj: CamaraObjetivo | None = None
+        self._onda: OndaFuenteController | None = None
 
     # ── Optional lifecycle hooks ────────────────────────────────────
     # Override any of these to add custom behavior:
@@ -66,6 +68,9 @@ class Stage3_3ElPatio(StageScene):
         # evento del framework que se emite al recoger un Pickup, y anima un
         # destello con easing en el punto exacto donde se recogio.
         self._moneda_fx = MonedaFxController(self.events)
+        # Poder propio del escenario: las monedas cargan la fuente y la
+        # tecla E suelta una onda expansiva que mata enemigos en area.
+        self._onda = OndaFuenteController(self.events)
         # El ancho del mapa sale del propio TMX, no de una constante: si
         # vuelvo a alargar el nivel, el encuadre se ajusta solo.
         ancho, alto = self._stage_data.map_pixel_size
@@ -81,6 +86,9 @@ class Stage3_3ElPatio(StageScene):
             self._moneda_fx.update(dt)
         # Va de ultimo a proposito: pisa el offset que acaba de calcular
         # `super().update()`, y asi manda la cinematica mientras dura.
+        if self._onda is not None:
+            enemigos = getattr(self._stage_data, "entity_list", []) or []
+            self._onda.update(dt, self._player, enemigos)
         if self._camara_obj is not None:
             self._camara_obj.update(dt, self._player, self._camera)
 
@@ -90,6 +98,8 @@ class Stage3_3ElPatio(StageScene):
             self._fountain.draw(surface, self._camera.offset)
         if self._moneda_fx is not None:
             self._moneda_fx.draw(surface, self._camera.offset)
+        if self._onda is not None:
+            self._onda.draw(surface, self._camera.offset)
         if self._camara_obj is not None:
             self._camara_obj.draw(surface, self._camera.offset)
 

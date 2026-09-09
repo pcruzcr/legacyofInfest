@@ -104,7 +104,7 @@ porque a diferencia del cuarto del jefe, El Patio no tiene pared de fondo.
 | Objeto TMX (`type`) | Nombre narrativo | Cantidad | Notas |
 |---|---|---|---|
 | `Walker` | WalkerPalom | 7 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
-| `Flying` | FlyingHalcon | 5 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
+| `Flying` | FlyingHalcon | 2 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
 | `Shooter` | ShooterQuetzal | 8 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
 | `FlyingBomber` | Dron | 3 | Suelta bombas cada 2,5 s (daño 1,0, radio 48). Dos vigilan los muros |
 | `Climber` | Trepador | 2 | Sube y baja por las lianas: te disputa la ruta de ascenso |
@@ -361,6 +361,44 @@ instanciados de verdad (`StageLoader.load()` devuelve 5 `EnemyFlying`,
 3 `EnemyFlyingBomber`, 2 `EnemyClimber`, 2 `EnemyMedusa`, 8 `EnemyShooter`,
 7 `EnemyWalker`) y las 3 cinemáticas disparando en su sitio en una
 simulación del recorrido completo.
+
+## 4h. La Onda de la Fuente y menos halcones todavía (2026-09-08)
+
+**Los halcones bajan de 5 a 2.** En el aire quedan **7 cosas** (2 halcones,
+3 drones, 2 medusas) donde al principio había 15, y son de tres clases
+distintas en vez de una repetida. Total del nivel: **24 enemigos**.
+
+**El poder: la Onda de la Fuente** (`onda_fuente.py`) — Unidades II, V y VI.
+
+Las monedas ya no solo suman en el marcador: **cargan la fuente**. Cada
+3 monedas dan una carga (hasta 3), y con carga disponible la tecla **E**
+suelta una onda expansiva centrada en el jugador que crece hasta 140 px en
+0,55 s y aplica 3,0 de daño a todo enemigo que alcance — más que la vida de
+casi cualquier enemigo de la zona 3 (2,0), así que mata de un golpe. Cada
+enemigo recibe como máximo un impacto por onda.
+
+| Unidad | Dónde aparece |
+|---|---|
+| II — vectores | `vec2_distance` decide quién entra en el radio; `vec2_normalize` da la dirección del empujón |
+| V — color | El anillo va del blanco-agua al azul de la fuente interpolando **en HSV** (`ColorTools.rgb_to_hsv`/`hsv_to_rgb`), no en RGB: mezclar tonos distintos en RGB pasa por grises sucios |
+| VI — easing + EventBus | El radio crece con `ease_out_cubic` y se apaga con `ease_out_quad`; la carga llega suscribiéndose a `EVENTO_RECOGIDO` |
+
+**Por qué es un poder aparte y no el ataque normal.** El jugador ya tiene
+`SHORT_ATTACK`, `LONG_ATTACK` y `DASH` en el mapa de acciones del motor:
+cuerpo a cuerpo, corto alcance, uno a uno. La onda es lo contrario —área, a
+distancia, con recurso limitado— y resuelve justo lo que el ataque normal no
+puede: quitarte de encima al dron mientras trepas la liana, cuando no puedes
+ni golpear ni esquivar. Medido sobre el nivel cargado, **una sola onda en el
+segundo muro mata 4 enemigos a la vez** (el dron, el trepador, el tirador y
+un caminante).
+
+**Por qué la tecla E se lee directa de pygame.** Registrar una acción nueva
+obligaría a tocar `src/engine/input/action_map.py`, que es del profesor. E
+está libre: el motor solo usa A C D F G J K M P Q R S V W X Z.
+
+Verificado: 3 monedas → 1 carga y 6 → 2; una onda deja al enemigo de prueba
+en −1,0 de vida (muerto); `validate_tmx` 1/1; `grade_stage` **124/130
+(95,4%)**; 40 s de juego sin un error de consola.
 
 ## 5. Obstáculos y plataformeo
 

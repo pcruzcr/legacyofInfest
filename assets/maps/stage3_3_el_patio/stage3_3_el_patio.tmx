@@ -346,25 +346,7 @@
     <property name="damage_on_contact" type="float" value="0.5"/>
    </properties>
   </object>
-  <object id="20" type="Flying" name="Flying_01" x="320" y="260">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
-   </properties>
-  </object>
   <object id="22" type="Flying" name="Flying_03" x="900" y="280">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
-   </properties>
-  </object>
-  <object id="24" type="Flying" name="Flying_05" x="1392" y="270">
    <properties>
     <property name="zone" type="int" value="3"/>
     <property name="flight_mode" value="sine"/>
@@ -380,15 +362,6 @@
     <property name="flight_speed" type="float" value="75"/>
     <property name="sine_amplitude" type="float" value="20"/>
     <property name="sine_frequency" type="float" value="0.9"/>
-   </properties>
-  </object>
-  <object id="62" type="Flying" name="Flying_13" x="2340" y="270">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="65.0"/>
-    <property name="sine_amplitude" type="float" value="24.0"/>
-    <property name="sine_frequency" type="float" value="0.6"/>
    </properties>
   </object>
   <object id="30" type="Shooter" name="Shooter_01" x="24" y="384">
