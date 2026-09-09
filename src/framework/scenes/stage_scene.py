@@ -787,6 +787,10 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         audio = self.audio
         if audio is not None:
             audio.stop_music()
+            # AUD-829 — la capa ambiental es independiente de la música
+            # (`mixer.music` contra `Sound` en bucle): parar sólo la música
+            # dejaba el zumbido pegado en el siguiente escenario.
+            audio.stop_ambient()
         self._subtitles.destroy()
         self._achievements.save()
         self._bestiary.save()

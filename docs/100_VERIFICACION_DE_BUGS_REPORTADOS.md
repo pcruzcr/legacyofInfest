@@ -300,6 +300,26 @@ escena lo limpia al salir); no hay `DeathPit` para enemigos.
 
 ---
 
+## Cierre AUD-829 — loop largo de viento y lifecycle del ambiente
+
+**Cambios:** `src/framework/scenes/stage_scene.py::on_exit` ahora hace
+`stop_ambient()` además de `stop_music()` (la fuga: capas independientes,
+`mixer.music` contra `Sound` en bucle). `fog`/`snow` apuntan al nuevo
+`sfx_environment_wind_loop.wav` (8 s, mono 22050, generado por
+`tools/generar_ambiente_viento.py`, determinista por semilla): ruido marrón
+periódico por síntesis espectral + ráfagas de ciclos enteros, empalme exacto
+(salto 0,0047, bordes ±6 %). El volumen de arranque no se toca: manda el bus
+del jugador y el suelo sonoro es decisión deliberada (AUD-402).
+
+**Evidencia:** `tests/test_aud829_ambiente.py` (2, fallaban antes) pasa.
+Runtime con stage real: stage1_1 entra con música+ambiente, `on_exit` deja
+ambas en `None`/`False`, título limpio. Batería de audio 118/118.
+`validate_assets.py` 0 errores con el wav nuevo.
+
+**CERT:** AUD-800 AUDIO (lifecycle + loops).
+
+---
+
 ## Cierre AUD-826 — pausa dimensionada con panel del kit
 
 **Cambio:** `src/framework/stage/drawing_system.py` conserva `_draw_pause_panel` (orden AUD-555 intacto) y delega a `src/framework/stage/pausa_dibujo.py` (nuevo): tira de 20→40 px (`SPACE_XL`), pestañas insetadas `MARGIN`, texto centrado vertical con `theme.font(FONT_SMALL)`; lista "Menú" en panel `SURFACE`/`BORDER`/`RADIUS_L` con fila elegida en `SURFACE_RAISED` y paso de métrica real + `SPACE_S`. Se eliminó la fuente fija 20 y el lienzo cacheado (el fondo ahora es `fill(Theme.BG)`). No se tocó HUD, Mapa, Equipo, Habilidades, diálogo, subtítulos, lógica ni input de pausa.

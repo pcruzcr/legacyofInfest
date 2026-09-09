@@ -313,8 +313,12 @@ class WeatherSystem:
         # alta, que era lo correcto mientras no existieran; ahora se generan
         # por el mismo camino que el resto del audio del proyecto.
         "rain": "sfx/environment/sfx_environment_rain_ambient.wav",
-        "snow": "sfx/environment/sfx_environment_wind_indoor.wav",
-        "fog": "sfx/environment/sfx_environment_wind_indoor.wav",
+        # AUD-829 — `snow` y `fog` loopeaban `wind_indoor` (2,0 s): la
+        # periodicidad corta se oía como un "chorro raro" mecánico, no como
+        # viento. Ahora usan el loop largo de 8 s con empalme perfecto
+        # (`tools/generar_ambiente_viento.py`).
+        "snow": "sfx/environment/sfx_environment_wind_loop.wav",
+        "fog": "sfx/environment/sfx_environment_wind_loop.wav",
         "storm": "sfx/environment/sfx_environment_storm_ambient.wav",
     }
 
