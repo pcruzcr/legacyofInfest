@@ -5,6 +5,41 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.2.0] - 2026-09-10
+
+Cierre de release de la línea 1.x: el estado certificado RC (B2/B3/B4/Zone4,
+save v6, HUD, TMX) se consolida, se integra el stage 4.1 y se dejan por
+escrito los informes de cierre. Sin features nuevas: lo que estaba
+declarado se verificó, y lo que estaba roto se reparó con prueba.
+
+### Campaña
+
+- **Stage 4.1, respiro narrativo:** nivel, tilesets, fondos, seis pistas de
+  música, efectos de ambiente y diálogos (`data/dialogues/stage4_1.json`)
+  integrados, con su spec, diseño y auditoría en `docs/`.
+- **Exámenes que faltaban:** parry con examen real en la sala Defensa del hub
+  (profesor que aturde 2 s al devolver) y chimenea de muro en
+  `stage_mecanicas` coronable por cadena de saltos + agarrarse, con bot
+  que lo demuestra.
+- **Verdad de jefes:** el Gavilán picado con telegraph, plumas proyectiles
+  y órbita que se cierra; las fases del Rey F1→F3 y las cuatro formas de
+  Paburu verificadas por transiciones, no declaradas.
+- **Reparaciones:** el escudo del blindado protegía la espalda (invertido),
+  las habilidades `skill_ground_pound` y `skill_coraza` tenían candado sin
+  entrada en el catálogo, y la luz apagaba las barras de vida enemigas.
+
+### Motor y datos
+
+- Mapas con `schema_version` y el tileset de datacenter ampliado en
+  `stage2_2`; validadores de assets/TMX y la guía de seguridad de cambios
+  actualizados a la ola final.
+
+### Cierre
+
+- Informes de cierre y finalización en la raíz, auditoría documental total,
+  rayos X del repositorio (AUD-836) y guía de juego con handoff al
+  estudiante.
+
 ## [1.1.0] - 2026-07-28
 
 Primera versión pensada para que **treinta estudiantes la usen a la vez sin
