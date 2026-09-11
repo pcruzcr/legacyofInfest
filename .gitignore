@@ -74,6 +74,14 @@ temp2.json
 # Entregas zip
 entrega 2/
 
+# Material docente ajeno al motor que vive en el árbol de trabajo pero no
+# forma parte del juego (pptx de clase, ejemplos de curvas). Como `entrega 2/`,
+# se ignora en vez de borrarse: es contenido del autor, no basura.
+Compu Grafica/
+
+# Estado local de ZCode (settings por máquina, locks de ejecución)
+.claude/
+
 
 src/tools/__pycache__/
 
