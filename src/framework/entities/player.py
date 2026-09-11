@@ -821,6 +821,16 @@ class Player(BaseEntity):
         # tope, un futuro sexto rango podría acercarse peligrosamente a
         # "invencible", que no es lo que pide la rama.
         defensa = max(0.05, 1.0 - self._bonus_arbol_defensa)
+        # GPL-CIERRE R-002 — `skill_coraza` (botín del Gavilán) existe en el
+        # catálogo y ahora hace lo que su descripción promete: -25 % sobre el
+        # daño ya mitigado por el árbol. Va después (multiplica, no sustituye)
+        # para no pisar la progresión del árbol ni la dificultad elegida.
+        try:
+            from src.engine.core.inventory import get_inventory
+            if get_inventory().has_skill("skill_coraza"):
+                defensa *= 0.75
+        except Exception:
+            pass
         effective_damage = amount * cfg.incoming_damage_mult * defensa
         self._health = max(0.0, self._health - effective_damage)
         # AUD-608 — la sinergia **Titán** (vitalidad e ímpetu al máximo)

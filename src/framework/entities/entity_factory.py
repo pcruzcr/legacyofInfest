@@ -31,6 +31,7 @@ from src.framework.entities.enemy_flying_bomber import EnemyFlyingBomber
 from src.framework.entities.enemy_hormiga import EnemyHormiga
 from src.framework.entities.enemy_medusa import EnemyMedusa
 from src.framework.entities.enemy_oropel import EnemyOropel
+from src.framework.entities.enemy_parry_teacher import EnemyParryTeacher
 from src.framework.entities.enemy_pez_abismal import EnemyPezAbismal
 from src.framework.entities.enemy_shielded import EnemyShielded
 from src.framework.entities.enemy_shooter import EnemyShooter
@@ -100,6 +101,10 @@ def ensure_registered() -> None:
         "Oropel": EnemyOropel,
         "Cerbatana": EnemyCerbatana,
         "Ceibo": EnemyCeibo,
+        # T1-FINALIZATION — el profesor de parry existía sin registro: ningún
+        # TMX podía colocarlo y la sala Defensa del tutorial_hub enseñaba el
+        # parry sólo con texto. Un registro es reutilizar, no crear sistema.
+        "ParryTeacher": EnemyParryTeacher,
         "BossVenado": BossVenado,
         "BuddyRino": BuddyRino,
         "BuddyExpresso": BuddyExpresso,

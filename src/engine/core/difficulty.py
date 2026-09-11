@@ -82,6 +82,23 @@ def get_config(
     leer del slot más reciente vía SaveManager (sin ciclo de importación).
     """
     base = DIFFICULTY_PRESETS[d or _current_difficulty]
+    # AUD-826 — aislamiento de tests: con LEGACYOFINFEST_TESTING=1 no se lee
+    # el disco (los saves del usuario, p. ej. NG+9, contaminaban la suite:
+    # enemy_health_mult=1.9 y los tests de daño esperaban 1.0). Sin gestor
+    # vivo y en test, ng_plus=0. Mismo patrón que SDL_VIDEODRIVER=dummy en
+    # tests/conftest.py. En producción (variable ausente) no cambia nada.
+    import os as _os
+
+    if ng_plus is None and _os.environ.get("LEGACYOFINFEST_TESTING") == "1":
+        try:
+            from src.engine.core.save_manager import _candado_gestor, _gestor_activo
+
+            with _candado_gestor:
+                _mgr = _gestor_activo
+            if _mgr is None:
+                return base
+        except Exception:
+            return base
     # Resolver ng_plus: parámetro explícito gana; si no, intentar del guardado
     # Se prefiere la ranura activa (AUD-441) al más reciente: con dos partidas,
     # `newest_slot` puede apuntar a otra distinta de la que se está jugando.

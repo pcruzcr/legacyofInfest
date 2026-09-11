@@ -12,9 +12,9 @@ de que sus cifras envejecieran sin que nadie se enterara.
 
 Se guarda lo que se puede medir aquí sin ejecutar la suite entera:
 
-* los **tipos de objeto** que acepta el cargador (104 en runtime, con el
-  desglose 50 + 54 + `Solid`/`Platform`, y los 97 del registro base que
-  genera la referencia de estudiantes);
+* los **tipos de objeto** que acepta el cargador (120 en runtime en `Objects`,
+  desglose 51 + 69 + `Solid`/`Platform` —122 con `Collision`—, y los 106 del
+  registro base que genera la referencia de estudiantes);
 * las **propiedades de mapa** que reconoce el validador (18).
 
 La cuenta de pruebas (4.751) la vigila ya `test_el_numero_de_pruebas_es_el_real`
@@ -132,6 +132,7 @@ def _motor():
         # que otras pruebas hubieran dejado puesto a mano, que es lo que el
         # docstring de esta fixture dice que hace.
         # Actualizado 2026-08-30: 97 base (50+47) / 104 runtime (50+54) reflejan 50 builtins + 47/54 entidades.
+        # AUD-837: hoy 106 base (51+55) / 120 runtime (51+69); ParryTeacher es el +1 del registro base.
         StageLoader._entity_registry.update(anterior)
         entity_factory._registered = registered_previo
 
@@ -144,12 +145,12 @@ def _cifra(texto: str, patron: str) -> int:
 
 class TestLosTiposDeObjeto:
     def test_el_inventario_dice_lo_que_mide_el_cargador(self, inventario, _motor) -> None:
-        """La frase «119 tipos de objeto en runtime» y su desglose tienen que
+        """La frase «120 tipos de objeto en runtime» y su desglose tienen que
         coincidir con el cargador; si el desglose cambia, el documento y esta
         prueba se actualizan juntos. Las cuatro cuentas conviven a propósito:
-        105 = capa `Objects` con el registro base (lo que genera la referencia
-        de estudiantes, en intérprete limpio), 107 = + `Solid`/`Platform`,
-        119 = `Objects` con los escenarios descubiertos."""
+        106 = capa `Objects` con el registro base (lo que genera la referencia
+        de estudiantes, en intérprete limpio), 108 = + `Solid`/`Platform`,
+        120 = `Objects` con los escenarios descubiertos."""
         integrados = _motor["integrados_fresco"]
         base = _motor["registro_base"]
         colision = _motor["colision_fresco"]
@@ -159,21 +160,22 @@ class TestLosTiposDeObjeto:
         # (AmbientLightZone, MusicZone, CameraZoomZone); AUD-605 añade
         # ArenaZone; IndoorZone añade 1 más; 13 especies nuevas
         # (Ceibo/Cerbatana/Hormiga/Oropel/Ahogado/LaSodaCulebra etc. + 3 del
-        # parche cenital/pokemon) suben el registro a 68 (base 54) y runtime
-        # a 119 (51 integrados + 68).
-        assert objects_runtime == 119, (
+        # parche cenital/pokemon) y ParryTeacher (AUD-837: ausente en HEAD,
+        # el 55 del registro base) suben el registro a 69 (base 55) y runtime
+        # a 120 (51 integrados + 69).
+        assert objects_runtime == 120, (
             f"el cargador acepta {objects_runtime} tipos en `Objects` con "
-            "escenarios descubiertos, no 119: ¿cambió el registro o la prueba?"
+            "escenarios descubiertos, no 120: ¿cambió el registro o la prueba?"
         )
         assert integrados == 51, f"integrados: {integrados}, no 51"
-        assert base == 54, f"registro base limpio: {base}, no 54"
-        assert base + integrados == 105, f"{base}+{integrados}, no 105"
-        assert base + integrados + colision == 107
+        assert base == 55, f"registro base limpio: {base}, no 55"
+        assert base + integrados == 106, f"{base}+{integrados}, no 106"
+        assert base + integrados + colision == 108
 
-        assert "119 tipos de objeto en runtime" in inventario
+        assert "120 tipos de objeto en runtime" in inventario
         assert f"{integrados} integrados" in inventario
         assert f"{_motor['registro_runtime']} del" in inventario
-        assert "105" in inventario and "107" in inventario
+        assert "106" in inventario and "108" in inventario
 
 
 class TestLasPropiedadesDeMapa:

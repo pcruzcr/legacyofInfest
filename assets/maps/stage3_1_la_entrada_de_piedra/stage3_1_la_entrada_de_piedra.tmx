@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="160" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="64">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="160" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="65">
  <properties>
   <property name="schema_version" type="int" value="1" />
   <property name="stage_id" value="3-1" />
@@ -17,8 +17,8 @@
   <property name="bloom" type="float" value="0.30" />
   <property name="vignette" type="float" value="0.35" />
  </properties>
- <tileset firstgid="1" name="tileset_invenio_gothic_v5" tilewidth="16" tileheight="16" tilecount="464" columns="8">
-  <image source="../../../student_assets/tilesets/tileset_invenio_gothic_v5.png" width="128" height="928" />
+ <tileset firstgid="1" name="tileset_invenio_gothic_v5" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
+  <image source="../../../student_assets/tilesets/tileset_invenio_gothic_v5.png" width="1024" height="1024" />
   <tile id="38">
    <animation>
     <frame tileid="38" duration="220" />
@@ -353,6 +353,12 @@
    </properties>
   </object>
 
+  <object id="64" type="MessageTrigger_Once" name="MessageTrigger_Arco" x="1100" y="400" width="48" height="96">
+   <properties>
+    <property name="text" value="Los halcones no bajan. Arco con F: apunta arriba y lascia." />
+   </properties>
+  </object>
+
   
   <object id="8" type="WalkerGarza" name="WalkerGarza_01" x="192" y="512">
    <properties>
@@ -420,6 +426,7 @@
 
   
   <object id="1012" type="ShooterQuetzal" name="ShooterQuetzal_01" x="2144.0" y="384" />
+  <object id="53" type="DeathPit" name="DeathPit_01" x="872" y="616" width="40" height="24" />
   </objectgroup>
  <objectgroup id="7" name="Collision">
   
@@ -455,10 +462,7 @@
   <object id="50" type="Platform" name="Puente_Pozo" x="928" y="560" width="96" height="16" />
   <object id="51" type="Platform" name="Cobertura_E1" x="1312" y="432" width="48" height="16" />
   <object id="52" type="Platform" name="Cobertura_E2" x="1440" y="544" width="48" height="16" />
-
-  
-  <object id="53" type="DeathPit" name="DeathPit_01" x="872" y="616" width="40" height="24" />
- </objectgroup>
+  </objectgroup>
  <layer id="8" name="FG_Overlay" width="160" height="45">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

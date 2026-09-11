@@ -226,15 +226,19 @@ ausencia = suelo sólido.
 
 ## 5. Eventos del bus
 
-Enum `Events` con **60 entradas** (`src/engine/core/events.py`), más **5 de
+Enum `Events` con **83 entradas** contadas en `src/engine/core/events.py`, más **5 de
 interacción** emitidos por `interactable_system.py`:
 
 Jugador / enemigo: `PLAYER_DAMAGED`, `PLAYER_HEALED`, `PLAYER_DIED`,
 `ENEMY_DIED`, `BOSS_ATTACK`, `BOSS_PHASE_CHANGED`. Nivel: `STAGE_COMPLETE`,
 `CHECKPOINT_REACHED`, `ITEM_COLLECTED`, `FLAG_SET`, `SAVE_REQUESTED`. UI / narración:
 `SHOW_MESSAGE`, `HIDE_MESSAGE`, `DIALOGUE_FINISHED`, `ACHIEVEMENT_UNLOCKED`,
-`ACHIEVEMENT_PROGRESS`. SFX (41): `SFX_PLAYER_JUMP/LAND/FOOTSTEP`, `SFX_HIT_CONNECT`,
-`SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_BOSS_HIT`, `SFX_BOSSES_*`… VFX:
+`ACHIEVEMENT_PROGRESS`. SFX (49 + `MUSIC_STINGER`): `SFX_PLAYER_JUMP/LAND/FOOTSTEP`
+(+ variantes `MUSGO/LODO/GRAVA/AHOGADO`), `SFX_PLAYER_CLIMB/WALL_SLIDE/ZIPLINE`,
+`SFX_HIT_CONNECT`,
+`SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_BOSS_HIT`, `SFX_BOSSES_*`,
+`SFX_POISON_TICK`, `SFX_TIMER_ALERT_PULSE`… (lista completa en
+`docs/52_EVENT_MAP.md` §2). VFX:
 `VFX_PARRY`, `VFX_CHARGE`, `VFX_SLAM`, `VFX_ULTIMATE`, `VFX_BUBBLE`.
 
 Interacción (5): `INTERACT_ITEM_PICKED`, `INTERACT_LOCK_OPENED`,

@@ -135,20 +135,26 @@ class EnemyShielded(EnemyBase):
         return "walk"
 
     def _build_hurtbox(self) -> pygame.Rect:
-        # Hurtbox solo vulnerable por detrás
+        # Hurtbox solo vulnerable por detrás. TRACK-B: estaba espejada —
+        # la franja quedaba del lado al que mira (delante) y `apply_hit`
+        # recortaba por detrás: el escudo protegía la espalda y el frente
+        # pegaba entero, al revés que el diseño ("escudo frontal").
+        # Delante = hacia donde mira: facing>0 → franja a la IZQUIERDA.
         if self.facing_direction > 0:
-            return pygame.Rect(self.rect.width - 8, 2, 8, self.rect.height - 4)
-        else:
             return pygame.Rect(0, 2, 8, self.rect.height - 4)
+        else:
+            return pygame.Rect(self.rect.width - 8, 2, 8, self.rect.height - 4)
 
     def _build_hitbox(self) -> pygame.Rect:
         return self.caja_ajustada(margen_x=2, margen_y=1)
 
     def apply_hit(self, damage: float, source_position: tuple[float, float], canal: str | None = None) -> None:
-        # Si golpea por delante (escudo), dañar escudo
+        # Si golpea por delante (escudo), dañar escudo. TRACK-B: la
+        # polaridad estaba invertida junto con la hurtbox — ver arriba.
+        # Delante = mismo lado hacia el que mira.
         from_front = (
-            (source_position[0] < self.rect.centerx and self.facing_direction > 0)
-            or (source_position[0] > self.rect.centerx and self.facing_direction < 0)
+            (source_position[0] > self.rect.centerx and self.facing_direction > 0)
+            or (source_position[0] < self.rect.centerx and self.facing_direction < 0)
         )
         if from_front and not self._shield_broken:
             self.shield_health -= damage

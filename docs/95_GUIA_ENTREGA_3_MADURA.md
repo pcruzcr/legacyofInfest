@@ -172,7 +172,7 @@ python scripts/validate_assets.py      # 8 errores de paleta en retratos (= OK, 
 
 ## 6. Mecánicas y estados — todos funcionales
 
-**Player FSM (28 estados, `src/framework/entities/states/`):**
+**Player FSM (30 estados, `src/framework/entities/states/` + `PlayerState` en `player.py`):**
 
 * Grounded: `Idle, Walk, Crouch, Parry, Grab, Throw, Charge, Slide`
 * Airborne: `Jump, Fall, AirChase, AerialAttack, AerialSlam, GroundPound`

@@ -35,7 +35,7 @@ date_processed: "2026-08-31"
 
 | Top 9.5-8.4 | Qué lo hace 9+ | Tenemos | Falta espectacular | LD 100% |
 |---|---|---|---|---|
-| **Silksong 9.5** Hornet 150 enemigos Silk Soul | 65 tipos `62:64` `SquadBrain` 4Hz `96` 82.7% | **85 tipos** (faltan 5 `93:98` `BossSpawn` indirecto) | `Ceibo/Cerbatana/Hormiga/Oropel/Abismal` HD 48×48 `stage_mecanicas` salas |
+| **Silksong 9.5** Hornet 150 enemigos Silk Soul | 55 tipos `62:64` `SquadBrain` 4Hz `96` 82.7% | **85 tipos** (faltan 5 `93:98` `BossSpawn` indirecto) | `Ceibo/Cerbatana/Hormiga/Oropel/Abismal` HD 48×48 `stage_mecanicas` salas |
 | **Animal Well 9.25** pixel Zelda survival | 45 tilesets `Fog` `Water` | **Survival** `HazardZone` ya, falta `IndoorZone` luz cálida 0.85 `simulacion.py:130` | `IndoorZone` 320,128 384×256 `hub/dojo` ya |
 | **Mario Wonder 9.1** Flor Maravilla | `Recogible` `skill_drop` | **Flor** → habilidad `Recogible cantidad` `interactables.py:69` | 2 días `RhythmBlock` `music_clock` ya |
 | **Ori/Hollow 92/91** 150 enemigos, mundo 40h | `WorldMap` 30 nodos `hub_backtracking` + `SquadBrain` | **Mundo grande** sin streaming `92` | Hub 17 warps ya `gen_hub_backtracking.py` |
@@ -84,7 +84,7 @@ date_processed: "2026-08-31"
 
 ---
 
-## 6. Enemigos: 65 tipos espectaculares HD `62:64` + 4 jefes `17_BOSS_SPEC` 100%
+## 6. Enemigos: 55 tipos espectaculares HD `62:64` + 4 jefes `17_BOSS_SPEC` 100%
 
 **Tenemos espectacular:** 27 `enemy_*.py` 8 arquetipos `Walker 48×56` `Brute 64×56` `Flying 40×28` `Shooter 32×48` HD nativo `hd_enemies.py` + 35 especies `WalkerInsect` … `Ceibo/Cerbatana/Hormiga/Oropel/Abismal` `93:98` ya, + `SquadBrain` 48 4Hz `stage_ai_dojo` `96` + `Hub` Warps. `PLACEHOLDER 40×64/48×48/128` `asset_loader:31` sin pixelado `smoothscale`.
 

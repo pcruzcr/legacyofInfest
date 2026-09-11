@@ -18,8 +18,8 @@ usando fuentes canonicas, no busqueda textual ingenua.
 Referencia patron: tests/test_el_estado_de_los_jefes_es_real.py y docs/60 tests.
 """
 from __future__ import annotations
+
 import ast
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -62,10 +62,19 @@ def test_06_tmx_spec_tipos_reconocidos_por_validador():
     """06_TMX_SPEC tipos TMX deben ser reconocidos por validate_tmx (TMX_PROPERTY)."""
     spec = RAIZ / "docs/06_TMX_SPEC.md"
     assert spec.exists()
-    r = subprocess.run([sys.executable, "scripts/validate_tmx.py", "--ci"], capture_output=True, text=True, encoding="utf-8", errors="replace")
-    assert "33/33 passed" in r.stdout or "33/33" in r.stdout, f"validate_tmx fallo — TMX_PROPERTY contract roto: {r.stdout[:500]}"
+    r = subprocess.run(
+        [sys.executable, "scripts/validate_tmx.py", "--ci"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    # AUD-814: el rebuild del 4.1 añade su TMX (33→34).
+    # AUD-837: stage_qa_proof añade el suyo (34→35).
+    assert "35/35 passed" in r.stdout or "35/35" in r.stdout, (
+        f"validate_tmx fallo — TMX_PROPERTY contract roto: {r.stdout[:500]}"
+    )
     txt = spec.read_text(encoding="utf-8", errors="replace")
-    assert "Checkpoint" in txt, "06_TMX_SPEC no menciona Checkpoint — posible doc term vs TMX_PROPERTY confusion"
+    assert "Checkpoint" in txt, (
+        "06_TMX_SPEC no menciona Checkpoint — posible doc term vs TMX_PROPERTY confusion"
+    )
 
 
 def test_17_boss_spec_cabecera_no_envejece():
@@ -84,7 +93,9 @@ def test_17_boss_spec_cabecera_no_envejece():
             continue
     assert count >= 3, f"Se esperaban >=3 clases Boss* en src/stages, hay {count} — BOSS_SPEC desync"
     txt = spec.read_text(encoding="utf-8", errors="replace")
-    assert "no es un contrato" in txt.lower() or "AUD-369" in txt, "17_BOSS_SPEC debe advertir que no es contrato (AUD-369) — DOCUMENTATION_TERM"
+    assert "no es un contrato" in txt.lower() or "AUD-369" in txt, (
+        "17_BOSS_SPEC debe advertir que no es contrato (AUD-369) — DOCUMENTATION_TERM"
+    )
 
 
 def test_doc_code_contract_clasificacion_explicita():

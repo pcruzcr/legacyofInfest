@@ -81,7 +81,11 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/framework/entities/enemy_*.py"],
         "CERT-ENEMIES",
         [
-            "python -m pytest tests/test_enemy*.py -q",
+            # AUD-832C — globs literales en Windows (igual que test_asset*):
+            # pytest no expande y falla con exit 4. Lista concreta verificada
+            # contra tests/ el 2026-09-07.
+            "python -m pytest tests/test_enemy_flying.py tests/test_enemy_shooter.py "
+            "tests/test_enemy_state_machine.py tests/test_enemy_walker.py -q",
             "python scripts/check_orphan_systems.py",
         ],
     ),
@@ -90,7 +94,12 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/stages/boss_*"],
         "CERT-BOSS",
         [
-            "python -m pytest tests/test_boss*.py -q",
+            # AUD-837 — glob literal en Windows (igual que AUD-832C en
+            # ENEMIES/AUDIO/ASSETS): pytest no expande y falla con exit 4.
+            # Lista concreta verificada contra tests/ el 2026-09-09.
+            "python -m pytest tests/test_boss_base.py tests/test_boss_encounter.py "
+            "tests/test_boss_grader.py tests/test_boss_phases_truth.py tests/test_boss_rush.py "
+            "tests/test_boss_rush_conducido.py tests/test_boss_spawn_desde_tiled.py -q",
             "python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json",
         ],
     ),
@@ -107,7 +116,10 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/engine/scene/**", "src/engine/core/game_context.py"],
         "CERT-STATE",
         [
-            "python -m pytest tests/test_game_state*.py tests/test_state_integration.py -q",
+            # AUD-837 — `tests/test_state_integration.py` no existe y el glob
+            # `test_game_state*.py` llegaba literal en Windows (exit 4).
+            # Hoy el único que casa es test_game_state_integration.py.
+            "python -m pytest tests/test_game_state_integration.py -q",
         ],
     ),
     (
@@ -115,7 +127,10 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/engine/audio/**"],
         "CERT-AUDIO",
         [
-            "python -m pytest tests/test_audio*.py -q",
+            # AUD-832C — glob literal en Windows (ver CERT-ENEMIES): lista
+            # concreta verificada contra tests/ el 2026-09-07.
+            "python -m pytest tests/test_audio_direccional_por_entidad.py "
+            "tests/test_audio_wiring.py -q",
         ],
     ),
     (
@@ -123,7 +138,10 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/engine/core/save*.py", "src/engine/core/user_settings.py"],
         "CERT-SAVE",
         [
-            "python -m pytest tests/test_save*.py tests/test_persistence*.py -q",
+            # AUD-837 — `tests/test_persistence*.py` no casa con ningún fichero
+            # y el glob llegaba literal en Windows (exit 4). Hoy el único que
+            # casa es test_save_manager.py.
+            "python -m pytest tests/test_save_manager.py -q",
         ],
     ),
     (
@@ -147,7 +165,10 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         ["src/framework/vfx/**", "src/engine/core/gpu_effects.py"],
         "CERT-VFX",
         [
-            "python -m pytest tests/test_vfx*.py tests/benchmarks/test_render_benchmark.py -q",
+            # AUD-837 — `tests/test_vfx*.py` no casa con ningún fichero y el
+            # glob llegaba literal en Windows (exit 4). Hoy el único que casa
+            # es el benchmark de render.
+            "python -m pytest tests/benchmarks/test_render_benchmark.py -q",
         ],
     ),
     (
@@ -173,7 +194,11 @@ MATRIZ: list[tuple[str, list[str], str, list[str]]] = [
         "CERT-ASSETS",
         [
             "python scripts/validate_assets.py",
-            "python -m pytest tests/test_asset*.py -q",
+            # AUD-832C — el glob `test_asset*.py` lo expandía el shell en
+            # sh pero llegaba literal en Windows (pwsh) y pytest fallaba
+            # con "file or directory not found". Ruta concreta: hoy el
+            # único que casa es test_asset_loader.py.
+            "python -m pytest tests/test_asset_loader.py -q",
         ],
     ),
     (

@@ -421,6 +421,11 @@ def _objetos() -> list[str]:
     obj("MessageTrigger_Once", (9 * SALA + 6) * TS, suelo_px - 64, 64, 32,
         text="Lianas de salto — colgate, balanceate y salta a la siguiente")
 
+    # AUD-838 (cierra BUG-826-08) — el mensaje de la sala del muro existía
+    # sólo en el TMX (objeto manual 919). Texto copiado del TMX entregado.
+    obj("MessageTrigger_Once", 4336, 256, 48, 64,
+        text="Muro: salta de pared en pared con SALTO. Arriba hay moneda.")
+
     # Luces — 2 focos con sombras proyectadas (coste medido)
     obj("Light", (SALA // 2) * TS, (SUELO_Y - 6) * TS, 16, 16,
         radius=180, color="#ffe9a8", intensity=0.9)
@@ -454,6 +459,13 @@ def _colisiones() -> list[str]:
         solido((sala * SALA - 4) * TS, (SUELO_Y - 5) * TS, 8 * TS, 8, "Platform")
     # Repisa alta del resorte
     solido((7 * SALA + 17) * TS, (SUELO_Y - 7) * TS, 6 * TS, 8, "Platform")
+    # AUD-838 (cierra BUG-826-08) — la sala del muro existía sólo en el TMX
+    # (objetos manuales 916-918/921): dos muros paralelos para salto de pared
+    # con repisas de salida arriba. Coordenadas copiadas del TMX entregado.
+    solido(4416, 134, 16, 186)
+    solido(4472, 134, 16, 186)
+    solido(4368, 118, 48, 8, "Platform")
+    solido(4488, 118, 48, 8, "Platform")
     return r
 
 

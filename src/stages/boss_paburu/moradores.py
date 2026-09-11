@@ -124,6 +124,10 @@ class AhogadoDelPozo(EnemyFlying):
         from src.engine.utils.asset_loader import AssetLoader
         ruta = (settings.ASSETS_DIR / "sprites" / "enemies" / "zone4"
                 / "enemy_ahogado_zone4.png")
+        if not ruta.exists():
+            # AUD-830: la zona 4 no trae hoja propia de ahogado: se queda
+            # con la de vuelo genérica sin avisar (ver enemy_flying).
+            return
         try:
             marcos = AssetLoader.load_sprite_sheet(ruta, fw, fh)
             self._sprite_frames["fly"] = marcos
@@ -390,9 +394,16 @@ class MascaraTilawa(EnemyCharger):
         from src.engine.utils.asset_loader import AssetLoader
         base = settings.ASSETS_DIR / "sprites" / "enemies" / "zone4"
         for clave in ("wind_up", "charge", "stun"):
+            ruta = base / f"enemy_{clave}_zone4.png"
+            if not ruta.exists():
+                # AUD-830: la zona 4 no trae estas hojas: a walk sin aviso
+                # (el aviso queda para hojas corruptas de verdad).
+                if "walk" in self._sprite_frames:
+                    self._sprite_frames[clave] = self._sprite_frames["walk"]
+                continue
             try:
                 self._sprite_frames[clave] = AssetLoader.load_sprite_sheet(
-                    base / f"enemy_{clave}_zone4.png", fw, fh)
+                    ruta, fw, fh)
             except (pygame.error, FileNotFoundError, PermissionError):
                 # Antes que el cuadro rojo, cualquier cosa: se cae a la
                 # animación de caminar, que al menos tiene forma de máscara.
@@ -461,6 +472,10 @@ class SukiaDeCeniza(EnemyShooter):
         from src.engine.utils.asset_loader import AssetLoader
         ruta = (settings.ASSETS_DIR / "sprites" / "enemies" / "zone4"
                 / "enemy_zone4_shooter_walk.png")
+        if not ruta.exists():
+            # AUD-830: sin hoja propia de sukia: se queda con la hoja de la
+            # zona sin avisar; fea, pero visible (ver enemy_flying).
+            return
         try:
             self._sprite_frames["walk"] = AssetLoader.load_sprite_sheet(ruta, fw, fh)
         except (pygame.error, FileNotFoundError, PermissionError):

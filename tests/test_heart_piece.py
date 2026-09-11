@@ -21,9 +21,9 @@ def _tmp_saves(tmp_path):
     orig = SaveManager.SAVES_DIR
     SaveManager.SAVES_DIR = tmp_path / "saves"
     SaveManager.SAVES_DIR.mkdir(parents=True, exist_ok=True)
-    # also isolate inventory
-    inv_path = tmp_path / "inventory"
-    orig_inv = Inventory._INVENTORY_PATH if hasattr(Inventory, "_INVENTORY_PATH") else None
+    # also isolate inventory (AUD-831: se eliminan locales sin uso)
+    _inv_path = tmp_path / "inventory"
+    _orig_inv = Inventory._INVENTORY_PATH if hasattr(Inventory, "_INVENTORY_PATH") else None
     # use Inventory's path via user_data_dir mock not needed: Inventory uses _INVENTORY_PATH
     # Redirect
     import src.engine.core.inventory as inv_mod
@@ -106,7 +106,8 @@ def test_heart_piece_collects_one():
     inv = get_inventory()
     inv._items.clear()
     inv._equipped.clear()
-    r = Recogible(rect=pygame.Rect(0, 0, 16, 16), item_id="heart_piece", tmx_object_id=1)
+    # AUD-831: el Recogible documenta el caso pero la vía probada es collect.
+    _r = Recogible(rect=pygame.Rect(0, 0, 16, 16), item_id="heart_piece", tmx_object_id=1)
     # Simulate InteractableSystem collect path: Inventory.collect
     assert inv.collect("heart_piece", 1) is True
     assert inv.count("heart_piece") == 1
@@ -160,7 +161,8 @@ def test_heart_piece_reload_does_not_duplicate():
     # Save with 2 heart pieces already collected via map_item_collected + inventory
     k1 = item_key("stage0", 1, "heart_piece")
     k2 = item_key("stage0", 2, "heart_piece")
-    data = SaveData(slot_id=1, stage_id="stage0", inventory_items={"heart_piece": 2}, map_item_collected={"stage0": [k1, k2]})
+    data = SaveData(slot_id=1, stage_id="stage0", inventory_items={"heart_piece": 2},
+                    map_item_collected={"stage0": [k1, k2]})
     mgr.save(1, data)
     mgr.ranura_activa = 1
     # Load and hydrate + restore inventory as real flow does
@@ -314,7 +316,8 @@ def test_heart_piece_death_respawn():
 # 17
 def test_heart_piece_slot_isolation():
     mgr = SaveManager()
-    mgr.save(1, SaveData(slot_id=1, inventory_items={"heart_piece": 2}, map_item_collected={"stage0": [item_key("stage0", 1, "heart_piece")]}))
+    mgr.save(1, SaveData(slot_id=1, inventory_items={"heart_piece": 2},
+                         map_item_collected={"stage0": [item_key("stage0", 1, "heart_piece")]}))
     mgr.save(2, SaveData(slot_id=2, inventory_items={}, map_item_collected={}))
     d1 = mgr.load(1)
     d2 = mgr.load(2)
@@ -346,9 +349,12 @@ def test_heart_piece_b3_percentage():
     stage = _make_stage("stage0", recogibles=[r1, r2, r3, r4])
     assert stage.item_total() == 4
     assert stage.item_percentage(set()) == 0.0
-    assert round(stage.item_percentage({item_key("stage0", 1, "heart_piece")}) * 100) == 25
-    assert round(stage.item_percentage({item_key("stage0", 1, "heart_piece"), item_key("stage0", 2, "heart_piece")}) * 100) == 50
-    assert round(stage.item_percentage({item_key("stage0", 1, "heart_piece"), item_key("stage0", 2, "heart_piece"), item_key("stage0", 3, "heart_piece")}) * 100) == 75
+    k1 = item_key("stage0", 1, "heart_piece")
+    k2 = item_key("stage0", 2, "heart_piece")
+    k3 = item_key("stage0", 3, "heart_piece")
+    assert round(stage.item_percentage({k1}) * 100) == 25
+    assert round(stage.item_percentage({k1, k2}) * 100) == 50
+    assert round(stage.item_percentage({k1, k2, k3}) * 100) == 75
     assert stage.item_percentage({item_key("stage0", i, "heart_piece") for i in [1, 2, 3, 4]}) == pytest.approx(1.0)
 
 

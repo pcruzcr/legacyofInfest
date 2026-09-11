@@ -135,7 +135,7 @@ olvidar actualizar uno.
 | Eclipses solar/lunar | 🟢 | Como *evento del calendario* con un multiplicador sobre la luz. Barato — si se pretende que caigan en fechas astronómicamente correctas, es 🔴 |
 | Superluna / microluna / luz cenicienta | 🟢 | Escala y brillo del disco |
 | **Latitud/longitud reales** | 🔴 | Efemérides de verdad (declinación, ecuación del tiempo, refracción). Semanas de trabajo y un modelo que hay que validar contra tablas |
-| Planetas visibles | ⛔ | Mecánica celeste. Nadie va a distinguir Saturno de una estrella en un juego 2D a 800×600 |
+| Planetas visibles | ⛔ | Mecánica celeste. Nadie va a distinguir Saturno de una estrella en un juego 2D a 1280×720 |
 
 ### 3.5 Fenómenos ópticos
 

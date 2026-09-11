@@ -219,6 +219,42 @@ class DibujoDeEscenario:
         else:
             self._lighting.render(surface, self._camera.offset)
             self._post_processing.apply(surface)
+            # GPL-CIERRE R-003 (GAP-075) — las barras de vida enemigas se
+            # repintan DESPUÉS de la luz y del post-procesado, en coordenadas
+            # de pantalla. Pintadas en espacio-mundo por `EnemyBase.draw`
+            # (medido: la llamada directa deja 84 píxeles), el multiplicador
+            # de luz las apagaba hasta cero píxeles en stage0 — la misma
+            # familia que AUD-090 (HUD) y AUD-194 (previsualización del arco).
+            # Se repinta sólo lo dañado y vivo; el coste es un rect por
+            # enemigo tocado, no por entidad. La marca bajo la luz queda
+            # debajo, inofensiva.
+            self._repintar_barras_de_vida(surface)
+
+    def _repintar_barras_de_vida(self, surface: pygame.Surface) -> None:
+        """Barras enemigas por encima de la luz (GAP-075, GPL-CIERRE R-003).
+
+        Sólo enemigos vivos y dañados (`_draw_health_bar` ya filtra plena
+        vida y muerte, se le deja el contrato). Sin import de entidades: se
+        usa el método si existe, para no meter la cadena de `entities` en
+        este módulo de dibujado. Con zoom >1 el lienzo base ya está a escala
+        reducida y el offset es el recortado, así que las coordenadas son
+        coherentes con lo pintado debajo.
+        """
+        datos = getattr(self, "_stage_data", None)
+        lista = getattr(datos, "entity_list", None) if datos is not None else None
+        if not lista:
+            return
+        offset = self._camera.offset
+        for entidad in lista:
+            pintar = getattr(entidad, "_draw_health_bar", None)
+            if pintar is None or not getattr(entidad, "is_alive", False):
+                continue
+            try:
+                pintar(surface,
+                       int(entidad.position.x - offset.x),
+                       int(entidad.position.y - offset.y))
+            except Exception:
+                continue
 
     def dibujar_ui(self, surface: pygame.Surface) -> None:
         """La interfaz: lo que nunca recibe la luz del escenario.

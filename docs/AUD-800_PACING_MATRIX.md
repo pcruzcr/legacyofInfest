@@ -9,8 +9,8 @@
 | **stage1_2_la_soda** 80×45 | 32,560 | 5 (cocina) | cerrado, 1 cuaderno volador | cocina enseña `Crouch` | laberinto mesones | 2 | mesa | media | + horda cucaracha | 400px | comida (vida) | — | PASS | Densidad justa |
 | **stage1_3_las_aulas** 90×45 | 64,544 | 3 + 1 infectado | aula → pasillo | pizarra (lore) | 2 aulas conectadas | 1 | pupitre | baja | + infectado | 500px | XP | — | PASS | Pacing tranquilo |
 | **stage2_1_oficinas** 120×45 | point | 6 (Brute, Charger, Dron) | oficina abierta | Brute telegraph 0.5s | 3 despachos | 3 | café (descanso) | alta | + Charger embiste | 600px | dash | — | PASS | Pacing escalado bien |
-| **stage2_2** 30×60 vertical | 48,672 | 4 (vertical) | caída 80px enseña `is_grounded` | trepa | hueco vertical | 1 | plataforma | media | + caída larga | 40px vertical | — | — | PASS | Checkpoint cada 15 tiles vertical |
-| **stage3_1_la_entrada_de_piedra** 100×45 | 32,584 | 3 (Ceibo) | piedra, DeathPit 53 | Ceibo trampa | 2 grutas | 2 | luz | media | + pit | 700px | — | — | PASS | DeathPit warn intencional |
+| **stage2_2** 120×50 vertical | 48,672 | 4 (vertical) | caída 80px enseña `is_grounded` | trepa | hueco vertical | 1 | plataforma | media | + caída larga | 40px vertical | — | — | PASS | Checkpoint cada 15 tiles vertical |
+| **stage3_1_la_entrada_de_piedra** 100×45 | 32,584 | 3 (Ceibo) | piedra, DeathPit 53 | Ceibo trampa | 2 grutas | 2 | luz | media | + pit | 700px | — | — | PASS | DeathPit 53 en Objects (AUD-828), foso letal |
 | **stage3_3_el_patio** 110×45 | 40,544 | 4 (Hormiga×3) | patio abierto | enjambre | 3 jardines | 2 | fuente | baja | + Ceibo | 550px | — | — | PASS | |
 | **stage3_4_boss_gavilan** 80×45 arena 40×30 | 24,544 | 1 boss | arena cerrada | boss telegraph | arena | 1 boss | — | **alta** | boss fases 3 | — | habilidad | **Gavilan (3 fases)** | PASS | `_is_locked_x` fix AUD-143 |
 | **stage4_1** 90×45 | 80,448 | 5 mixto | bosque | Oropel mimic | 2 claros | 3 | tronco | media-alta | + invocador | 500px | — | — | PASS | |
@@ -21,7 +21,7 @@
 | **boss_rey** | 90×45 arena | 69,544 | 1 boss | arena trono | boss 5 patrones | boss | — | **alta** | 4 fases | — | dash mejorado | **Rey** | PASS | |
 | **boss_paburu** | 40×82 vertical | point | 1 boss + moradores | vertical | boss catacumba | boss | — | **alta** | fases + foso | — | ultimate | **Paburu** | PASS | Props catacumba warn ignoradas |
 | **lobby_datacenter** | 80×45 | 48,160 | 2 Dron | lobby | tutorial | 1 | — | baja | — | 300px | — | — | PASS | |
-| **stage_mecanicas** | 80×45 | 32,288 | 1 de cada (kit) | kit 101 tipos | catálogo | demo | — | baja | — | — | — | — | PASS | 115 tipos (06_TMX_SPEC 104+11) |
+| **stage_mecanicas** | 80×45 | 32,288 | 1 de cada (kit) | kit de mecánicas | catálogo | demo | — | baja | — | — | — | — | PASS | 122 tipos en runtime (ver docs/62) |
 | **stage_ai_dojo** | 80×45 | reset dojo | 4 IA | dojo | IA scikit opcional | 4 | — | media | + predictor | — | — | — | PASS | Heurística si no scikit |
 | **tutorial_hub** | 40×30 | 32,288 | 0 | hub 6 demos | menú | — | — | baja | — | — | — | — | PASS | No contamina World Map |
 | **stage_cenital (+pokemon)** | 80×45 | — | 2 swim | cenital | nuevo modo física | — | — | baja | — | — | — | — | PASS | Sin gravedad |

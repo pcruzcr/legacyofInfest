@@ -87,11 +87,24 @@ Abre Tiled → Nuevo mapa:
 
 | Propiedad | Tipo | Ejemplo |
 |---|---|---|
+| `schema_version` | int | `1` — la versión del formato TMX que lee el motor (la plantilla ya la trae; sin ella se asume `1`) |
 | `stage_id` | string | `stage1_2_la_soda` |
 | `stage_name` | string | `"La Soda"` |
 | `time_limit` | int | `120` |
-| `bgm_track` | string | `bgm_stage0` |
+| `bgm_track` | string | `bgm_stage0` — un fichero real de `assets/music/` |
 | `background_zone` | string | `zone1` (opcional) |
+
+**Tilesets y `firstgid` (obligatorio al añadir un segundo tileset):**
+
+Cada `<tileset>` del TMX declara `firstgid`, dimensiones, columnas y fichas, y
+deben coincidir con el PNG real. Al añadir un tileset nuevo, su `firstgid`
+empieza donde termina el anterior (anterior `firstgid` + `tilecount`): dos
+rangos solapados reasignan baldosas en silencio. Ejemplo real verificado
+(AUD-827): `stage2_2` usa `tileset_parqueo` (`firstgid=65`, 128 fichas →
+ocupa 65–192) y `tileset_datacenter_ext` (`firstgid=193`, 256×256, 16
+columnas, 256 fichas). La ruta del `<image>` se escribe relativa al TMX
+(p. ej. `../../tilesets/tileset_stage0.png` desde `assets/maps/<nivel>/`).
+Detalle en `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`.
 
 **Objetos requeridos en `Objects`:**
 
@@ -185,6 +198,26 @@ python main.py --stage <tu_id>
 # Pruebas unitarias
 python -m pytest tests/ -v -k <tu_id>
 ```
+
+### 2.7 Validar y entregar (pipeline real)
+
+```bash
+python scripts/validate_tmx.py --ci            # 8 capas, propiedades, PlayerSpawn, rangos de tileset
+python scripts/validate_assets.py              # PNG/WAV referenciados existen y están sanos
+python scripts/grade_stage.py assets/maps/<tu_id>/ --json   # criterios de aceptación del nivel
+python scripts/check_translations.py --ci      # si tocaste textos visibles
+```
+
+Cómo leer el resultado:
+
+- `OPTIONAL MISSING ASSET` (aviso silencioso o `WARN` acotado): una hoja de
+  sprites opcional de enemigo no existe para tu zona y el cargador usa un
+  reemplazo válido (AUD-830, VERIFIED en `enemy_*.py`: `try/except
+  (pygame.error, FileNotFoundError, PermissionError)`). **No es un error.**
+- `CORRUPTED / INVALID ASSET` (`[LOAD FAIL]`, `[COLOR BUDGET]`, WAV ilegible):
+  el fichero existe pero está roto. **Sí hay que arreglarlo.**
+- Un `DeathPit` que se pisa como suelo no es un error del validador: está en
+  la capa equivocada (va en `Objects`, §2.2).
 
 ---
 
@@ -295,6 +328,21 @@ Cada PNG es un spritesheet con frames ordenados horizontalmente. `BossBase` carg
 python main.py --boss <tu_id>
 ```
 
+### 3.7 Sonido del boss (obligatorio: emitir, no sólo existir)
+
+Que el `.wav` exista en `assets/sfx/` no basta: el grader
+(`python scripts/grade_boss.py src/stages/<tu_id>/<tu_id>.py --json`) y
+`tests/test_audio_wiring.py` comprueban que cada ataque **emite** su evento.
+Patrón verificado (AUD-831, `boss_gavilan.py::_do_dive`):
+
+```python
+self._event_bus.emit(Events.BOSS_ATTACK, pattern="DIVE", rect=self.rect)
+self._event_bus.emit(Events.SFX_BOSSES_GAVILAN_DIVE, pos=(self.position.x, self.position.y))
+```
+
+Sin el `emit`, el evento queda en la lista de «sonidos sin emisor»
+(`docs/52_EVENT_MAP.md` §3) aunque el fichero exista.
+
 ---
 
 ## 4. Checklist de Entregable
@@ -303,7 +351,7 @@ python main.py --boss <tu_id>
 
 - [ ] TMX con las 8 capas requeridas
 - [ ] `PlayerSpawn_01`, `NextTrigger_01`, `Checkpoint_01` en Objects
-- [ ] Colisiones `Solid`, `Solid_OneWay`, etc. en Collision
+- [ ] Colisiones `Solid` y `Platform` en Collision (son los dos únicos tipos; los peligros van en `Objects`, §2.2)
 - [ ] Al menos 2 tipos de enemigos (de los 3 disponibles)
 - [ ] Propiedades de mapa completas (stage_id, stage_name, time_limit, bgm_track)
 - [ ] Clase del stage hereda de `StageScene`

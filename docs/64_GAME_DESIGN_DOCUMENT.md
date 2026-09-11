@@ -258,7 +258,7 @@ Los jefes aplican el pipeline académico completo: movimiento por curvas de la U
 
 ### 11.1 Dirección de arte
 
-- Resolución interna: **800×600**.
+- Resolución interna: **1280×720** (AUD-754; era 800×600).
 - Tile size: **16 px**.
 - Estética SNES: paleta limitada, silueta legible, 16×16 a 32×32 para sprites.
 - Fondos parallax en 3–4 planos (cielo, cresta montañosa, dosel, sotobosque).

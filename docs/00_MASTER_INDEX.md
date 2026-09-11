@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 2 de septiembre de 2026 · **Documentos:** 134 en `docs/` (133 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
+**Fecha:** 9 de septiembre de 2026 · **Documentos:** 144 en `docs/` (143 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -31,7 +31,8 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 149 (el encabezado de arriba los cuenta). Se retiraron 35
+ficheros y hoy son 142 (el encabezado de arriba los cuenta; AUD-833: el
+párrafo decía «149»). Se retiraron 35
 auditorías cerradas, informes de fase, hojas de ruta cumplidas y registros de
 decisiones ya tomadas, y se incorporaron 63 —incluyendo AUD-800 (8),
 `CHANGE_SAFETY_GUIDE`, `AUD-803_NATIVE_RENDERING_AUDIT`, `AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION` y `AUD-805_LEVEL_COMPOSITION_AUDIT`—. No eran
@@ -144,6 +145,9 @@ git si hace falta consultarlos.
 | [`07_STAGE0_DESIGN.md`](07_STAGE0_DESIGN.md) | Diseño del Escenario 0 |
 | [`86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`](86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md) | Especificación de Niveles y Jefes |
 | [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrativa y trasfondo |
+| [`STAGE_4_1_DESIGN.md`](STAGE_4_1_DESIGN.md) | Diseño del Stage 4.1 «La Entrada al Cementerio Sagrado» (rebuild AUD-812) |
+| [`STAGE_4_1_SPEC.md`](STAGE_4_1_SPEC.md) | Especificación técnica del Stage 4.1 (trazado, TMX, audio, banderas) |
+| [`STAGE_4_1_AUDIT.md`](STAGE_4_1_AUDIT.md) | Matriz de certificación del Stage 4.1 (S41-001…S41-030, veredicto) |
 | [`65_EL_LORE_EXTENSO.md`](65_EL_LORE_EXTENSO.md) | El Lore Extenso |
 
 ## Estado del proyecto y auditoría
@@ -156,6 +160,7 @@ git si hace falta consultarlos.
 | [`69_PROMPT_AUDITORIA_MAESTRO.md`](69_PROMPT_AUDITORIA_MAESTRO.md) | Prompt maestro de auditoría |
 | [`70_INFORME_DE_AUDITORIA_VIVO.md`](70_INFORME_DE_AUDITORIA_VIVO.md) | Informe de auditoría vivo — datos medidos por iteración (AUD-305: restaurado; el §7 del prompt 69 lo exige) |
 | [`AUDIT_2026-07.es.md`](AUDIT_2026-07.es.md) | Auditoría Multidisciplinaria de Producción |
+| [`83_AUDITORIA_DOCUMENTAL_TOTAL.md`](83_AUDITORIA_DOCUMENTAL_TOTAL.md) | Auditoría documental total 2026-09-09 — todo el proyecto alineado al árbol (resolución, conteos, SFX, deudas) |
 | [`89_AUDITORIA_MULTIDISCIPLINAR.md`](89_AUDITORIA_MULTIDISCIPLINAR.md) | Auditoría multidisciplinar agosto 2026 — 16 disciplinas, AUD-310 a AUD-322 |
 | [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
 | [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
@@ -218,12 +223,17 @@ git si hace falta consultarlos.
 | [`AUD-803_NATIVE_RENDERING_AUDIT.md`](AUD-803_NATIVE_RENDERING_AUDIT.md) | Auditoría native rendering — pipeline 1280×720, camera, HUD, tilemap, pixel-perfect |
 | [`AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md`](AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md) | Certificación visual truth — falsación adversarial de AUD-803, 1.5× no integer |
 | [`AUD-805_LEVEL_COMPOSITION_AUDIT.md`](AUD-805_LEVEL_COMPOSITION_AUDIT.md) | Auditoría composición niveles — 37 TMX, player 40×64, ground 608, HUD 128, parallax |
+| [`AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`](AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md) | Auditoría documental TMX+audio+enemigos — stage2_2, stage3_1, qa_proof, fallback, Gavilán, pipeline, BUG-826-08 |
 | [`PROJECT_IMPROVEMENT_REGISTER.md`](PROJECT_IMPROVEMENT_REGISTER.md) | Registro de mejoras del proyecto - 12 mejoras I-001..I-012 priorizadas WHY->COST->RISK |
 | [`RELEASE_READINESS.md`](RELEASE_READINESS.md) | Preparación para release - matriz RC 15 áreas, P0=0 P1=0, renderer FROZEN |
 | [`B3_ITEM_COMPLETION_CONTRACT_REVIEW.md`](B3_ITEM_COMPLETION_CONTRACT_REVIEW.md) | B3 item completion - revision de contrato CODE+DATA+TEST |
 | [`B4_2_HEART_PIECE_CONTRACT_REVIEW.md`](B4_2_HEART_PIECE_CONTRACT_REVIEW.md) | B4.2 heart piece - revision de contrato, modo analisis |
 | [`B4_MASTER_CERTIFICATION.md`](B4_MASTER_CERTIFICATION.md) | B4 master certification - bonfire, heart piece, recharge station COMPLETE |
+| [`99_AUD836_PROJECT_XRAY.md`](99_AUD836_PROJECT_XRAY.md) | Radiografía integral AUD-836 — inventario técnico verificado del proyecto real |
+| [`99_GUIA_DE_JUEGO_Y_HANDOFF.md`](99_GUIA_DE_JUEGO_Y_HANDOFF.md) | Guía de juego real y handoff — capacidades, progresión, stages y próximas tareas |
 | [`100_VERIFICACION_DE_BUGS_REPORTADOS.md`](100_VERIFICACION_DE_BUGS_REPORTADOS.md) | Verificación y cierre AUD-826 a AUD-834 — pausa, ritmo, enemigos, audio, tirolesa, liana, menús |
+| [`101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md`](101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md) | Verificación de los 20 bugs del motor reportados por el estudiante (P1-P20; adopción AUD-498..512 y AUD-817..825) — 18 resueltos, #9 parcial, #5 con regresión de AUD-827 |
+| [`102_AUDITORIA_VISUAL_Y_DE_DISENO.md`](102_AUDITORIA_VISUAL_Y_DE_DISENO.md) | Auditoría visual y de diseño integral (AV-01..36) — level design, gameplay, juice, pacing, fun factor y gaps del proyecto completo |
 
 ---
 
@@ -236,5 +246,5 @@ git si hace falta consultarlos.
 | [`../KNOWN_GAPS.md`](../KNOWN_GAPS.md) | Huecos conocidos y su resolución. No se borra nunca una entrada: se tacha |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Cómo contribuir: ramas, mensajes de commit, qué pasa CI |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Historial de versiones |
-| `labs/`, `quizzes/`, `rubricas/`, `exam_bank/`, `eval_practica/` | Material de clase: 3 laboratorios, 4 cuestionarios, rúbricas y banco de exámenes |
-| `niveles/`, `entregables/`, `lore/` | Diseños de nivel, entregables del curso y material de trasfondo |
+| `colab/`, `computer-vision-course/`, `exams/` | Cuadernos, curso de visión por computadora y exámenes (raíz del repo) |
+| `student_templates/` | Plantilla de escenario para estudiantes (raíz del repo) |

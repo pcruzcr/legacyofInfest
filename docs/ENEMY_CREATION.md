@@ -209,6 +209,16 @@ La clase base espera las hojas en `assets/sprites/enemies/zone{zone}/`:
 - `enemy_zone{zone}_hurt.png`
 - `enemy_zone{zone}_die.png`
 
+> **Activos opcionales frente a activos rotos (AUD-830, VERIFIED).** Las hojas
+> extra de zona (montura, vuelo, profesor, pez abismal) pueden no existir y los
+> cargadores (`enemy_buddies.py`, `enemy_flying.py`, `enemy_shooter.py`,
+> `enemy_shielded.py`, `enemy_pez_abismal.py`, `enemy_parry_teacher.py`) hacen
+> `fallback` en silencio con `try/except (pygame.error, FileNotFoundError,
+> PermissionError)`: eso es `OPTIONAL MISSING ASSET`, no un error. Un PNG que
+> existe pero no carga (`[LOAD FAIL]`) o un WAV ilegible sí es
+> `CORRUPTED / INVALID ASSET` y hay que arreglarlo. Cómo se lee cada caso en
+> el grader: `docs/38_STAGE_BOSS_GUIDE.md` §2.7.
+
 La cadencia se ajusta con variables de clase:
 
 ```python

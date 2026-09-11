@@ -4101,3 +4101,37 @@ tanto, el código no cambia: el fallback es el contrato.
   física para verificarlo — en CI headless no hay GL — y toca el renderer
   CONGELADO (POST-AUD-811) con su presupuesto de 8,33 ms. Test existente
   del lado software: `tests/test_el_zoom_llega_al_mundo.py`.
+
+## ~~[GAP-075] La barra de vida del enemigo no se ve en el dibujado de escena~~ *(Resuelto — GPL-CIERRE R-003)*
+
+- **File:** `src/framework/entities/enemy_base.py`
+  (`EnemyBase._draw_health_bar`, `EnemyBase.draw`), ruta de dibujado de
+  `StageScene`/`DrawingSystem`.
+- **Phase:** Certification Recovery (detección 2026-09-07, pendiente de AUD).
+- **Reason:** `EnemyBase.draw` sí pinta la barra (verificado llamándolo
+  directo: fondo `(28, 20, 24)` + relleno presentes), pero tras
+  `StageScene.draw` no hay ni un píxel del fondo en el lienzo aunque el
+  sprite del enemigo sí sale (atenuado por la luz). El sprite llega al
+  cuadro y la barra no: la escena no usa ese camino para este enemigo o
+  algo la tapa después. Falla en HEAD (AUD-825) limpio, así que es previo
+  a esta fase.
+- **Impact:** La funcionalidad de AUD-091 (barra tras el primer golpe) no
+  se ve jugando; el jugador no sabe si avanza. Lo vigilan
+  `tests/test_reported_ui_bugs.py::TestLosEnemigosMuestranSuVida::test_tras_el_primer_golpe_aparece`
+  y `::test_la_barra_encoge_con_la_vida` (2 fallan, 2 pasan).
+- **Prescription (NO hacer ahora):** trazar la ruta real de dibujado del
+  enemigo en escena (¿batch de sprites en vez de `entity.draw`?) antes de
+  tocar nada del renderer; la causa aún no está demostrada y un fix a
+  ciegas en dibujado es justo lo prohibido en hardening.
+- **Resolution:** causa demostrada por diagnóstico dirigido (GPL-CIERRE):
+  `EnemyBase._draw_health_bar` sí pintaba (84 píxeles en llamada directa)
+  pero `_pintar_mundo` aplica después `LightSystem.render`, cuyo
+  multiplicador apagaba la barra hasta cero píxeles en stage0 — la misma
+  familia que AUD-090 (HUD) y AUD-194 (previsualización del arco).
+  Fix mínimo en `src/framework/scenes/stage_parts/dibujo.py`:
+  `_repintar_barras_de_vida` repinta barras de enemigos vivos y dañados
+  DESPUÉS de luz + post-procesado, sin imports nuevos (duck-typing).
+  Evidencia: `tests/test_reported_ui_bugs.py` (los 2 tests que fallaban
+  ahora pasan, 15/15 en el archivo) + `tests/test_habilidades_otorgables.py`
+  (5 nuevos). Limitación: en la ruta GPU la barra viaja en la superficie
+  del mundo y el sombreador la atenúa igual; queda PARTIAL en GPU.

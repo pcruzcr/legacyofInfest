@@ -82,3 +82,17 @@ Total mínimo **8 enemigos**. Si se usan solo 2 tipos, el mínimo sube a 10.
 - [ ] `start_hour = 20:30` y `day_length = 1000`
 - [ ] CameraLock vertical + checkpoint al pie de la escalera
 - [ ] `validate_tmx.py --ci` y `grade_stage.py` en verde
+
+## Estado verificado del TMX (AUD-827, VERIFIED)
+
+Medido en `assets/maps/stage2_2/stage2_2.tmx` y
+`assets/tilesets/tileset_datacenter_ext.png` (256×256 px reales):
+
+| Tileset | `firstgid` | Dimensiones | Columnas | Fichas |
+|---|---|---|---|---|
+| `tileset_datacenter_ext` | 193 | 256×256 | 16 | 256 |
+| `tileset_parqueo` | 65 | 256×128 | 16 | 128 |
+
+`schema_version=1`. El `firstgid=193` evita el solape histórico
+(`firstgid=1` solapaba el rango 65–192 de `tileset_parqueo`). Detalle y
+evidencia en `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`.

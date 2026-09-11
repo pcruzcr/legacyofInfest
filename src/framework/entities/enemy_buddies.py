@@ -218,16 +218,20 @@ class BuddyRino(BuddyBase):
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
-        for key, fname in [("walk", f"buddy_rino_{zone_key}_walk.png"), 
+        for key, fname in [("walk", f"buddy_rino_{zone_key}_walk.png"),
                            ("ride", f"buddy_rino_{zone_key}_ride.png"),
-                           ("charge", f"buddy_rino_{zone_key}_charge.png")]:
+                           ("charge",
+f"buddy_rino_{zone_key}_charge.png")]:
             path = base / fname
+            if not path.exists():
+                # AUD-830: variantes de montura opcionales ausentes en zona:
+                # se conserva el walk genérico sin avisar (ver enemy_flying).
+                continue
             try:
                 frames = AssetLoader.load_sprite_sheet(path, 32, 28)
                 self._sprite_frames[key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("buddy_rino: failed to load sprite %s", path)
-
     def _alert_behavior(self, dt: float) -> None:
         self._face_player()
         
@@ -321,14 +325,18 @@ class BuddyExpresso(BuddyBase):
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
         for key, fname in [("fly", f"buddy_expresso_{zone_key}_fly.png"),
-                           ("ride", f"buddy_expresso_{zone_key}_ride.png")]:
+                           ("ride",
+f"buddy_expresso_{zone_key}_ride.png")]:
             path = base / fname
+            if not path.exists():
+                # AUD-830: variantes de montura opcionales ausentes en zona:
+                # se conserva el walk genérico sin avisar (ver enemy_flying).
+                continue
             try:
                 frames = AssetLoader.load_sprite_sheet(path, 24, 20)
                 self._sprite_frames[key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("buddy_expresso: failed to load sprite %s", path)
-
     def _patrol_behavior(self, dt: float) -> None:
         if self._is_mounted:
             return
@@ -408,14 +416,18 @@ class BuddyEnguarde(BuddyBase):
         zone_key = f"zone{zone}" if zone > 0 else "zone1"
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
         for key, fname in [("swim", f"buddy_enguarde_{zone_key}_swim.png"),
-                           ("ride", f"buddy_enguarde_{zone_key}_ride.png")]:
+                           ("ride",
+f"buddy_enguarde_{zone_key}_ride.png")]:
             path = base / fname
+            if not path.exists():
+                # AUD-830: variantes de montura opcionales ausentes en zona:
+                # se conserva el walk genérico sin avisar (ver enemy_flying).
+                continue
             try:
                 frames = AssetLoader.load_sprite_sheet(path, 28, 22)
                 self._sprite_frames[key] = frames
             except (pygame.error, FileNotFoundError, PermissionError):
                 logger.warning("buddy_enguarde: failed to load sprite %s", path)
-
     def _patrol_behavior(self, dt: float) -> None:
         if self._is_mounted:
             return

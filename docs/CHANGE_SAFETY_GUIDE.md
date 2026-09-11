@@ -68,7 +68,7 @@ Fuente única: `docs/AUD-800_REGRESSION_MATRIX.md`. Resumen operativo:
 | `src/framework/vfx/**`, `src/engine/core/gpu_effects.py` | `CERT-VFX` | `pytest tests/test_vfx*.py tests/benchmarks/test_render_benchmark.py` |
 | `locale/**`, `src/engine/core/i18n.py` | `CERT-LOCALIZATION` | `python scripts/check_translations.py --ci && pytest tests/test_documentacion_en_espanol.py` |
 | `src/engine/core/clock.py`, `src/engine/render/sprite_batch.py` | `CERT-PERFORMANCE` | `pytest tests/benchmarks/test_performance_budget.py && python scripts/bench_sprite_batch.py` |
-| `assets/**`, `src/engine/utils/asset_loader.py` | `CERT-ASSETS` | `python scripts/validate_assets.py && pytest tests/test_asset*.py` |
+| `assets/**`, `src/engine/utils/asset_loader.py` | `CERT-ASSETS` | `python scripts/validate_assets.py && pytest tests/test_asset_loader.py` |
 | `docs/**` | `CERT-DOCS` | `python scripts/check_doc_symbols.py --ci && python scripts/audit_docs_vs_code.py && pytest tests/test_el_indice_maestro_cuenta_bien.py` |
 | `pyproject.toml`, `.github/workflows/ci.yml`, `mypy_scope.txt` | `CERT-BUILD` | `ruff check … && mypy … && python scripts/check_dependency_sync.py` |
 
@@ -123,3 +123,71 @@ Si `check_change_safety.py` dice `CERT-HUD → 11 tests`, y los corres y pasan, 
 - `tests/test_change_safety.py` — prueba del validador (no del juego)
 
 Un cambio que no pueda nombrar su certificación es un cambio que no sabe qué puede romper. No se fusiona.
+
+---
+
+## 8. Matriz de certificación: FAST GATE y FULL GATE (AUD-835)
+
+La suite completa supera los 600 s en esta máquina, así que «todo PASS» no
+es una orden reproducible del día a día. Dos niveles, medidos el 2026-09-07
+(`SDL_VIDEODRIVER=dummy`, `.venv` del repo):
+
+### FAST GATE — cada cambio, objetivo < 2 min (medido: ~27 s pytest + ~40 s validadores)
+
+```powershell
+# 1. Lint + validadores rápidos (~40 s):
+python -m ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/
+python scripts/check_dependency_sync.py
+python scripts/check_translations.py --ci
+python scripts/check_tmx_coverage.py --ci
+python scripts/generate_tmx_reference.py --check
+python scripts/validate_tmx.py --ci
+
+# 2. Regresiones unitarias sin arranque de escena (~27 s, 178 tests):
+python -m pytest tests/test_enemy_walker.py tests/test_enemy_flying.py `
+  tests/test_enemy_shooter.py tests/test_combo_system.py tests/test_checkpoint.py `
+  tests/test_input_manager.py tests/test_movement_core.py `
+  tests/test_los_rects_van_a_la_escala_del_sprite.py `
+  tests/test_el_spawn_deja_los_pies_en_el_suelo.py tests/test_stage0_reference.py `
+  tests/test_el_interior_se_declara.py tests/test_clock.py tests/test_heart_piece.py `
+  tests/test_curve_editor_mouse_letterbox.py tests/test_change_safety.py `
+  tests/test_el_indice_maestro_cuenta_bien.py tests/test_documentacion_en_espanol.py -q
+```
+
+Criterio: todo lo de arriba en verde. Lo que el FAST GATE no cubre
+(escenas completas, audio con arranque, gameplay de 3 s, zoom con mundo) vive
+en el FULL GATE; un cambio en esos subsistemas exige además su regresión
+mínima de la matriz §3 (`check_change_safety.py --run` la indica).
+
+### FULL / NIGHTLY GATE — release, sin atajos
+
+```powershell
+python -m pytest -q                      # suite completa (6331 casos; >600 s: NO es puerta por cambio)
+python scripts/validate_assets.py        # ~3-10 min, bucles por píxel; imprime fases [1/6]-[6/6]
+python scripts/check_change_safety.py --ci
+python scripts/grade_stage.py assets/maps/ --json
+python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json
+```
+
+Reglas: un `timeout` nunca es un PASS; `validate_assets.py` debe terminar con
+código 0 (sus 9 errores históricos —8 paletas de retrato + `4_1_b.mp3`—
+se cerraron en AUD-832B/C); `check_change_safety.py --ci` debe decir
+`0 regresiones FALLARON`.
+
+### GPU: ENVIRONMENT LIMITATION (AUD-834 / GAP-074)
+
+Sin OpenGL real (CI, `SDL_VIDEODRIVER=dummy`, esta máquina sin Quadro
+activa) **no se declara GPU PASS**: `gl_pipeline.py` cae a software y
+`bench_sprite_batch.py` avisa. Lo que sí se certifica sin GPU es el
+contrato CPU-side —`test_el_zoom_llega_al_mundo.py` (zoom 1.0 vs 1.5
+compone distinto en `dibujar_mundo`), `test_native_rendering*.py`— y la
+equivalencia conceptual CPU/GPU del transform de cámara. La certificación
+de silicio exige NVIDIA Quadro M2200 y ejecución real del renderer.
+
+### Techo visual declarado (AUD-834)
+
+HD-neorretro a 1280×720, no «calidad PS4»: sin integer-scale (escala
+fraccionaria con shimmer documentado en `visual_forensics.py`), estelas
+rectangulares (`trail_system.py`), doble camino agua/luz CPU↔GPU y zoom
+sólo-CPU (GAP-074). Nada de esto bloquea gameplay; reescribirlo sería
+reingeniería, no hardening.

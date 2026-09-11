@@ -17,7 +17,7 @@ source: "docs/niveles/09_STAGE_3_1.md"
 |---|---|
 | Dificultad | ★★★☆☆ (3/5) |
 | Tamaño mínimo | **1600 × 224 px** (100 × 14 tiles) |
-| Tamaño de referencia | 1600 × 608 px (100 × 38, implementado) — **38 es intencional para BG_Mid y colisión vertical, spec actualizado** |
+| Tamaño de referencia | 2560 × 720 px (160 × 45, implementado en el TMX) |
 | Tipos de enemigo | 2 mínimos / 3 máximos |
 | Enemigos mínimos | 8 (de referencia: 10) |
 | Objetos mínimos | 1 `PlayerSpawn`, 1 `Checkpoint`, 1 `NextTrigger`, 5 coleccionables |
@@ -30,6 +30,12 @@ source: "docs/niveles/09_STAGE_3_1.md"
 
 1. **Es el nivel inicial de la Zona 3: declara dónde empieza la NOCHE.** `start_hour = "night"` (22:00) es obligatorio.
 2. **Altura máxima del mapa: 224 px** — un pasillo al aire libre sin techos: los picados vienen del cielo y deben leerse (sombra antes del ataque).
+
+> **Contradicción abierta (auditoría documental total, 2026-09-09).** El TMX
+> de referencia mide 160×45 (2560×720 px), muy por encima de esos 224 px.
+> La regla describe la intención de diseño (pasillo bajo al aire libre) pero
+> el artefacto no la cumple; queda como deuda de diseño por aclarar, no como
+> VERIFIED.
 3. **Las losas se encienden en secuencia al pisarlas** (Unidad VI): es la mecánica protagonista, no decoración.
 4. Sin cobertura real: las jardineras son las únicas cubiertas (plataformas de un sentido).
 5. **Los halcones nunca picotean en el mismo tramo que las garzas** (regla de lectura: se aprenden por separado).
@@ -80,3 +86,15 @@ Total mínimo **8 enemigos**.
 - [ ] `start_hour = "night"` y `day_length = 500`
 - [ ] Losas que se encienden funcionando (Unidad VI)
 - [ ] `validate_tmx.py --ci` y `grade_stage.py` en verde
+
+## Estado verificado del TMX (AUD-828, VERIFIED)
+
+Medido en `assets/maps/stage3_1_la_entrada_de_piedra/stage3_1_la_entrada_de_piedra.tmx`:
+
+- Tileset `tileset_invenio_gothic_v5`: 1024×1024, 64 columnas, 4096 fichas
+  (`firstgid=1`).
+- `DeathPit id=53` (`DeathPit_01`, 872×616, 40×24) está en la capa `Objects`,
+  no en `Collision`: representa el foso letal, no suelo sólido. Poner un
+  `DeathPit` en `Collision` lo convierte en suelo sólido en silencio
+  (ver `docs/38_STAGE_BOSS_GUIDE.md` §2.2 y `docs/06_TMX_SPEC.md` §11.3).
+- Detalle y evidencia en `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`.

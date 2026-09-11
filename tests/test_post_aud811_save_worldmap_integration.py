@@ -148,18 +148,22 @@ def test_save_load_preserves_checkpoint_and_progression():
 
 
 def test_world_map_29_nodes_and_backtrack():
-    """Verifica 14 progresión +15 backtrack =29, zigzag 3 por fila."""
+    """Verifica 15 progresión +15 backtrack =30, zigzag 3 por fila.
+
+    AUD-814: el rebuild del 4.1 vuelve al registry público entre el
+    Gavilán y Paburu (15 en vez de 14 en progresión).
+    """
     nodos = construir_nodos()
-    assert len(nodos) == 29
+    assert len(nodos) == 30
     prod = [n for n in nodos if not n.get("is_backtrack")]
     back = [n for n in nodos if n.get("is_backtrack")]
-    assert len(prod) == 14
+    assert len(prod) == 15
     assert len(back) == 15
     # zigzag: NODOS_POR_FILA 3
     from src.engine.scenes.world_map_scene import NODOS_POR_FILA
 
     assert NODOS_POR_FILA == 3
-    # backtrack hub conecta a 14 vistas
+    # backtrack hub: 14 vistas fijas (el 4.1 no abre atajo de vuelta).
     hub = next(n for n in nodos if n["id"] == "hub_backtracking")
     assert len(hub["unlocks"]) == 14
 

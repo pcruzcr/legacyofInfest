@@ -13,10 +13,12 @@ Visión por Computadora y Reconocimiento de Patrones.
 - Consola de depuración (F11) con FPS, cola de eventos y árbol de módulos; cajas de colisión en F1
 - Atmósfera configurable desde Tiled: iluminación por focos, clima, partículas
   de ambiente, bloom y viñeta — sin escribir una línea de Python
-- 6.323 pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+- 6.300+ pruebas automatizadas + validadores de TMX, assets y dependencias en CI
+  (cifra exacta: `python -m pytest --collect-only -q`; no se escribe un número
+  fijo porque la suite crece con cada entrega)
 
 ```
-pip install -r requirements.txt
+pip install -e ".[dev]"
 python main.py
 ```
 
@@ -35,12 +37,13 @@ dependencias:
   `AERIAL_SLAM` `GROUND_POUND` `AIR_CHASE` `STAGGER` `POSSESSED` `CHARGE_RELEASE`
 - **Escenarios** — carga de TMX con dibujado por pyscroll, capas de colisión,
   puntos de control, zonas de peligro, fosos, bloqueos de cámara y fondos con
-  parallax. **119 tipos de objeto** aceptados desde Tiled en ejecución (51
-  integrados del framework y 68 del registro una vez descubiertos los
-  escenarios, más `Solid` y `Platform` en la capa `Collision`)
-- **Enemigos** — 65 tipos registrados sobre ocho arquetipos base (caminante, volador,
+  parallax. **108 tipos de objeto** aceptados desde Tiled en ejecución (51
+  integrados del framework + 55 del registro en la capa `Objects` —106—
+  más `Solid` y `Platform` de la capa `Collision`; medido con
+  `scripts/check_tmx_coverage.py --ci`)
+- **Enemigos** — 55 tipos registrados sobre ocho arquetipos base (caminante, volador,
   tirador, arquero, embestidor, bruto, hechicero, asesino) con una máquina de
-  13 estados
+  15 estados
 - **Jefes** — fases, telegrafiado, puntos débiles, parry, invocaciones y
   límites de arena
 - **ECS** — componentes y sistemas por debajo de la herencia existente, de modo
@@ -61,7 +64,8 @@ src/
   framework/           framework de juego (entidades, escenario, ecs, ia, vfx,
                        ui, procesamiento, académico)
   stages/              el escenario 0 y las entregas de los estudiantes
-tests/                 6.323 pruebas sobre todos los módulos
+tests/                 pruebas automatizadas sobre todos los módulos
+                     (recontar con `python -m pytest --collect-only -q`)
 tools/                 generadores de mapas
 scripts/               validadores, calificadores y el previsualizador de TMX
 docs/                  documentación completa
@@ -86,3 +90,43 @@ componente del framework, entregable, evidencia de aprendizaje) de cada unidad.
 ## Licencia
 
 Uso educativo — véase el fichero LICENSE.
+
+## Controles
+
+Teclado: A/D moverse, W/ESPACIO saltar, S agacharse, Z ataque corto,
+X ataque largo, C/G agarrar, F/V arco, SHIFT dash, Q/R tiempo-bala.
+Mando y ratón también funcionan (`src/engine/input/action_map.py`).
+Reasignables desde la escena de controles (se guardan en `keybindings.json`).
+
+## Comandos de estudiante
+
+```
+pip install -e ".[dev]"          # instalación completa recomendada
+python main.py                   # jugar (añade --stage stage0 para un nivel)
+python main.py --help            # todas las opciones (--stage, --boss, --debug, --semilla)
+pytest tests/test_habilidades_otorgables.py -q   # ejemplo: un archivo
+pytest tests/ -k "collision"     # ejemplo: por patrón
+ruff check src/engine src/framework src/stages/stage0 tests/ scripts/ tools/
+python scripts/validate_tmx.py --ci
+python scripts/grade_stage.py assets/maps/ --json
+```
+
+Sin pantalla: `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy PYGAME_HIDE_SUPPORT_PROMPT=1`.
+
+## Límites conocidos (GPU y rendimiento)
+
+El juego corre en CPU/pygame-ce (1280×720, 120 Hz paso fijo). La ruta
+GPU/ModernGL es opcional y sólo se certifica con NVIDIA Quadro M2200;
+sin esa tarjeta cae a software. Sin medición no se declara ausencia de
+fugas: véase `KNOWN_GAPS.md`.
+
+## Guías
+
+- Qué puede hacer cada rol: `docs/88_QUE_PUEDE_HACER_CADA_ROL.md`
+- Juego real, capacidades y tareas para continuar: `docs/99_GUIA_DE_JUEGO_Y_HANDOFF.md`
+- Crear escenarios/enemigos/jefes: `docs/STAGE_CREATION.md`,
+  `docs/ENEMY_CREATION.md`, `docs/BOSS_CREATION.md`
+- Diseñar niveles: `docs/66_GUIA_DE_LEVEL_DESIGN.md`
+- Flujo de trabajo: inspeccionar → planificar → modificar → probar →
+  comprobar en pantalla → documentar → revisar. Nunca modificar código
+  sin su prueba (`CONTRIBUTING.md`, `docs/CHANGE_SAFETY_GUIDE.md`).

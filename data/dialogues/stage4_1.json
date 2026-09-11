@@ -1,0 +1,175 @@
+[
+  {
+    "id": "venado",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "El Venado",
+        "portrait": "venado.png",
+        "voice": "sfx_voz_venado_fase1",
+        "text": "Antes de que hubiera cruces aquí, ya corría yo entre estos árboles. Mis huellas son el sendero que pisan.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "El Venado",
+        "portrait": "venado_habla.png",
+        "voice": "sfx_voz_venado_fase2",
+        "text": "El bosque me retiene por una sola deuda: nadie me ha dicho que ya puedo subir. Díganlo ustedes.",
+        "choices": [
+          [
+            "Sube, Venado. Ya puedes descansar.",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "serpiente",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "La Serpiente",
+        "portrait": "rey_terciopelo.png",
+        "voice": "sfx_voz_rey_terciopelo",
+        "text": "Cada hueso de esta loma es una muda mía. Suban despacio: el que corre sobre los muertos, tropieza.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "La Serpiente",
+        "portrait": "rey_terciopelo_habla.png",
+        "voice": "sfx_voz_rey_terciopelo",
+        "text": "La tormenta me avisó: Paburu abre los ojos. Ya no hace falta que guarde este camino.",
+        "choices": [
+          [
+            "Asciende, Serpiente. El camino queda libre.",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "halcon",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "El Halcón",
+        "portrait": "gavilan.png",
+        "voice": "sfx_voz_gavilan",
+        "text": "Vi caer cada árbol desde arriba, y después el silencio. Quédense quietos un momento... ¿lo oyen? Ya no queda nada que vigilar.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "El Halcón",
+        "portrait": "gavilan_habla.png",
+        "voice": "sfx_voz_gavilan",
+        "text": "El cielo me reclama de vuelta. Cuando me vaya, sigan hacia la luna: los muertos ya van en camino.",
+        "choices": [
+          [
+            "Vuela alto, Halcón.",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "campanero",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "Jhon",
+        "portrait": "jhon.png",
+        "text": "«M. Tilarán — el campanero». Esta lápida está cuidada, a diferencia de las demás. Alguien sigue viniendo.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "Jin",
+        "text": "«Aquí sigo, dando las horas a los que ya no las cuentan». Me pregunto si él también nos está mirando ahora.",
+        "choices": [
+          [
+            "...",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "maestra",    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "Jin",
+        "text": "«R. Arenal — la maestra». Hay flores frescas. En un cementerio donde todo lo demás está olvidado.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "Jhon",
+        "portrait": "jhon.png",
+        "text": "«Enseñó a leer a medio pueblo; el pueblo la trajo de vuelta». Vámonos, Jin. Este lugar recuerda demasiado bien.",
+        "choices": [
+          [
+            "...",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "paburu",
+    "start": "n1",
+    "nodes": {
+      "n1": {
+        "speaker": "Paburu",
+        "portrait": "paburu.png",
+        "voice": "sfx_voz_paburu_risa",
+        "text": "Tres deudas saldadas. Tres caminos libres. Jhon... Jin... pasen al umbral.",
+        "choices": [
+          [
+            "...",
+            "n2"
+          ]
+        ]
+      },
+      "n2": {
+        "speaker": "Paburu",
+        "portrait": "paburu_habla.png",
+        "voice": "sfx_voz_paburu_risa",
+        "text": "Lo que duerme aquí ya no duerme. El portal está abierto.",
+        "choices": [
+          [
+            "Entrar.",
+            "__end__"
+          ]
+        ]
+      }
+    }
+  }
+]

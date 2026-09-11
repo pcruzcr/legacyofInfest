@@ -64,12 +64,13 @@
 | `stage1_2_la_soda` | producción | sí | 1 | PASS |
 | `stage1_3_las_aulas` | producción | sí | 1 | PASS |
 | `stage2_1_oficinas` | producción | sí (point) | 1 | PASS |
-| `stage2_2` | producción vertical | point | — | WARN (falta `schema_version`) |
-| `stage3_1` | producción | sí | 1 | WARN (`DeathPit` en `Collision`) |
+| `stage2_2` | producción vertical | point | 1 | PASS (AUD-827: `datacenter_ext` 256×256/16 col/256 fichas, `firstgid=193` sin solape con `tileset_parqueo` 65–192; ver `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`) |
+| `stage3_1` | producción | sí | 1 | PASS (AUD-828: `invenio_gothic_v5` 1024×1024/64 col/4096; `DeathPit id=53` en `Objects`, no en `Collision`; ver `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`) |
 | `stage3_3`, `stage3_4` | producción | sí | 1 | PASS |
 | `stage4_1`, `4_1b`, `4_1c_*` | producción | sí | 1 | PASS |
 | `boss_*`, `hall`, `lobby`, `tutorial_hub` | producción | sí | 1 | PASS (boss_paburu 9 props catacumba ignoradas) |
-| `stage_mecanicas`, `stage_ai_dojo`, `tutorial_hub_cenital` | producción/demo | sí | 1 | PASS |
+| `stage_mecanicas`, `stage_ai_dojo`, `tutorial_hub_cenital` | producción/demo | sí | 1 | PASS (nota: `stage_mecanicas.tmx` lleva objetos manuales —p. ej. `Solid` 916–917, `Platform` 918/921— que `tools/generate_stage_mecanicas.py` ya genera desde AUD-838 (BUG-826-08 resuelto; el TMX no se tocó), ver `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`) |
+| `stage_qa_proof` | prueba interna (no entregable) | sí | 1 | PASS (AUD-829: `tileset_stage0` 1024×1024/64 col/4096, ruta `../../tilesets/tileset_stage0.png`; ver `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`) |
 | `stage_cenital`, `dimetrica`, `isometrica`, `trimetrica`, `oblicua`, `frontal`, `mode7`, `raycast`, `stencil`, `dissolve`, `paralaje`, `pokemon_cenital`, `y-sorting` | demo académica | no (vista cenital, sin gravedad) | 1 parcial | PASS cobertura 44% intencional |
 | `hub_backtracking` | producción | sí | 1 | PASS |
 | `student_template` | plantilla | sí | 1 | PASS |

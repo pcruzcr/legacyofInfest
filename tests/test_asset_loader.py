@@ -49,8 +49,13 @@ def test_missing_image_has_white_border() -> None:
 
 
 def test_missing_image_placeholder_size_uses_category() -> None:
+    # AUD-832C — decisión documentada: TEST OBSOLETO, no bug. El RC Native
+    # Visual duplicó el placeholder de enemigos a HD 2×
+    # (`asset_loader.py: PLACEHOLDER_SIZES["enemies"] = (48, 48)`), acorde
+    # con los rects a escala de sprite (Walker 48×56). Un placeholder de 24
+    # sería media silueta.
     surface = AssetLoader.load_image("enemies/missing.png")
-    assert surface.get_size() == (24, 24)
+    assert surface.get_size() == (48, 48)
 
 
 def test_load_font_default() -> None:

@@ -14,12 +14,13 @@ date_processed: "2026-07-14"
 > [`60_GUIA_COMPLETA_DEL_MOTOR.md`](60_GUIA_COMPLETA_DEL_MOTOR.md).**
 >
 > Lo que hay aquí abajo sigue siendo cierto, pero es **parcial**: la tabla de
-> enemigos lista 8 de los 65 tipos registrados, y no aparecen ninguno de los
+> enemigos lista 8 de los 55 tipos registrados, y no aparecen ninguno de los
 > objetos de las fases 4 y 5 —`Pickup`, `Key`, `LockedDoor`, `Chest`, `Vine`,
 > `Zipline`, `RhythmBlock`, `MovingPlatform`, `SinkingPlatform`, `WindZone`,
 > `WaterZone`, `FrictionZone`, `Conveyor`, `LaserZone`, `Guard`, `Stalker`,
 > `EventTrigger`—. Si buscas algo y no está aquí, está en la guía completa
-> antes que en ningún sitio. Actualizado 2026-08-30: 65 tipos (ver `docs/62`).
+> antes que en ningún sitio. Actualizado 2026-09-09: 55 tipos (69 con los
+> escenarios descubiertos; ver `docs/62`).
 
 ## 1. Requisitos del mapa TMX
 
@@ -344,6 +345,7 @@ Como referencia, mira `src/stages/stage0/stage0.py` y `assets/maps/stage0/`.
 | `Stalker` | Punto | `velocidad` (px/s, 55) · `distancia_retirada` (px, 480) · `reaparicion` (s, 6.0) |
 | `ScrollZone` | Rectángulo (el **disparador**, no la zona de muerte) | `velocidad_x` (px/s, 40) · `velocidad_y` (px/s, 0) · `margen_de_gracia` (px que se puede rebasar el borde antes de morir, 24) · `parar_en_x` (la cámara se detiene ahí; sin ella, hasta el final del mapa). Al pisarlo la cámara arranca sola y **el borde izquierdo mata**: SMB3 Airship, Cuphead, Ori |
 | `WarpZone` | Rectángulo (el disparador) | `destino_x` / `destino_y` (**obligatorias**: adónde van los **pies** del jugador, en píxeles de mundo) · `automatico` (al tocar, true) · `una_vez` (false) · `key_id` · `enfriamiento` (s antes de poder repetirlo, 0.5) · `mensaje`. Teletransporta **dentro del mismo mapa**, que es lo que `NextTrigger` no hace: Zelda, Metroid, Hollow Knight. Sin destino no se carga y el cargador avisa |
+| `IndoorZone` | Rectángulo | — (sin propiedades: la geometría ES el techo). Marca área bajo techo: sin clima, luz cálida constante; alimenta clima/luz/simulación. Vista-agnóstico (lateral/isométrica/raycast) |
 | `Slope` | Rectángulo (el **triángulo entero**, no la línea) | `sube` (`derecha` por defecto, o `izquierda`: dónde está el lado alto). Suelo inclinado de verdad — la hipotenusa va de esquina a esquina. **No se apila con bloques escalonados**: eso es una escalera que frena al jugador en cada peldaño. Sonic, DKC, Celeste (AUD-297) |
 | `Vine` | Rectángulo (alto = lo que se trepa) | `ancho_de_agarre` (px, 10) · `velocidad` (px/s de trepada, 70) |
 | `VineSwing` | Rectángulo (pareja de lianas para saltar) | `largo` (px, 48) · `amplitud` (px, 28) · `periodo` (s, 1.6) · `radio_agarre` (px, 20) |
@@ -421,6 +423,6 @@ propiedad del objeto en Tiled.
 | *(ninguno)* o `Solid` | Colisión AABB completa |
 | `Platform` | Plataforma atravesable desde abajo |
 
-Total aceptado en `Objects`: **104** tipos.
+Total aceptado en `Objects`: **106** tipos.
 
 <!-- END GENERATED: tipos de objeto -->

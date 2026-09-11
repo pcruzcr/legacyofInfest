@@ -24,6 +24,9 @@ date_processed: "2026-07-14"
 > en `assets/sfx/` (ver `20_ASSET_BIBLE.md`); y el diagrama del HUD seguía
 > mostrando el área de juego a 320×224, la resolución retirada por AUD-451
 > — la interna real es 800×600.
+>
+> **AUD-754 (supersede).** La interna pasó a **1280×720** (nativo 720p);
+> donde este manual diga 800×600, léase 1280×720.
 
 ---
 
@@ -97,7 +100,7 @@ Al iniciar el juego verás:
 ┌──────────────────────────────────────────────────┐
 │ ❤ ❤ ❤ ❤ ❤                     ⏱ 01:45     │
 │                                                    │
-│              [Área de juego 800×600 px]             │
+│              [Área de juego 1280×720 px]             │
 │                                                    │
 │                                                    │
 │                                                    │

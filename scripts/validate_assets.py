@@ -13,6 +13,11 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+# AUD-832B — numpy para los conteos por píxel: los bucles Python puro
+# tardaban >10 min en la fase [3/6] (fondos de 1280×720) y el validador
+# moría por timeout aparentando un cuelgue. Misma semántica, mismos
+# mensajes y mismos topes; sólo cambia la velocidad.
+import numpy as np
 import pygame
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -89,7 +94,12 @@ REQUIRED_SOUNDS = [
     # AUD-575 — el tema en loop de la mina inundada (4-1b), material de
     # autor como las fases del cementerio: llegó como `.mp3` y se registra
     # con su extensión real, no la convención heredada.
-    "music/4_1_b.mp3",
+    # AUD-832C — retirado como las pistas de AUD-683/684: el 4-1b se
+    # desvinculó al repo privado y el stage4_1 reconstruido usa
+    # `mus_stage41_f*` (tools/generar_stage41_audio.py); nada del repo
+    # referencia `4_1_b` y el fichero no existe. Se re-exige cuando vuelva
+    # con su blueprint.
+    # "music/4_1_b.mp3",
     # UI SFX
     "sfx/ui/sfx_ui_menu_move.wav",
     "sfx/ui/sfx_ui_menu_confirm.wav",
@@ -393,7 +403,13 @@ SPRITE_PALETTES: list[tuple[str, set[tuple[int, int, int]]]] = [
     ("ui/portrait_*.png", {
         (0, 0, 0), (60, 60, 80), (100, 100, 100), (200, 80, 80),
         (200, 120, 100), (220, 180, 140), (255, 255, 255),
-    }),  # 4 file(s), 7 colour(s)
+        # AUD-832C — la paleta se generó con 4 retratos; AUD-749/761R
+        # añadieron 8 estados con rampa de sombreado propia y tonos por
+        # estado. Colores medidos con el validador (arte deliberado, no
+        # corrupción: los 3 primeros salen en los 8 ficheros).
+        (40, 40, 60), (80, 40, 40), (120, 60, 60),
+        (230, 110, 110), (230, 150, 130), (250, 210, 170), (130, 130, 130),
+    }),  # 8 file(s), 14 colour(s)
     ("ui/relic_*.png", {
         (0, 0, 0), (100, 180, 100), (200, 150, 100), (200, 200, 150),
         (255, 215, 0), (255, 255, 255),
@@ -557,7 +573,12 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
 
 
 def check_color_budget(path: Path, budget: int) -> None:
-    """Warn when an image uses more distinct colours than its category allows."""
+    """Warn when an image uses more distinct colours than its category allows.
+
+    AUD-832B — vectorizado: el bucle por píxel no terminaba en la
+    práctica sobre fondos grandes. Se cuentan los colores distintos de
+    los píxeles opacos; el mensaje y el umbral no cambian.
+    """
     try:
         raw = pygame.image.load(str(path))
         img = raw.convert_alpha()
@@ -565,24 +586,15 @@ def check_color_budget(path: Path, budget: int) -> None:
         ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
         return
 
-    w, h = img.get_size()
-    na = pygame.surfarray.pixels3d(img)
-    alpha = pygame.surfarray.pixels_alpha(img) if (img.get_flags() & pygame.SRCALPHA) else None
-    seen: set[tuple[int, int, int]] = set()
-    for y in range(h):
-        for x in range(w):
-            if alpha is not None and alpha[x, y] == 0:
-                continue
-            seen.add((int(na[x, y, 0]), int(na[x, y, 1]), int(na[x, y, 2])))
-            if len(seen) > budget:
-                break
-        if len(seen) > budget:
-            break
-    del na
-    if alpha is not None:
-        del alpha
+    arr = pygame.surfarray.array3d(img)
+    if img.get_flags() & pygame.SRCALPHA:
+        alpha = pygame.surfarray.array_alpha(img)
+        pixeles = arr[alpha != 0]
+    else:
+        pixeles = arr.reshape(-1, 3)
+    distintos = len(np.unique(pixeles.reshape(-1, 3), axis=0))
 
-    if len(seen) > budget:
+    if distintos > budget:
         rel = path.relative_to(ASSETS_DIR).as_posix()
         ERRORS.append(
             f"[COLOR BUDGET] {rel}: over {budget} distinct colours — "
@@ -609,22 +621,22 @@ def check_palette(path: Path) -> None:
         ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
         return
 
-    w, h = img.get_size()
-    na = pygame.surfarray.pixels3d(img)
-    alpha = pygame.surfarray.pixels_alpha(img) if (img.get_flags() & pygame.SRCALPHA) else None
-    bad: set[tuple[int, int, int]] = set()
-
-    for y in range(h):
-        for x in range(w):
-            if alpha is not None and alpha[x, y] == 0:
-                continue
-            r, g, b = int(na[x, y, 0]), int(na[x, y, 1]), int(na[x, y, 2])
-            if (r, g, b) not in allowed:
-                bad.add((r, g, b))
-                if len(bad) > 20:
-                    break
-        if len(bad) > 20:
-            break
+    # AUD-832B — vectorizado como check_color_budget: mismo tope (21) y
+    # mismo mensaje que el bucle, que cortaba al superar 20.
+    arr = pygame.surfarray.array3d(img)
+    if img.get_flags() & pygame.SRCALPHA:
+        alpha = pygame.surfarray.array_alpha(img)
+        pixeles = arr[alpha != 0].reshape(-1, 3)
+    else:
+        pixeles = arr.reshape(-1, 3)
+    if len(pixeles) == 0:
+        return
+    distintos = np.unique(pixeles, axis=0)
+    permitidos = np.array(sorted(allowed), dtype=np.uint8)
+    # Pertenencia por difusión contra la paleta (pequeña: ≤ dozens).
+    dentro = (distintos[:, None, :] == permitidos[None, :, :]).all(axis=2).any(axis=1)
+    malos = [tuple(int(v) for v in c) for c in distintos[~dentro][:21]]
+    bad = set(malos)
 
     if bad:
         s = ", ".join(f"({r},{g},{b})" for r, g, b in sorted(bad)[:10])
@@ -702,10 +714,15 @@ def main() -> int:
         print(f"  (audio no disponible: {exc} — se validan los archivos igual)")
     pygame.display.set_mode((1, 1))
 
-    print(f"Validating assets in: {ASSETS_DIR}")
-    print()
+    print(f"Validating assets in: {ASSETS_DIR}", flush=True)
+    print(flush=True)
 
+    # AUD-832B — el validador tarda ~3 min (bucles por píxel en Python sobre
+    # todos los PNG) y no imprimía nada hasta el final: con la salida por
+    # tubería parecía colgado y se lo mataba a los 180 s. Estas cabeceras de
+    # fase con flush demuestran que avanza; no cambian lo que valida.
     # Fonts
+    print("  [1/6] fuentes...", flush=True)
     for rel in REQUIRED_FONTS:
         p = ASSETS_DIR / rel
         check_file(p, "Font")
@@ -718,6 +735,7 @@ def main() -> int:
         check_file(p, "Image")
 
     # Strict palette validation — indexed pixel art only (see SPRITE_PALETTES).
+    print("  [2/6] paleta estricta...", flush=True)
     import fnmatch
     checked: set[Path] = set()
     for p in sorted(ASSETS_DIR.rglob("*.png")):
@@ -728,6 +746,7 @@ def main() -> int:
                 check_palette(p)
 
     # Colour-budget validation — painted/rendered art (backgrounds, tilesets).
+    print("  [3/6] presupuesto de color...", flush=True)
     for p in sorted(ASSETS_DIR.rglob("*.png")):
         rel = p.relative_to(ASSETS_DIR).as_posix()
         if p in checked:
@@ -738,6 +757,7 @@ def main() -> int:
                 break
 
     # Datasets (AUD-587: sustituye a la exigencia del modelo pickle)
+    print("  [4/6] datasets y voces...", flush=True)
     for rel in REQUIRED_DATASETS:
         p = ASSETS_DIR / rel
         check_file(p, "Dataset")
@@ -752,6 +772,7 @@ def main() -> int:
     _ensure_voz_placeholders()
 
     # Sounds
+    print("  [5/6] sonidos requeridos...", flush=True)
     for rel in REQUIRED_SOUNDS:
         p = ASSETS_DIR / rel
         check_file(p, "Sound")
@@ -762,6 +783,7 @@ def main() -> int:
     # requeridos: los cuatro ficheros que dejaban escenarios mudos no estaban
     # en `REQUIRED_SOUNDS`, y por eso el validador pasaba en verde mientras el
     # juego se jugaba en silencio.
+    print("  [6/6] formato de todo el audio...", flush=True)
     for p in sorted(ASSETS_DIR.rglob("*")):
         if p.is_file() and p.suffix.lower() in CABECERAS_DE_AUDIO:
             check_audio_format(p)

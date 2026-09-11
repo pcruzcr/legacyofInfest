@@ -133,6 +133,16 @@ Es una asignación abierta, no deuda del motor. Quien la tome recibe:
 | Todo `BossBase` heredado gratis: fases, parry (AUD-243), escala de fase y teletransporte (AUD-257), arena, invocaciones | Los sonidos `SFX_BOSSES_GAVILAN_DIVE` y `_MASK_BEAM`, que **existen con fichero** y esperan su emisor |
 <!-- /cita-historica -->
 
+> **Estado actual (AUD-831, VERIFIED).** La tabla de arriba es la foto histórica
+> de 2026-08-04 y se conserva como tal. Desde entonces `boss_gavilan.py`
+> emite `Events.SFX_BOSSES_GAVILAN_DIVE` en `_do_dive`
+> (`src/stages/stage3_4_boss_gavilan/boss_gavilan.py`), y
+> `tests/test_audio_wiring.py` lo confirma (la entrada salió de
+> `AWAITING_THEIR_BOSS`, lista que sólo puede encoger). Sigue pendiente de
+> emisor: `SFX_BOSSES_GAVILAN_MASK_BEAM` (DECLARED, ataque de jefe de estudiante
+> no implementado). Detalle y evidencias en
+> `docs/AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`.
+
 **Por dónde empezar, medido:** `src/stages/boss_venado/boss_venado.py` es el
 jefe de referencia y hace las mismas cosas que §5 pide — telegrafía, puntos
 débiles, proyectiles con curva, dos fases con escala y teletransporte, voz—.
@@ -140,6 +150,11 @@ Copiar de ahí es lo esperado, no hacer trampa.
 
 **Cómo se califica:** `python scripts/grade_boss.py src/stages/stage3_4_boss_gavilan/boss_gavilan.py --json`
 (100 puntos). Medido el 2026-08-04: el venado saca **100 %**, el Gavilán **45 %**. Esos 55 puntos son, literalmente, la tarea.
+
+> **Medido 2026-09-09 (auditoría documental total).** Hoy los cuatro jefes
+> califican **100 %** (`boss_venado.py`, `boss_paburu.py`, `boss_rey.py` y
+> `boss_gavilan.py`, todos `percentage: 100.0` con `--json`). La cifra de
+> 45 % queda como medida histórica del 2026-08-04.
 
 **`BossSpawn`** —el tipo de objeto de Tiled que §8 describe— **ya funciona
 (AUD-259)**. Hasta entonces el motor no lo conocía y un estudiante que siguiera

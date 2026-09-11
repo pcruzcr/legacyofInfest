@@ -84,7 +84,7 @@ def test_curve_editor_mouse_viewport_corners_map_to_internal_corners(dw: int, dh
 @pytest.mark.parametrize("dw,dh", RESOLUTIONS)
 def test_curve_editor_mouse_letterbox_bar_is_outside_or_clamped(dw: int, dh: int):
     """Un click en la barra negra (letterbox/pillar) queda fuera de [0, INTERNAL)."""
-    vp_x, vp_y, vp_w, vp_h = display.calculate_viewport(dw, dh)
+    vp_x, vp_y, _vp_w, _vp_h = display.calculate_viewport(dw, dh)
     has_letterbox = vp_x > 0
     has_pillarbox = vp_y > 0
     if has_letterbox:

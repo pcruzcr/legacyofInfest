@@ -553,23 +553,29 @@ class TestMathUtilsJIT:
 
 
 class TestWeatherClimateGravity:
+    # AUD-829B — decisión documentada: TEST OBSOLETO, no bug de
+    # implementación. Los 60/40/100 eran el balance pre-RC; el commit
+    # d1676cf (Native Visual RC) los subió a 150/90/220 a propósito para
+    # densidad HD (storm = clima del clímax de stage0) y el código desde
+    # entonces corre con esos valores. Se actualiza la expectativa y se
+    # deja constancia de la fuente normativa.
     def test_rain_climate_params(self) -> None:
         from src.framework.vfx.weather_system import WeatherSystem
         ws = WeatherSystem(climate="rain")
         assert ws._climate == "rain"
-        assert ws.CLIMATE_PARAMS["rain"]["particles"] == 60
+        assert ws.CLIMATE_PARAMS["rain"]["particles"] == 150
 
     def test_snow_climate_params(self) -> None:
         from src.framework.vfx.weather_system import WeatherSystem
         ws = WeatherSystem(climate="snow")
         assert ws._climate == "snow"
-        assert ws.CLIMATE_PARAMS["snow"]["particles"] == 40
+        assert ws.CLIMATE_PARAMS["snow"]["particles"] == 90
 
     def test_storm_climate_params(self) -> None:
         from src.framework.vfx.weather_system import WeatherSystem
         ws = WeatherSystem(climate="storm")
         assert ws._climate == "storm"
-        assert ws.CLIMATE_PARAMS["storm"]["particles"] == 100
+        assert ws.CLIMATE_PARAMS["storm"]["particles"] == 220
 
     def test_clear_climate_params(self) -> None:
         from src.framework.vfx.weather_system import WeatherSystem

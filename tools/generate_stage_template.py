@@ -67,12 +67,18 @@ def generar():
      <property name="intensity" type="float" value="0.8"/>
     </properties>
    </object>
- </objectgroup>
- <objectgroup id="7" name="Collision">
-  <object id="20" type="Solid" name="Solid_Floor" x="0" y="608" width="1280" height="112"/>
-  <object id="21" type="Solid" name="Solid_LeftWall" x="-16" y="0" width="16" height="720"/>
-  <object id="22" type="Solid" name="Solid_RightWall" x="1280" y="0" width="16" height="720"/>
- </objectgroup>
+   <object id="6" type="Slope" name="Slope_Sube_Ejemplo" x="500" y="560" width="96" height="48">
+    <properties><property name="sube" value="derecha"/></properties>
+   </object>
+   <object id="7" type="Slope" name="Slope_Baja_Ejemplo" x="700" y="560" width="96" height="48">
+    <properties><property name="sube" value="izquierda"/></properties>
+   </object>
+  </objectgroup>
+  <objectgroup id="7" name="Collision">
+   <object id="20" type="Solid" name="Solid_Floor" x="0" y="608" width="1280" height="112"/>
+   <object id="21" type="Solid" name="Solid_LeftWall" x="-16" y="0" width="16" height="720"/>
+   <object id="22" type="Solid" name="Solid_RightWall" x="1280" y="0" width="16" height="720"/>
+  </objectgroup>
  <layer id="8" name="FG_Overlay" width="{MW}" height="{MH}">
   <data encoding="csv">
 {ceros}

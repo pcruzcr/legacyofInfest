@@ -212,6 +212,20 @@ def _try_attack(self, patron: str, dt: float) -> None:
 Que el ataque dependa de la **distancia** es lo que hace que el jefe se lea:
 el jugador aprende que acercarse trae una cosa y alejarse otra.
 
+### El sonido de cada ataque (obligatorio: emitir, no sólo existir)
+
+Cada patrón emite su evento de sonido con el bus (patrón verificado AUD-831
+en `src/stages/stage3_4_boss_gavilan/boss_gavilan.py::_do_dive`):
+
+```python
+self._event_bus.emit(Events.BOSS_ATTACK, pattern="DIVE", rect=self.rect)
+self._event_bus.emit(Events.SFX_BOSSES_GAVILAN_DIVE, pos=(self.position.x, self.position.y))
+```
+
+Sin el `emit`, el `.wav` existe pero el evento queda huérfano y
+`tests/test_audio_wiring.py` + `scripts/grade_boss.py` lo marcan. Detalle en
+`docs/38_STAGE_BOSS_GUIDE.md` §3.7.
+
 ### La cola de combos
 
 ```python

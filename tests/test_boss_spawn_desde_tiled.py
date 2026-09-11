@@ -130,16 +130,39 @@ class TestLoQueNoCambia:
         precisamente lo que un estudiante hace cuando la especificación pide un
         nombre que el motor no acepta. Buscar la cadena a secas daba ese mapa
         como falso positivo.
+
+        AUD-837 — excepción documentada: `stage_mecanicas.tmx` (el mapa demo
+        «1 de cada», kit de catálogo) trae desde AUD-753 el objeto id 915
+        `BossSpawn_915` con `boss="BossVenado"`. Es contenido entregado a
+        propósito, no un uso accidental: el test lo permite sólo a él (con su
+        `boss` intacto) y sigue fallando ante cualquier otro mapa u objeto.
         """
         import re
         from pathlib import Path
 
         raiz = Path(__file__).resolve().parents[1]
         con_spawn = []
+        demo_visto = False
         for p in (raiz / "assets" / "maps").rglob("*.tmx"):
             texto = p.read_text(encoding="utf-8", errors="replace")
             for trozo in re.finditer(r"<object\b[^>]*", texto):
                 tipo = re.search(r'\s(?:type|class)="([^"]+)"', trozo.group(0))
                 if tipo and tipo.group(1) == "BossSpawn":
-                    con_spawn.append(p.name)
+                    ident = re.search(r'\sid="([^"]+)"', trozo.group(0))
+                    ident = ident.group(1) if ident else "?"
+                    if p.name == "stage_mecanicas.tmx" and ident == "915":
+                        demo_visto = True
+                    else:
+                        con_spawn.append(f"{p.name} id={ident}")
         assert not con_spawn, f"ya lo usaban: {con_spawn}"
+        assert demo_visto, (
+            "desapareció el BossSpawn_915 demo de stage_mecanicas sin aviso: "
+            "si se retiró a propósito, quitar esta comprobación con su AUD"
+        )
+        demo = (raiz / "assets" / "maps" / "stage_mecanicas"
+                / "stage_mecanicas.tmx").read_text(encoding="utf-8",
+                                                   errors="replace")
+        assert 'name="BossSpawn_915"' in demo and 'value="BossVenado"' in demo, (
+            "el objeto demo cambió de jefe o de nombre: actualizar la "
+            "excepción con su AUD, no borrarla en silencio"
+        )

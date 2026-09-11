@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="310" height="24" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="916">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="310" height="24" tilewidth="16" tileheight="16" infinite="0" nextlayerid="20" nextobjectid="923">
  <properties>
   <property name="schema_version" value="1" />
   <property name="stage_id" value="stage_mecanicas" />
@@ -78,6 +78,10 @@
   <object id="13" type="Platform" x="3776" y="240" width="128" height="8" />
   <object id="14" type="Platform" x="4256" y="240" width="128" height="8" />
   <object id="15" type="Platform" x="3632" y="208" width="96" height="8" />
+  <object id="916" type="Solid" x="4416" y="134" width="16" height="186" />
+  <object id="917" type="Solid" x="4472" y="134" width="16" height="186" />
+  <object id="918" type="Platform" x="4368" y="118" width="48" height="8" />
+  <object id="921" type="Platform" x="4488" y="118" width="48" height="8" />
  </objectgroup>
  <objectgroup id="8" name="Objects">
   <object id="101" name="PlayerSpawn_101" type="PlayerSpawn" x="32" y="272" width="16" height="32">
@@ -731,6 +735,18 @@
     <property name="radius" type="int" value="150" />
     <property name="color" value="#a8d8ff" />
     <property name="intensity" type="float" value="0.7" />
+   </properties>
+  </object>
+  <object id="919" name="MessageTrigger_Once_919" type="MessageTrigger_Once" x="4336" y="256" width="48" height="64">
+   <properties>
+    <property name="text" value="Muro: salta de pared en pared con SALTO. Arriba hay moneda." />
+   </properties>
+  </object>
+  <object id="920" name="Pickup_920" type="Pickup" x="4384" y="94" width="16" height="16">
+   <properties>
+    <property name="item_id" value="moneda_muro" />
+    <property name="automatico" type="bool" value="true" />
+    <property name="mensaje" value="Recompensa por dominar el muro." />
    </properties>
   </object>
  <object id="900" name="Boton_900" type="Boton" x="4800" y="320" width="32" height="16" /><object id="901" name="BuddyEnguarde_901" type="BuddyEnguarde" x="4832" y="320" width="16" height="16" /><object id="902" name="BuddyExpresso_902" type="BuddyExpresso" x="4848" y="320" width="16" height="16" /><object id="903" name="BuddyRino_903" type="BuddyRino" x="4864" y="320" width="16" height="16" /><object id="904" name="Ceibo_904" type="Ceibo" x="4800" y="280" width="16" height="16" /><object id="905" name="Cerbatana_905" type="Cerbatana" x="4816" y="280" width="16" height="16" /><object id="906" name="Hormiga_906" type="Hormiga" x="4832" y="280" width="16" height="16" /><object id="907" name="Oropel_907" type="Oropel" x="4848" y="280" width="16" height="16" /><object id="908" name="LianaSalto_908" type="LianaSalto" x="4864" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="909" name="RopeSwing_909" type="RopeSwing" x="4880" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="910" name="PlacaDePresion_910" type="PlacaDePresion" x="4800" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object><object id="911" name="PlacaPresion_911" type="PlacaPresion" x="4832" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE2" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object><object id="912" name="BruteOficinas_912" type="BruteOficinas" x="4864" y="280" width="16" height="16" /><object id="913" name="ChargerOficinas_913" type="ChargerOficinas" x="4880" y="280" width="16" height="16" /><object id="914" name="Dron04_914" type="Dron04" x="4896" y="280" width="16" height="16" /><object id="915" name="BossSpawn_915" type="BossSpawn" x="100" y="280" width="16" height="16"><properties><property name="boss" value="BossVenado" /></properties></object></objectgroup>

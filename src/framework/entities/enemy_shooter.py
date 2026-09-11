@@ -227,6 +227,13 @@ class EnemyShooter(EnemyBase):
         for key, fname in [("aim", f"enemy_aim_{zone_key}.png"),
                            ("fire", f"enemy_fire_{zone_key}.png")]:
             path = base / fname
+            if not path.exists():
+                # AUD-830: hoja opcional ausente (p. ej. zone4): placeholder
+                # silencioso; el aviso queda para hojas corruptas de verdad.
+                placeholder = pygame.Surface((fw, fh), pygame.SRCALPHA)
+                placeholder.fill(colors.get(key, (200, 0, 200)))
+                self._sprite_frames[key] = [placeholder]
+                continue
             try:
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames

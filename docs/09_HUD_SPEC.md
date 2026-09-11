@@ -73,8 +73,9 @@ El HUD está implementado en `src/engine/ui/hud.py` y es un sistema del profesor
 ## 2. Layout
 
 El HUD se diseñó sobre una pantalla de 320 px de ancho y se **escala** a la
-resolución interna real (`settings.INTERNAL_WIDTH`), hoy 800×600. El factor sale
-de dividir una por otra: 800/320 = **2,5**.
+resolución interna real (`settings.INTERNAL_WIDTH`), hoy 1280×720 (AUD-754;
+era 800×600). El factor sale
+de dividir una por otra: 1280/320 = **4,0** (antes 800/320 = 2,5).
 
 AUD-451 — hasta esa auditoría, las coordenadas estaban escritas en píxeles de
 la pantalla de 320 y se dibujaban **sin escalar** sobre la de 800: el HUD
@@ -142,12 +143,13 @@ ocupa el minimapa.
 ### 2.1 Regiones del HUD
 
 Las columnas X/Y/Ancho/Alto son de **diseño** (maqueta de 320). Entre
-paréntesis, lo medido en pantalla a 800×600 (factor 2,5) — algunas barras
+paréntesis, lo medido en pantalla a 800×600 (factor 2,5, previo a AUD-754:
+hoy el factor es 4,0 sobre 1280×720) — algunas barras
 redondean su alto/paso a un píxel real de diferencia por el redondeo de
 `theme.escalar`, así que la columna de pantalla es la que manda si las dos
 no cuadran a la fracción exacta.
 
-| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5, medido) | Notas |
+| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5 a 800×600, medido pre-AUD-754; hoy ×4,0 a 1280×720) | Notas |
 |---|---|---|---|---|---|---|
 | Caja de mensajes | 0 | 0 | 320 | 28 | 0,0 800×70 | Capa superior (movida desde abajo en v1.1.0) |
 | Marco del retrato | 6 | 6 | 24 | 24 | 15,15 60×60 | Círculo, no marco 9-slice (AUD-535); margen de pantalla (AUD-547) |

@@ -161,7 +161,25 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         id="skill_parry", name="Parada",
         description="Botón de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
-),
+    ),
+    # GPL-CIERRE R-001 — las dos habilidades fantasma ahora existen de verdad.
+    # `skill_ground_pound` la exige `airborne.py` como candado y `skill_coraza`
+    # la suelta `boss_gavilan.py`; ninguna estaba en este catálogo, así que
+    # `economia.py` filtraba el botín del Gavilán en silencio y el pisotón no
+    # podía otorgarse en ningún mapa nuevo vía `skill_drop`. La campaña actual
+    # no cambia (todos sus mapas están exentos en
+    # `ESCENARIOS_CON_HABILIDADES_LIBRES`); lo que cambia es que un mapa nuevo
+    # sí puede otorgarlas y el Gavilán sí entrega lo que promete.
+    "skill_ground_pound": ItemDef(
+        id="skill_ground_pound", name="Pisotón",
+        description="Botón de jefe: en el aire, abajo + ataque para caer recto y soltar una onda",
+        icon_color=(255, 140, 60), slot="skill",
+    ),
+    "skill_coraza": ItemDef(
+        id="skill_coraza", name="Coraza del Gavilán",
+        description="Botón de jefe: el daño que recibes se reduce un cuarto",
+        icon_color=(150, 200, 220), slot="skill",
+    ),
 
     # AUD-637 -- Collectible Identity: nuevos tipos de coleccionables con identidad
     #: Fragmento de reliquia -- lore del mundo, se entrega en SecretRoom
