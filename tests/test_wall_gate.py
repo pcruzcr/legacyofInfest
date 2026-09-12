@@ -153,10 +153,14 @@ def test_la_cadena_de_muro_si_sube() -> None:
         mejor = min(mejor, pies)
         if pies <= 150.0:
             break
-    assert saltos_de_muro >= 4, (
+    # AUD-839 — con la marcha a 120 (AUD-827) el re-enganche al muro
+    # opuesto llega antes y la coronación cabe en los 3 wall-jumps de un
+    # mismo vuelo (_wall_jump_count arranca en 3): la cadena engancha con
+    # 3; lo que sigue demostrando altura y alternancia es lo de abajo.
+    assert saltos_de_muro >= 3, (
         f"sólo {saltos_de_muro} wall-jumps: la cadena no engancha"
     )
-    assert alternancias >= 3, "los saltos no alternan de muro"
+    assert alternancias >= 2, "los saltos no alternan de muro"
     assert mejor <= 175.0, (
         f"mejor pies y={mejor}: la cadena no gana altura (salida {pies_ini})"
     )

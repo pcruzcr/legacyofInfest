@@ -245,7 +245,10 @@ class TestAnticipacion:
     """La cámara mira hacia donde vas."""
 
     def test_corriendo_a_la_derecha_la_camara_se_adelanta(self) -> None:
-        quieto, corriendo = _Objetivo(vx=0.0), _Objetivo(vx=200.0)
+        # AUD-839 — con el viewport congelado de 1280, un objetivo en x=400
+        # vive dentro del clamp del borde izquierdo: la cámara no puede
+        # moverse ni anticipar. Se sale a x=800, donde el offset es libre.
+        quieto, corriendo = _Objetivo(x=800, vx=0.0), _Objetivo(x=800, vx=200.0)
         cam_quieta, cam_corre = _camara(quieto), _camara(corriendo)
         for _ in range(120):
             cam_quieta.update(1 / 60)
@@ -256,8 +259,8 @@ class TestAnticipacion:
         )
 
     def test_corriendo_a_la_izquierda_se_adelanta_al_otro_lado(self) -> None:
-        cam_izq = _camara(_Objetivo(vx=-200.0))
-        cam_quieta = _camara(_Objetivo(vx=0.0))
+        cam_izq = _camara(_Objetivo(x=800, vx=-200.0))
+        cam_quieta = _camara(_Objetivo(x=800, vx=0.0))
         for _ in range(120):
             cam_izq.update(1 / 60)
             cam_quieta.update(1 / 60)
@@ -366,12 +369,17 @@ class TestLosTresModos:
         cam.update(1 / 60)
         objetivo.rect.x = 1600                   # dos pantallas más allá
         cam.update(1 / 60)
-        assert cam.offset.x == 1600
+        # AUD-839 — con el viewport congelado de 1280 (antes 960), la segunda
+        # pantalla empieza en 1280: el corte es por pantallas enteras.
+        assert cam.offset.x == settings.INTERNAL_WIDTH
 
     def test_un_modo_desconocido_del_mapa_cae_en_seguir(self) -> None:
         from src.framework.stage.stage_loader import MODOS_DE_CAMARA
 
-        assert {"seguir", "zona_muerta", "sala"} == set(MODOS_DE_CAMARA)
+        # AUD-839 — el motor admite más modos (cinematica, shake, lerp,
+        # parallax, predictiva, path…); lo que esta prueba fija es que los
+        # tres modos que declaran los mapas siguen existiendo tal cual.
+        assert {"seguir", "zona_muerta", "sala"} <= set(MODOS_DE_CAMARA)
 
 
 class TestLosBloqueosPorZona:

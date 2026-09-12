@@ -134,5 +134,6 @@
   "ui.vision_demo.modes.regions": "REGIONES",
   "ui.vision_demo.modes.threshold": "UMBRAL",
   "ui.vision_demo.modes.watershed": "CUENCAS",
-  "ui.vision_demo.press_i_close": "Pulsa I para cerrar la vista intermedia"
+  "ui.vision_demo.press_i_close": "Pulsa I para cerrar la vista intermedia",
+  "ui.score": "Puntuación"
 }

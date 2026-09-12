@@ -25,7 +25,7 @@ from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.splash_scene import SplashScene
 from src.engine.scenes.story_scene import StoryScene
 from src.engine.scenes.title_scene import TitleScene
-from src.engine.scenes.tutorial_scene import TutorialScene
+from src.stages.tutorial_hub.tutorial_hub import TutorialHub
 from src.engine.scenes.world_map_scene import WorldMapScene
 
 OK = "[OK]"
@@ -139,7 +139,8 @@ def _title_option_index(title, label: str) -> int:
 def test_title_menu_options(ctx: ContextManager) -> None:
     checks = [
         ("START", StoryScene),
-        ("TUTORIAL", TutorialScene),
+        # AUD-839 — el tutorial vive en el hub (con examen de parry incluido)
+        ("TUTORIAL", TutorialHub),
         ("WORLD MAP", WorldMapScene),
         ("INVENTORY", InventoryScene),
         ("BESTIARY", BestiaryScene),
@@ -195,7 +196,7 @@ def test_tutorial_scene(ctx: ContextManager) -> None:
     ctx.replace_to_title()
     ctx.step(10)
     _from_title_to(ctx, "TUTORIAL")
-    ctx.validate_scene("TutorialScene", TutorialScene)
+    ctx.validate_scene("TutorialHub", TutorialHub)  # AUD-839
     ctx.current.draw(ctx.surf)
     ctx.current.update(0.016)
     ctx.press_key("CANCEL")
@@ -257,7 +258,7 @@ def test_quit_action(ctx: ContextManager) -> None:
 def test_all_menus_return(ctx: ContextManager) -> None:
     scenes = [
         ("OptionsScene", OptionsScene),
-        ("TutorialScene", TutorialScene),
+        ("TutorialHub", TutorialHub),  # AUD-839
         ("WorldMapScene", WorldMapScene),
         ("InventoryScene", InventoryScene),
         ("BestiaryScene", BestiaryScene),
@@ -270,6 +271,19 @@ def test_all_menus_return(ctx: ContextManager) -> None:
         ctx.app.context.running = True
         ctx.sm.push(scene)
         ctx.step(80)
+        if scene_type is TutorialHub:
+            # AUD-839 — el hub es un escenario jugable: Cancelar abre la pausa
+            # (no vuelve al título como haría un menú). Su salida limpia es la
+            # opción "salir al título" de la pausa, el gancho _quit_to_title.
+            ctx.press_key("CANCEL")
+            ctx.step(30)
+            scene._quit_to_title()
+            ctx.step(100)
+            assert ctx.sm.stack_size > 0, f"{name} -- stack empty after quit"
+            assert isinstance(ctx.current, TitleScene), (
+                f"{name} -> {type(ctx.current).__name__} (expected TitleScene)"
+            )
+            continue
         ctx.press_key("CANCEL")
         ctx.step(100)
         assert ctx.sm.stack_size > 0, f"{name} -- stack empty after CANCEL"

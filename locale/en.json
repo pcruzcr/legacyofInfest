@@ -186,5 +186,6 @@
   "ui.vision_demo.press_i_close": "Press I to close intermediate view",
   "ÁRBOL DE HABILIDADES": "SKILL TREE",
   "—": "—",
-  "←→↑↓": "←→↑↓"
+  "←→↑↓": "←→↑↓",
+  "ui.score": "Score"
 }

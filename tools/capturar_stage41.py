@@ -18,6 +18,12 @@ import os
 import sys
 import time
 
+# AUD-839 — el manifiesto y los mensajes imprimen texto en español con acentos
+# que la consola cp1252 de Windows no puede codificar: sin esto el proceso
+# moría con UnicodeEncodeError a mitad del recorrido.
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
