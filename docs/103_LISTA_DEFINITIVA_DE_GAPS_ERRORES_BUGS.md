@@ -32,20 +32,20 @@ estado. Al cerrar una entrada, actualizar esta tabla y KNOWN_GAPS si procede.
 | ID | Sev | Qué es | Fuentes | Estado/evidencia |
 |---|---|---|---|---|
 | D-01 | 🔴 | **Oscuridad ilegible en media campaña** (boss_paburu, hall, 3-1, 3-3, 4-1, 1-3, tutorial_hub, stage0): 0 `LightSource` en esos TMX + ambiente bajo | AV-01 | ACTIVO — capturas 2026-09-11; `ambiente.py:60-95` |
-| D-02 | 🔴 | **Árbol de habilidades incompletable**: cuesta 64 pts, nivel máx da 59; campaña da para ~7 pts (~10 %) | AV-27, 62-B9 | ACTIVO — `skill_tree.py:79-114`, `experience.py:90` |
-| D-03 | 🔴 | **Calibración de salto en rojo**: los 6 tests de `test_calibracion_del_salto.py` fijan números de la marcha 90 y AUD-827 subió a 120 (envolvente 57/114 px vs 42,75/85,5) | doc101-P5 | ACTIVO — fallo medido 2026-09-10 |
-| D-04 | 🔴 | **`stage2_4` fantasma**: `stage2_4.py:38` apunta a un TMX que no existe | AV-29, XRAY | ACTIVO |
+| D-02 | 🔴 | **Árbol de habilidades incompletable**: cuesta 64 pts, nivel máx da 59; campaña da para ~7 pts (~10 %) | AV-27, 62-B9 | **RESUELTO AUD-839** — total 58/59 (ímpetu plano); completabilidad verificada |
+| D-03 | 🔴 | **Calibración de salto en rojo**: los 6 tests fijaban números de la marcha 90 | doc101-P5 | **RESUELTO AUD-839** — trinquete re-medido a marcha 120: natural 4 baldosas (margen 0,04), experta 7 (0,20); 7/7 verdes |
+| D-04 | 🔴 | **`stage2_4` fantasma**: apuntaba a un TMX que no existe | AV-29, XRAY | **RESUELTO AUD-839** — paquete retirado; el Rey completo (F1-F3) consolidado en `src/stages/boss_rey/` y es el que carga el registro |
 | D-05 | 🔴 | **`hall` sin checkpoint usable** (el único está tras la salida); patrón repetido en 1-1, 3-1, 2-1, boss_paburu | AV-20 | ACTIVO — `hall.tmx` |
-| D-06 | 🔴 | **Charger desbalanceado**: contacto 1,5 (30-54 % HP) + stagger 0,6 s + 250 px/s > dash 200 | AV-09 | ACTIVO — `enemy_charger.py:23-24` |
-| D-07 | 🔴 | **Cofre sin feedback**: `EVENTO_COFRE` sin ningún subscriptor (ni SFX ni VFX) | AV-14 | ACTIVO — `interactable_system.py:445` |
-| D-08 | 🟠 | **Jugador casi inmune al contacto** (i-frames 1,5 s + cooldown 0,3 s → 0,33 HP/s máx) | AV-08 | ACTIVO — `difficulty.py:47`, `enemy_base.py:1035` |
+| D-06 | 🔴 | **Charger desbalanceado**: contacto 1,5 + 250 px/s > dash 200 | AV-09 | **RESUELTO AUD-839** — contacto 1,0 y embestida 210 px/s |
+| D-07 | 🔴 | **Cofre sin feedback**: `EVENTO_COFRE` sin subscriptores | AV-14 | **RESUELTO AUD-839** — el evento lleva la posición del cofre; la escena suena el tono de recompensa y suelta chispas |
+| D-08 | 🟠 | **Jugador casi inmune al contacto** (i-frames 1,5 s + cooldown 0,3 s) | AV-08 | **RESUELTO AUD-839** — i-frames de Normal a 1,0 s (daño por contacto máximo ~0,5 HP/s) |
 | D-09 | 🟠 | **Jefes mueren en 6-15 s** (HP 12-20 vs ~2 golpes/s efectivos); estándar 60-120 s | AV-10, 70-iter6 (12,4/13,4/16,8 vs 30,2) | ACTIVO |
 | D-10 | 🟠 | **Pico de densidad 2-1**: 40 enemigos sin curva (vs 12-15); y 3.048 px sin checkpoint declarados en 87 | AV-21, 87§15.2, 89-P5 | ACTIVO (D2 del dueño lo deja a rúbrica; la densidad sigue) |
 | D-11 | 🟠 | **stage4_1: 960 tiles, 0 enemigos, travesía ~10-15 min antes del clímax** | AV-25, 70-D8 | ACTIVO (decisión declarada; sigue sin oposición) |
 | D-12 | 🟠 | **Validador de assets en rojo**: exige `tileset_stage4_1_selva.png` inexistente | AV-30 | ACTIVO — `validate_assets.py:555` |
 | D-13 | 🟠 | **Barra de maná muerta**: `set_mana` sin ni un llamante; invisible a 0, pero es feature sin gameplay | AUD-800 P3-07 (deferred M4) | ACTIVO-DEFERIDO — verificado 2026-09-11 |
 | D-14 | 🟠 | **TMX stage_mecanicas desincronizado de su generador** (`test_ecs::regenerar_igual` rojo) | doc100 | ACTIVO — `tools/generate_stage_mecanicas.py` |
-| D-15 | 🟠 | **play_sfx_critico puede atenuarse a cero** dejando la música bajada | 89§19.2 | ACTIVO (fix propuesto, decisión humana D9 pendiente) — `audio_manager.py:289` |
+| D-15 | 🟠 | **play_sfx_critico puede atenuarse a cero** | 89§19.2 | **OBSOLETO** — AUD-310 separó el duck persistente del temporizado; sonda AUD-839: tras 2,3 s el duck vuelve a 1,0 solo |
 | D-16 | 🟠 | **Eventos muertos**: `SECRET_FOUND` sin oyente; `SFX_BOSSES_MASK_BEAM`/`RELIC_APPEAR` sin emisor (87 añade PABURU_WAVE, REY_SPIT, REY_SPLIT); `ACHIEVEMENT_PROGRESS` sin oyente | AV-33, 87§8 | ACTIVO |
 | D-17 | 🟠 | **Partidas pre-AUD-502 sin migración** (checkpoint centro→esquina desplaza una vez) | doc101-P2 | ACTIVO-benigno |
 | D-18 | 🟠 | **Recibir daño sin hit-stop; curarse sin VFX; críticos nunca activos** (3 huecos de juice agrupados) | AV-15/16/17 | ACTIVO |
@@ -54,7 +54,7 @@ estado. Al cerrar una entrada, actualizar esta tabla y KNOWN_GAPS si procede.
 | D-21 | 🟡 | **Combo**: escalones 8-10 planos (×3,×3,×3) y aéreos/especiales no lo construyen | AV-11 | ACTIVO |
 | D-22 | 🟡 | **Valores muertos**: `NG_PLUS_BASE` no leído; estamina de dash apagada por defecto | AV-12 | ACTIVO |
 | D-23 | 🟡 | **Zoom de cenital casi negro** (stage_cenital, pokemon_cenital): luz no aplicada o mundo vacío en vista cenital | AV-05 | ACTIVO-sin diagnosticar |
-| D-24 | 🟡 | **2 tests de sombras en rojo** (`TestApagadoPorDefecto`): boss_paburu declara sombras sin estar en la excepción | doc100/101 | ACTIVO-conocido |
+| D-24 | 🟡 | **2 tests de sombras en rojo** (`TestApagadoPorDefecto`) | doc100/101 | **RESUELTO AUD-839** — fuera la declaración redundante de boss_paburu; introspección por el dominio `StagePhysics` |
 | D-25 | 🟡 | **4 fallos preexistentes `test_guardado_y_cadena`** + 18 rutas de docs rotas (track ajeno) | CLOSURE/FINAL | ACTIVO-preexistente, atribuido |
 | D-26 | 🟡 | **Teclas de depuración activas en build normal** (declaradas en PENDIENTES; p.ej. tecla 8 llena ultimate) | PENDIENTES, CLOSURE | ACTIVO-declarado |
 | D-27 | 🟡 | **Icono/rectángulo rojo sin identificar** en capturas de varios mapas | AV-07 | ACTIVO-sin diagnosticar |
@@ -154,3 +154,43 @@ Regla aplicada: manda el documento más reciente y, si es verificable, el códig
 **Conteo de esta lista:** 30 ACTIVOS (D-01..D-30, incluye D-71/72) · 12 PARCIALES
 restantes (D-31..D-42) · 16 DECLARADAS (D-43..D-58) · 12 DE PROCESO (D-59..D-70) ·
 11 contradicciones resueltas.
+
+---
+
+## H. Cierre AUD-839 (2026-09-11) — lo que este workstream cerró y lo que dejó
+
+**Cerrado y verificado en el árbol (cada uno con su prueba en verde):**
+
+* **D-02, D-03, D-04, D-06, D-07, D-08** (arriba) y **D-24**.
+* **D-12** — `validate_assets` lleva varias pasadas en verde en este árbol: el
+  tileset que exigía llegó con la ola de 4.1 / el validador se actualizó.
+* **D-25 (parcial)** — las rutas de documentación rotas (16 documentos, incluidas
+  las 31 citas del track privado de 4.1) están saneadas: citas corregidas en los
+  docs vivos, historia del delink declarada en `MODULOS_RETIRADOS` y los
+  4.1b/c aún en obra como marcadores con reverso automático. Quedan abiertos los
+  4 fallos históricos de `guardado_y_cadena` (salida/jefe de stage4_1 e identidad
+  `Stage21Oficinas`), que siguen en la tabla como D-25.
+* **Contaminación de la suite (raíz de ~30 falsos rojos)**: el `SaveManager`
+  vivo sobrevivía a su prueba y el NG+ del siguiente test multiplicaba la vida
+  enemiga. El reset vive en `tests/conftest.py` y la familia completa
+  (boss_base ×2.0, Rey F2/F3, Paburu Forma3, player_damage, aud_559) está verde.
+* **Guardianes apagados que volvieron a vigilar**: el parser del árbol de
+  `03_ARCHITECTURE.md` (`test_architecture_doc_matches_tree`) y la
+  introspección de la fachada `StageData` en cuatro pruebas.
+* **Dos hallazgos nuevos, anotados y sin cerrar**:
+  * **D-71** 🟠 — la inercia del musgo (AUD-522) no altera la velocidad de
+    marcha: la entrada fija la velocidad y el puente ECS↔legacy la re-fija
+    después de `sistema_friccion`. Medido: 120 px/s en musgo, sendero y lodo
+    por igual. Arreglarlo es decisión de diseño (¿el material multiplica el
+    objetivo de marcha?) más reordenar el puente.
+  * **D-72** 🟡 — escalón de 16 px entre `cima_llana_408` (y=447) y
+    `bajada_408` (y=432) en `stage4_1.tmx`: el descenso caminando se frenan en
+    la costura. Mover la bajada 16 px abajo es la corrección candidata.
+
+**Quedan ACTIVOS (no se cierran sin decisión de diseño o sin re-trabajo de
+contenido, fuera del alcance seguro de un cierre):** D-01 (oscuridad: luces por
+mapa), D-05 (checkpoints), D-09 (HP de jefes), D-10 (densidad 2-1), D-11
+(declarada), D-13 (deferida), D-14 (paridad generador↔TMX: stage_mecanicas,
+stage0 y plantilla), D-16 (eventos muertos), D-17 (migración de partidas
+pre-AUD-502; toca SAVE_VERSION, congelado), D-18 (jugos de daño/curación), D-19,
+D-20, D-21 (combo), D-22, D-23, D-26, D-27, D-28, D-71 y D-72.

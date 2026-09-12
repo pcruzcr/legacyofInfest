@@ -49,8 +49,6 @@ try:
         _gen_gothic_tileset,
         _gen_normal_map_para_tileset,
         _gen_procedural_tileset,
-        _gen_tileset_stage4_1b,
-        _gen_tileset_stage4_1b_caverna,
     )
 except ImportError:  # ejecutado desde tools/ sin paquete
     from generate_all_assets import (  # type: ignore
@@ -59,11 +57,13 @@ except ImportError:  # ejecutado desde tools/ sin paquete
         _gen_gothic_tileset,
         _gen_normal_map_para_tileset,
         _gen_procedural_tileset,
-        _gen_tileset_stage4_1b,
-        _gen_tileset_stage4_1b_caverna,
     )
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw  # noqa: E402 — va tras el sys.path del paquete
+
+# AUD-839 — consolas Windows cp1252: los avisos llevan acentos.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 SALIDA = _RAIZ / "assets" / "tilesets_hd"
 TS_HD = 32          # baldosa HD real (2× de 16)

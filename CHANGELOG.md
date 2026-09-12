@@ -5,6 +5,48 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.3.0] - 2026-09-11
+
+Cierre de la lista 103 (gaps, errores y bugs): los defectos que se podían
+cerrar con prueba quedaron cerrados; los que exigen decisión de diseño o
+re-trabajo de contenido quedaron clasificados en `docs/103` (§H) con su
+motivo.
+
+### Campaña
+
+- **El Rey Terciopelo de tres fases es el jefe real del juego:** el paquete
+  fantasma `stage2_4` (que apuntaba a un mapa inexistente) se retiró y su
+  Rey completo —división en mitades y frenesí incluidos— vive en
+  `src/stages/boss_rey/`, con los sprites que ya estaban en el árbol.
+- **El árbol de habilidades se puede terminar:** coste total 58 de los 59
+  puntos que otorga el nivel máximo (era 64).
+- **El embestidor se lee antes de golpear:** contacto 1,0 y embestida a
+  210 px/s (antes 1,5 y 250, por encima del dash).
+- **Los cofres dicen algo:** abrir uno suena el tono de recompensa y suelta
+  chispas donde está.
+- **El tutorial es el hub** y el mapa del mundo (30 nodos) distingue la
+  progresión bloqueada en orden de las demos académicas libres.
+- **Los créditos firman con el nombre completo** de quien entregó cada
+  nivel, y el equipo docente se reconoce por prefijo.
+
+### Motor
+
+- **La suite no hereda tu partida:** el `SaveManager` vivo se resetea entre
+  pruebas; un NG+ del disco ya no multiplica la vida enemiga del siguiente
+  test (raíz de ~30 falsos rojos).
+- **El predictor de IA persiste en `.npz`** y re-entrena al cargar: el motor
+  ya no deserializa pickle en ninguna ruta.
+- Trinquete de salto re-medido a la marcha 120 (natural 4 baldosas, experta
+  7); i-frames de Normal a 1,0 s; `stage4_1` recupera su exención de
+  habilidades.
+
+### Documentación
+
+- Las 16 rutas rotas de la documentación corregidas o declaradas historia;
+  `crafting.py` en el árbol de arquitectura; la región de la puntuación del
+  HUD y la ficha del nombre en el diálogo descritas como las dibuja el motor
+  a 1280×720.
+
 ## [1.2.0] - 2026-09-10
 
 Cierre de release de la línea 1.x: el estado certificado RC (B2/B3/B4/Zone4,

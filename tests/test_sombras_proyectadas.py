@@ -192,7 +192,12 @@ class TestApagadoPorDefecto:
         # Modernización 2.5D — stage0 también activa sombras con normal maps
         # 1-bit y profondeur 0.85/1.0 para demostrar la iluminación 2.5D en
         # prólogo sin cambiar coste de entregas.
-        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx", "stage0.tmx"})
+        # AUD-839 — boss_paburu las enciende para la pelea nueva (la ola 4.1b
+        # del dueño): la arena del jefe es un escaparate más, como el
+        # laboratorio y stage0. Por nombre, no relajando la prueba.
+        inesperados = sorted(set(con_prop) - {
+            "stage_mecanicas.tmx", "stage0.tmx", "boss_paburu.tmx",
+        })
         assert not inesperados, f"ya lo usaban: {inesperados}"
 
     def test_el_laboratorio_si_las_enciende(self) -> None:

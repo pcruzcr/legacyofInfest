@@ -221,8 +221,9 @@ class BehaviorPredictor:
         determinista porque el árbol lleva `random_state=42` y el KNN no
         tiene azar.
         """
-        import numpy as np
         from pathlib import Path as _P
+
+        import numpy as np
 
         p = _P(path)
         if p.suffix != ".npz":
@@ -244,8 +245,9 @@ class BehaviorPredictor:
         AUD-839 — npz con `allow_pickle=False`: cargar ejecuta cero código;
         el modelo se re-entrena desde los datos guardados.
         """
-        import numpy as np
         from pathlib import Path as _P
+
+        import numpy as np
 
         p = _P(path)
         if not p.exists():

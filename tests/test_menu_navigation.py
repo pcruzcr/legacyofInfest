@@ -25,8 +25,8 @@ from src.engine.scenes.options_scene import OptionsScene
 from src.engine.scenes.splash_scene import SplashScene
 from src.engine.scenes.story_scene import StoryScene
 from src.engine.scenes.title_scene import TitleScene
-from src.stages.tutorial_hub.tutorial_hub import TutorialHub
 from src.engine.scenes.world_map_scene import WorldMapScene
+from src.stages.tutorial_hub.tutorial_hub import TutorialHub
 
 OK = "[OK]"
 FAIL = "[FAIL]"

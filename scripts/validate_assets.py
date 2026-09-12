@@ -6,6 +6,11 @@ Exits with code 0 if all required files exist and load correctly, else 1.
 from __future__ import annotations
 
 import sys
+
+# AUD-839 — los avisos imprimen rutas y nombres con acentos: la consola
+# cp1252 de Windows revienta con UnicodeEncodeError a mitad de validación.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 from pathlib import Path
 
 # Add project root to sys.path so that 'src' is importable
