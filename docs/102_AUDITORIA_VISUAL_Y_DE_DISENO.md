@@ -148,7 +148,7 @@ legítimos, con guardián que vigila).
 
 | ID | Severidad | Hallazgo | Evidencia |
 |---|---|---|---|
-| AV-29 | 🔴 ALTA | **`stage2_4` es un stage fantasma**: `src/stages/stage2_4/stage2_4.py:38` apunta a `assets/maps/stage2_4/stage2_4.tmx` que NO existe — el stage no carga | citado |
+| AV-29 | 🔴 ALTA | **`stage2_4` era un stage fantasma**: `src/stages/stage2_4/stage2_4.py:38` apuntaba a `assets/maps/stage2_4/stage2_4.tmx` que NO existe — el stage no cargaba. RESUELTO AUD-839: el Rey completo (F1-F3) se consolidó en `src/stages/boss_rey/` y el paquete fantasma se retiró | citado → resuelto |
 | AV-30 | 🟠 MEDIA | **Validador de assets en rojo**: `validate_assets.py:555` exige `tileset_stage4_1_selva.png` (AUD-546) que no está en `assets/tilesets`; `hoja_a_tileset.py` espera otro tileset nunca commitado | citados |
 | AV-31 | 🟠 MEDIA | **Ganchos de gameplay vacíos en stages de campaña**: `stage1_3_las_aulas.py:160-175` (5 TODO(student): entidades, trigger, puerta, cutscene), `lobby_datacenter.py:70-85` (4), `stage_qa_proof.py` (plantilla) — los mapas existen pero sus hooks no conectan contenido | citados |
 | AV-32 | 🟠 MEDIA | **Anillo de sistemas framework muertos**: `backtracking.py` (módulo entero — el real vive en `src/stages/hub_backtracking/`), `prefab_loader.py` (0 llamantes), `RoomTransition` (1-2 usa su copia privada), `MonedaFx`, `DamageNumber` (clase, no el manager), `stencil_mask`, `TrailPoint` — inflan el código sin uso | barrido |

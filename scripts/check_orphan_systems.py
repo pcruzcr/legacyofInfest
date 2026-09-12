@@ -99,6 +99,12 @@ GANCHOS = frozenset({
 #: Formato: nombre -> por qué no es un defecto.
 VERIFICADOS: dict[str, str] = {
     # ── Uso dentro del propio fichero ────────────────────────────
+    "get_ng_plus_level": (
+        "AUD-839: accesador público del HUD para las pruebas B2 "
+        "(test_ng_plus_ui); el dibujo consume _ng_plus_level internamente. "
+        "45_SWIMMING_SPEC lo cita como parte de la API del HUD, no como "
+        "mecánica del juego"
+    ),
     "personalizar": (
         "AUD-291: la llama `_paginas_de_texto` en su mismo módulo, al dibujar "
         "cada diálogo. El barrido sólo ve usos desde fuera del fichero"

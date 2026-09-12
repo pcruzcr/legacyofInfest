@@ -22,7 +22,7 @@ date_processed: "2026-08-31"
 | Exige PS4 1080p60 2D espectacular | Tenemos 1920×1080 nativo `settings.py:11` | Gap cerrado / queda |
 |---|---|---|
 | 1920×1080 60 tiles `1920/32` nativo 1:1 | 1920×1080 `TILE 32` `player 40×64` `48×56` `theme 76` `hud 128×128` | **Cerrado** `settings:25` `theme:95` |
-| Arte 32-48px HD + normal maps 4× | 45 tilesets 1024 `assets/tilesets` + `BAYER_4X4` `generate_all_assets.py:35` | **Cerrado** HD nativo 2×, falta `tileset_hd 2048` + `normal` |
+| Arte 32-48px HD + normal maps 4× | 45 tilesets 1024 `assets/tilesets` + `BAYER_4X4` `generate_all_assets.py:35` | **Cerrado** (2026-09-12) — `tools/generar_hd.py`: re-render ×2 real (geometría ×k) de 18 temas + `_hd4` 1024 + `_hd_2048` + normal maps + `manifiesto.json` en `assets/tilesets_hd` (medido: 79-88 colores/hoja) |
 | Atlas + batch 1 blit | 58 blits `62:142` | **Cerrado** `gl_pipeline` doc ON + `AssetLoader` `MAX 512` `256MiB` `asset_loader:74` |
 | Bloom/HDR/DOF GPU | CPU 1.55ms `62:139` `LightSystem` `float32` + `ParticleEmitter` `numba` `particle_system.py:55` | **Cerrado** `numba` `accel` + `Light` `weather` HD 150 lluvia `2×14` veta `weather_system.py:18` |
 | Autotiling + animados + decor 4 capas | 3 paletas `ZONE1_PAL` `Terrain_Detail` 2 | **Cerrado** vía `generate_all_assets` `autotiling` por hacer |

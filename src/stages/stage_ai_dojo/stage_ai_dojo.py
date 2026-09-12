@@ -8,7 +8,7 @@ Qué demuestra (y por qué es el stage ejemplo para scikit-learn):
 - SquadBrain con BehaviorPredictor (KNN/Tree) vs heurística pura
 - Métricas en tiempo real: % decisiones por modelo, accuracy estimada, supervivencia
 - Recolección de datos con 'C' y guardado con 'S' para entrenar fuera
-- Carga automática de student_assets/models/enemy_ai.pkl si existe
+- Carga automática de student_assets/models/enemy_ai.npz si existe
 
 Controles:
 - WASD / Flechas: mover
@@ -84,7 +84,7 @@ class StageAiDojo(StageScene):
         # Intentar cargar modelo estudiante
         try:
             from pathlib import Path as P
-            cand = P("student_assets/models/enemy_ai.pkl")
+            cand = P("student_assets/models/enemy_ai.npz")
             if cand.exists():
                 if pred.load(cand):
                     self._message = f"Modelo estudiante cargado: {cand} ({len(pred._X)} muestras)"
@@ -273,7 +273,7 @@ class StageAiDojo(StageScene):
             self._message = f"Re-entrenado en caliente con {len(self._collected_X)} muestras — is_trained={pred.is_trained}"
             self._message_timer = 3.0
             # Guardar modelo también
-            out = Path("student_assets/models/enemy_ai.pkl")
+            out = Path("student_assets/models/enemy_ai.npz")
             pred.save(out)
             self._message += f" -> {out}"
         except Exception as e:

@@ -234,6 +234,7 @@ git si hace falta consultarlos.
 | [`100_VERIFICACION_DE_BUGS_REPORTADOS.md`](100_VERIFICACION_DE_BUGS_REPORTADOS.md) | Verificación y cierre AUD-826 a AUD-834 — pausa, ritmo, enemigos, audio, tirolesa, liana, menús |
 | [`101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md`](101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md) | Verificación de los 20 bugs del motor reportados por el estudiante (P1-P20; adopción AUD-498..512 y AUD-817..825) — 18 resueltos, #9 parcial, #5 con regresión de AUD-827 |
 | [`102_AUDITORIA_VISUAL_Y_DE_DISENO.md`](102_AUDITORIA_VISUAL_Y_DE_DISENO.md) | Auditoría visual y de diseño integral (AV-01..36) — level design, gameplay, juice, pacing, fun factor y gaps del proyecto completo |
+| [`103_LISTA_DEFINITIVA_DE_GAPS_ERRORES_BUGS.md`](103_LISTA_DEFINITIVA_DE_GAPS_ERRORES_BUGS.md) | Lista definitiva consolidada D-01..D-70 — índice canónico de gaps/errores/bugs de toda la documentación, con estado y contradicciones resueltas |
 
 ---
 

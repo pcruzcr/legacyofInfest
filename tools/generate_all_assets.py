@@ -6363,7 +6363,19 @@ def main():
     
     print("\n[9/9] SFX...")
     _gen_all_sfx()
-    
+
+    # Roadmap 97 — la barra HD 2D/2.5D estilo PS4 es parte de la tubería:
+    # re-render ×2 real de los tilesets temáticos, escalados ×4/×8 NEAREST,
+    # normal maps y manifiesto. Import perezoso: al llegar aquí el módulo ya
+    # está inicializado y no hay ciclo (generar_hd importa los pintores de
+    # este fichero).
+    print("\n[10/9] HD estilo PS4 (tilesets_hd: 512/1024/2048 + normales)...")
+    try:
+        from tools.generar_hd import generar_todo_hd
+    except ImportError:  # ejecutado como script plano desde tools/
+        from generar_hd import generar_todo_hd  # type: ignore
+    generar_todo_hd()
+
     # Count generated files
     total = sum(1 for _ in A.rglob("*") if _.is_file() and _.name != ".gitkeep")
     print(f"\n{'=' * 60}")

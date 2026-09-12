@@ -162,9 +162,14 @@ class TestApagadoPorDefecto:
     def test_stage_data_lo_declara_apagado(self) -> None:
         import dataclasses
 
-        from src.framework.stage.stage_loader import StageData
+        # AUD-839 — `StageData` ya no es una dataclass: es la fachada que reparte
+        # kwargs planos entre sus dominios, y `sombras_proyectadas` vive en
+        # `StagePhysics`. El default que esta prueba fija es el de ahí.
+        from src.framework.stage.stage_data import StagePhysics
 
-        por_nombre = {f.name: f.default for f in dataclasses.fields(StageData)}
+        por_nombre = {
+            f.name: f.default for f in dataclasses.fields(StagePhysics)
+        }
         assert por_nombre["sombras_proyectadas"] is False
 
     def test_ningun_mapa_entregado_lo_enciende(self) -> None:

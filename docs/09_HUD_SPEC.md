@@ -157,7 +157,7 @@ no cuadran a la fracción exacta.
 | Barra de vida | 6 | 32 | 24 | 5 | 15,80 60×12 | Roja, fija (AUD-547) — reemplaza la fila de corazones (AUD-535) |
 | Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547); sin pintar y sin reservar sitio si el escenario no la enciende (AUD-565) |
 | Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial; sube una franja si la estamina está apagada (AUD-565) |
-| Puntuación | 36 | 6 | 92 | 24 | 90,15 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
+| Puntuación | 80 | 8 | 267 | 27 | 240,24 801×81 (región; el marcador se alinea a la derecha de ella) | Layout ancho 1280 del builder: banda centrada cx−400…cx+400 con MARGEN; el número + monedas, al borde derecho de la región (AUD-811, antes junto a la identidad: AUD-535) |
 | Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | Rectangular cuadrado (AUD-560, revierte el círculo de AUD-547) |
 | Caja del temporizador | 134 | 6 | 52 | 16 | 335,15 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
 | Ícono del reloj | 137 | 7 | 12 | 12 | 342,18 30×30 | Reemplaza la etiqueta de texto "TIME" |

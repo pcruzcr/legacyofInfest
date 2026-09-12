@@ -23,7 +23,12 @@ import pygame
 import pytest
 
 from src.engine.core import settings
-from src.engine.ui.theme import ANCHO_DE_DISENO, ESCALA_DE_INTERFAZ, Theme
+from src.engine.ui.theme import (
+    ALTO_DE_DISENO,
+    ANCHO_DE_DISENO,
+    ESCALA_DE_INTERFAZ,
+    Theme,
+)
 
 
 @pytest.fixture(scope="module")
@@ -192,11 +197,20 @@ class TestEscaladoDeTexto:
         clear_font_cache()
 
     def test_la_escala_de_interfaz_es_coherente(self):
-        """ESCALA_DE_INTERFAZ = INTERNAL_WIDTH / ANCHO_DE_DISENO."""
-        esperado = settings.INTERNAL_WIDTH / ANCHO_DE_DISENO
+        """ESCALA_DE_INTERFAZ = min(ancho, alto) de diseño escalado.
+
+        AUD-839 — la fórmula es min(width_scale, height_scale) desde que el
+        HUD pasó a 1280×720 (16:9): sólo-ancho lo estiraba («sanchado»).
+        La invariante que se vigila es esa coherencia, no la división sola.
+        """
+        esperado = min(
+            settings.INTERNAL_WIDTH / ANCHO_DE_DISENO,
+            settings.INTERNAL_HEIGHT / ALTO_DE_DISENO,
+        )
         assert ESCALA_DE_INTERFAZ == pytest.approx(esperado), (
             f"ESCALA_DE_INTERFAZ ({ESCALA_DE_INTERFAZ}) != "
-            f"INTERNAL_WIDTH ({settings.INTERNAL_WIDTH}) / ANCHO ({ANCHO_DE_DISENO})"
+            f"min(INTERNAL {settings.INTERNAL_WIDTH}x{settings.INTERNAL_HEIGHT} / "
+            f"diseño {ANCHO_DE_DISENO}x{ALTO_DE_DISENO})"
         )
 
 

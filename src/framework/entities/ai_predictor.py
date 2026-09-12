@@ -211,49 +211,55 @@ class BehaviorPredictor:
     # ── Persistencia para entrenamiento por estudiantes (2 semanas) ──
 
     def save(self, path: str | Path) -> None:
-        """Guarda el predictor entrenado a disco (joblib). Usado por tools/train_enemy_ai.py"""
-        from pathlib import Path as _P
+        """Guarda el predictor entrenado a disco (.npz). Usado por
+        tools/train_enemy_ai.py y stage_ai_dojo.
 
-        import joblib
+        AUD-839 — antes joblib, que es pickle por debajo: serializar objetos
+        ejecuta código al cargar, y la regla del motor es persistir con
+        formatos de datos (orjson/npz) justo para no hacerlo. El payload son
+        sólo datos (X, y y nombres); `load()` reconstruye y re-entrena,
+        determinista porque el árbol lleva `random_state=42` y el KNN no
+        tiene azar.
+        """
+        import numpy as np
+        from pathlib import Path as _P
 
         p = _P(path)
-        if p.suffix not in (".pkl", ".joblib"):
-            raise ValueError(f"BehaviorPredictor.save: path debe terminar en .pkl/.joblib, got '{p.suffix}'")
+        if p.suffix != ".npz":
+            raise ValueError(f"BehaviorPredictor.save: path debe terminar en .npz, got '{p.suffix}'")
         p.parent.mkdir(parents=True, exist_ok=True)
-        # Guardamos solo lo necesario para rehidratar sin re-entrenar
-        payload = {
-            "X": self._X,
-            "y": self._y,
-            "knn": self._knn if self._trained else None,
-            "tree": self._tree if self._trained else None,
-            "trained": self._trained,
-            "feature_names": self._feature_names,
-            "action_names": self._action_names,
-        }
-        joblib.dump(payload, str(p))
+        np.savez_compressed(
+            p,
+            X=np.asarray(self._X, dtype=float),
+            y=np.asarray(self._y, dtype=int),
+            trained=int(self._trained),
+            feature_names=np.asarray(list(self._feature_names)),
+            action_names=np.asarray(list(self._action_names)),
+        )
 
     def load(self, path: str | Path) -> bool:
-        """Carga un predictor previamente guardado. Devuelve True si tuvo éxito."""
-        from pathlib import Path as _P
+        """Carga un predictor previamente guardado (.npz). Devuelve True si
+        tuvo éxito.
 
-        import joblib
+        AUD-839 — npz con `allow_pickle=False`: cargar ejecuta cero código;
+        el modelo se re-entrena desde los datos guardados.
+        """
+        import numpy as np
+        from pathlib import Path as _P
 
         p = _P(path)
         if not p.exists():
             return False
         try:
-            payload = joblib.load(str(p))
-            self._X = payload.get("X", [])
-            self._y = payload.get("y", [])
-            # Si el payload trae modelos ya entrenados, los restauramos
-            if payload.get("trained") and payload.get("knn") is not None:
-                self._knn = payload["knn"]
-                self._tree = payload["tree"]
-                self._trained = True
-            else:
-                # Re-entrenar desde X,y si no trae modelos (compatibilidad)
-                if len(self._X) >= 10:
-                    self._train()
+            data = np.load(str(p), allow_pickle=False)
+            X = data["X"]
+            y = data["y"]
+            self._X = [list(map(float, fila)) for fila in X] if X.ndim == 2 else []
+            self._y = [int(v) for v in y] if y.ndim >= 1 else []
+            self._feature_names = [str(s) for s in data["feature_names"]]
+            self._action_names = [str(s) for s in data["action_names"]]
+            if bool(data["trained"]) and len(self._X) >= 10:
+                self._train()
             return True
         except Exception as e:
             logger.warning("BehaviorPredictor.load failed for %s: %s", p, e)
@@ -284,10 +290,11 @@ def get_predictor() -> BehaviorPredictor:
         _global_predictor = BehaviorPredictor()
         # Auto-cargar modelo del estudiante si existe (stage_ai_dojo / 2 semanas)
         # No se hace en precarga_ia para no bloquear; aquí es lazy y silencioso.
+        # AUD-839 — sólo .npz: los .pkl/.joblib antiguos ya no se cargan
+        # (pickle ejecuta código al cargar; regla de seguridad del motor).
         for cand in [
-            Path("student_assets/models/enemy_ai.pkl"),
-            Path("student_assets/models/enemy_ai.joblib"),
-            Path("assets/datasets/ai_enemy_baseline.pkl"),
+            Path("student_assets/models/enemy_ai.npz"),
+            Path("assets/datasets/ai_enemy_baseline.npz"),
         ]:
             if cand.exists():
                 try:

@@ -561,6 +561,11 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
     # atlas from the source with nearest-neighbour scaling and no lossy
     # round-trip. Tracked as refactor item R-15.
     ("tilesets/*.png", 131072),
+    # Tubería HD (roadmap 97, tools/generar_hd.py): re-renders 2×/4×/2048 de
+    # los tilesets + sus normal maps. Medido 2026-09-12: 79-88 colores por
+    # hoja (misma banda PSX de 64-128 que `tilesets/*.png`) y 13 en normales;
+    # mismo techo que las hojas base.
+    ("tilesets_hd/*.png", 131072),
     # AUD-527 — el panel de 9-slice del HUD pasó de relleno plano a
     # degradado + antialiasing (decisión del dueño de modernizar el HUD).
     # Mide 77-149 colores hoy; 256 da margen para retocar el degradado sin

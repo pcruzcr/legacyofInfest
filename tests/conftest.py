@@ -96,6 +96,17 @@ def _reset_global_state():
     AchievementSystem._reset_instance()
     Inventory._reset_instance()
     user_settings.set_settings(user_settings.UserSettings())
+    # AUD-839 — el SaveManager vivo también es singleton de proceso: los tests
+    # de progresión (corazones, hogueras, recarga, NG+) crean gestores con
+    # ranuras NG+ y, sin este reset, el gestor sobrevivía a su prueba. La
+    # siguiente prueba que construía una entidad leía su NG+ vía
+    # difficulty.get_config() (vida enemiga ×2.0 con NG+10: `max_health=20`
+    # nacía con 40) y perdía contra un estado que nunca creó. Misma firma que
+    # AUD-545 con Inventory y AUD-826 con la dificultad.
+    from src.engine.core import save_manager as _save_manager
+
+    with _save_manager._candado_gestor:
+        _save_manager._gestor_activo = None
     # AUD-826 — la dificultad también es estado global de proceso: un test que
     # llame a set_difficulty() contaminaba a los siguientes (misma firma que
     # AUD-220 con las preferencias). Se restaura NORMAL antes de cada prueba;

@@ -254,4 +254,4 @@ completo.
 - `docs/91_PLAN_DE_CIERRE.md` — el plan de ocho lotes; esto es el lote 5
 - `docs/03_ARCHITECTURE.md` — `framework/world/` en el árbol
 - `docs/70_INFORME_DE_AUDITORIA_VIVO.md` — AUD-357 y AUD-358
-- `docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md` — el 4-1 **que existe**, en cinco actos
+- `docs/niveles/13_STAGE_4_1.md` — el 4-1 **que existe**, en cinco actos

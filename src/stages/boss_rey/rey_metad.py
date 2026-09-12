@@ -129,7 +129,6 @@ class ReyMetad(BossBase):
             "boss_rey", 40, 56,
             sheets={"walk": (40, 56), "spit": (40, 56),
                     "hurt": (40, 56), "death": (40, 56)},
-            base_dir=str(settings.ASSETS_DIR / "maps/stage2_4"),
         )
         # Dos fases: entera y enfurecida. `health_threshold[i]` es la vida
         # MÁXIMA de la fase i, así que la primera vale lo mismo que `VIDA`.

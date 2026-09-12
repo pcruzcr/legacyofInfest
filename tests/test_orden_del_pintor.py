@@ -158,5 +158,10 @@ class TestElMapaLasDeclara:
         entity_factory.ensure_registered()
         StageLoader.clear_tmx_cache()
         stage = StageLoader.load("assets/maps/stage0/stage0.tmx")
-        assert stage.orden_por_y is False
-        assert stage.profundidad_curva == pytest.approx(1.0)
+        # AUD-839 — stage0 ya no declara los valores neutros: la modernización
+        # 2.5D le puso orden_por_y=true y curva 1.5. La prueba sigue validando
+        # el cableado mapa→StageData, con lo que el mapa declara hoy.
+        assert stage.orden_por_y is True
+        assert stage.profundidad_curva == pytest.approx(1.5)
+        assert stage.profundidad_min == pytest.approx(0.85)
+        assert stage.profundidad_max == pytest.approx(1.0)

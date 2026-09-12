@@ -75,11 +75,14 @@ class TestElCuadroSeAdapta:
         caja.update(10.0)
         assert not caja.is_visible
 
+        # AUD-839 — con la tipografía del kit (AUD-834) una frase ya cabe en
+        # una línea: el texto de prueba se triplica para seguir exigiendo
+        # varias líneas de verdad.
         event_bus.emit(
             "SHOW_MESSAGE",
             text=("Una frase larguísima que a lo seguro no cabe en una sola "
                   "línea y necesita varias para contarse entera, porque los "
-                  "avisos del escenario también cuentan cosas."),
+                  "avisos del escenario también cuentan cosas. ") * 3,
             duration=3.0,
         )
         event_bus.dispatch()
@@ -212,16 +215,22 @@ class TestElDialogoRenderizaPorPagina:
         from src.framework.ui.dialogue_system import DialogueNode, DialogueTree
 
         sistema, _, preparadas = self._sistema(monkeypatch)
-        texto_largo = (
-            "Primera página con bastante texto para llenar más de una "
-            "pantalla de líneas envueltas. ") * 8
-        arbol = DialogueTree(
-            tree_id="prueba",
-            nodes={"inicio": DialogueNode(
-                node_id="inicio", speaker="Eco", text=texto_largo)},
-            start_node="inicio",
-        )
-        sistema.start_dialogue(arbol)
+        # AUD-839 — capacidad de líneas calculada con la fuente del kit: se
+        # multiplica hasta paginar de verdad en vez de fijar una talla.
+        base = ("Primera página con bastante texto para llenar más de una "
+                "pantalla de líneas envueltas. ")
+        texto_largo = base * 8
+        for _ in range(4):
+            arbol = DialogueTree(
+                tree_id="prueba",
+                nodes={"inicio": DialogueNode(
+                    node_id="inicio", speaker="Eco", text=texto_largo)},
+                start_node="inicio",
+            )
+            sistema.start_dialogue(arbol)
+            if sistema.paginas > 1:
+                break
+            texto_largo = texto_largo + base * 8
         superficie = pygame.Surface((800, 600))
         sistema._text_progress = float(sistema._caracteres_de_pagina())
         sistema._full_text_visible = True
@@ -246,7 +255,16 @@ class TestElDialogoRenderizaPorPagina:
         sistema._text_progress = float(sistema._caracteres_de_pagina())
         sistema._full_text_visible = True
 
-        superficie = pygame.Surface((800, 600))
+        # AUD-839 — el cuadro se posiciona contra INTERNAL_HEIGHT (720 en el
+        # renderer congelado), no contra el 600 que este test asumía: la
+        # ficha se dibujaba por debajo de una superficie de 600. La
+        # superficie y la franja se derivan ahora de las mismas constantes
+        # que usa draw().
+        from src.engine.core import settings
+        from src.framework.ui.dialogue_system import ALTO_CUADRO
+
+        superficie = pygame.Surface(
+            (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
         superficie.fill((255, 0, 255))   # imposible por el tema
         sistema.draw(superficie)
 
@@ -254,8 +272,9 @@ class TestElDialogoRenderizaPorPagina:
         # superior del cuadro: la ficha del nombre está pintada ahí.
         from src.engine.ui.theme import Theme
 
+        arriba_del_cuadro = settings.INTERNAL_HEIGHT - ALTO_CUADRO - 10
         franja = superficie.subsurface(pygame.Rect(
-            20, 600 - int(110 * 1.0) - 10 + 6, 300, 24)).copy()
+            20, arriba_del_cuadro + 6, 300, 24)).copy()
         encontrado = any(
             franja.get_at((x, y))[:3] == Theme.ACCENT[:3]
             for x in range(0, franja.get_width(), 3)

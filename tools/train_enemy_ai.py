@@ -8,11 +8,11 @@ Uso rápido (el juego mejora en minutos):
 
     # 2. Entrenar y guardar modelo estudiante
     python tools/train_enemy_ai.py --train \
-    --data assets/datasets/ai_enemy_baseline.npz --out student_assets/models/enemy_ai.pkl  # noqa: E501
+    --data assets/datasets/ai_enemy_baseline.npz --out student_assets/models/enemy_ai.npz  # noqa: E501
 
     # 3. Evaluar: compara reglas vs modelo en casos difíciles
     python tools/train_enemy_ai.py --eval \
-    --data assets/datasets/ai_enemy_baseline.npz --model student_assets/models/enemy_ai.pkl  # noqa: E501
+    --data assets/datasets/ai_enemy_baseline.npz --model student_assets/models/enemy_ai.npz  # noqa: E501
 
     # 4. Probar en juego:
     python -m src.main --stage stage_ai_dojo
@@ -188,7 +188,7 @@ def generate_baseline(n_samples: int = 800, out: Path | None = None) -> tuple[np
     return X_arr, y_arr
 
 def train_from_dataset(data_path: Path, out_path: Path, test_size: float = 0.2) -> None:
-    """Entrena BehaviorPredictor desde NPZ y guarda modelo .pkl"""
+    """Entrena BehaviorPredictor desde NPZ y guarda modelo .npz"""
     from sklearn.metrics import classification_report
     from sklearn.model_selection import train_test_split
 
@@ -265,7 +265,7 @@ def train_from_dataset(data_path: Path, out_path: Path, test_size: float = 0.2) 
     pred.save(out_path)
     print(f"\nModelo guardado en {out_path}")
     print("Para usar en juego: python -m src.main --stage stage_ai_dojo")
-    print("O copia a student_assets/models/enemy_ai.pkl (ya está ahi)")
+    print("O copia a student_assets/models/enemy_ai.npz (ya está ahí)")
 
 def eval_model(data_path: Path, model_path: Path) -> None:
     """Evalúa un modelo guardado contra un dataset, compara vs reglas"""
@@ -299,8 +299,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--train", action="store_true", help="Entrena desde --data y guarda en --out")
     p.add_argument("--eval", action="store_true", help="Evalúa --model contra --data")
     p.add_argument("--data", type=Path, default=Path("assets/datasets/ai_enemy_baseline.npz"), help="Ruta dataset .npz")
-    p.add_argument("--out", type=Path, default=Path("student_assets/models/enemy_ai.pkl"), help="Ruta salida .pkl")
-    p.add_argument("--model", type=Path, default=Path("student_assets/models/enemy_ai.pkl"), help="Ruta modelo para --eval")
+    p.add_argument("--out", type=Path, default=Path("student_assets/models/enemy_ai.npz"), help="Ruta salida .pkl")
+    p.add_argument("--model", type=Path, default=Path("student_assets/models/enemy_ai.npz"), help="Ruta modelo para --eval")
     p.add_argument("--samples", type=int, default=500, help="Número muestras baseline")
     args = p.parse_args(argv)
 
@@ -333,9 +333,9 @@ def main(argv: list[str] | None = None) -> int:
         print("\nEjemplo flujo 2 semanas:")
         print("  python tools/train_enemy_ai.py --generate-baseline")
         print("  python tools/train_enemy_ai.py --train \
-    --data assets/datasets/ai_enemy_baseline.npz --out student_assets/models/enemy_ai.pkl  # noqa: E501")
+    --data assets/datasets/ai_enemy_baseline.npz --out student_assets/models/enemy_ai.npz  # noqa: E501")
         print("  python tools/train_enemy_ai.py --eval \
-    --data assets/datasets/ai_enemy_baseline.npz --model student_assets/models/enemy_ai.pkl  # noqa: E501")
+    --data assets/datasets/ai_enemy_baseline.npz --model student_assets/models/enemy_ai.npz  # noqa: E501")
 
     return 0
 

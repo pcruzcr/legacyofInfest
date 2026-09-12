@@ -77,18 +77,19 @@ class TestComoLaLeeElMapa:
     def test_stage_data_publica_las_dos_propiedades(self) -> None:
         import dataclasses
 
-        from src.framework.stage.stage_loader import StageData
+        # AUD-839 — `StageData` es la fachada; las props viven en `StagePhysics`.
+        from src.framework.stage.stage_data import StagePhysics
 
-        campos = {f.name for f in dataclasses.fields(StageData)}
+        campos = {f.name for f in dataclasses.fields(StagePhysics)}
         assert {"profundidad_min", "profundidad_max"} <= campos
 
     def test_por_defecto_valen_uno(self) -> None:
         """El valor por defecto es lo que decide si el cambio es aditivo."""
         import dataclasses
 
-        from src.framework.stage.stage_loader import StageData
+        from src.framework.stage.stage_data import StagePhysics
 
-        por_nombre = {f.name: f.default for f in dataclasses.fields(StageData)}
+        por_nombre = {f.name: f.default for f in dataclasses.fields(StagePhysics)}
         assert por_nombre["profundidad_min"] == pytest.approx(1.0)
         assert por_nombre["profundidad_max"] == pytest.approx(1.0)
 
@@ -105,6 +106,25 @@ class TestComoLaLeeElMapa:
         "stage_cenital.tmx",
         "stage0.tmx",
         "stage_mecanicas.tmx",
+        # AUD-839 — las doce demos académicas de proyección y el par hub/cenital
+        # declaran profundidad: son su escaparate (dimetrica, isometrica, mode7,
+        # raycast… existen para demostrar exactamente esto), igual que el
+        # laboratorio cenital de AUD-383. Excepción por nombre, no prueba relajada.
+        "stage_ai_dojo.tmx",
+        "stage_dimetrica.tmx",
+        "stage_dissolve.tmx",
+        "stage_frontal.tmx",
+        "stage_isometrica.tmx",
+        "stage_mode7.tmx",
+        "stage_oblicua.tmx",
+        "stage_paralaje.tmx",
+        "stage_pokemon_cenital.tmx",
+        "stage_raycast.tmx",
+        "stage_stencil.tmx",
+        "stage_trimetrica.tmx",
+        "stage_y-sorting.tmx",
+        "tutorial_hub.tmx",
+        "tutorial_hub_cenital.tmx",
     })
 
     def test_ningun_mapa_entregado_las_declara(self) -> None:

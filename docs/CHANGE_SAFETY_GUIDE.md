@@ -52,15 +52,15 @@ Fuente única: `docs/AUD-800_REGRESSION_MATRIX.md`. Resumen operativo:
 
 | Familia (patrón de ficheros) | Certificación | Regresión mínima automática |
 |---|---|---|
-| `src/engine/render/**` | `CERT-RENDERER` | `pytest tests/test_render_pipeline.py tests/test_visual_composition.py tests/test_visual_regression.py` + `validate_tmx --ci` (FBO/camara) |
+| `src/engine/render/**` | `CERT-RENDERER` | `pytest tests/test_native_composition.py tests/test_visual_composition.py tests/test_visual_regression.py` + `validate_tmx --ci` (FBO/camara) |
 | `src/framework/stage/camera.py`, `src/framework/stage/**` | `CERT-CAMERA` / `CERT-STAGE` | `pytest tests/test_camera.py tests/test_stage0_reference.py tests/test_dynamic_visual.py` |
 | `src/engine/ui/hud*.py`, `src/engine/core/display.py` | `CERT-HUD` | `pytest tests/test_hud.py tests/test_visual_composition.py -k hud` |
 | `src/framework/entities/player*.py`, `src/framework/physics/**` | `CERT-PLAYER` | `pytest tests/test_player*.py tests/test_stage0_reference.py::test_player_spawn_feet_ground` |
 | `assets/maps/**.tmx`, `src/framework/stage/stage_loader.py` | `CERT-TMX` | `python scripts/validate_tmx.py --ci && python scripts/validate_stage_reference.py && python scripts/grade_stage.py assets/maps/ --json` |
 | `src/framework/entities/enemy_*.py` | `CERT-ENEMIES` | `pytest tests/test_enemy*.py && python scripts/check_orphan_systems.py` |
 | `src/stages/boss_*` | `CERT-BOSS` | `pytest tests/test_boss*.py && python scripts/grade_boss.py src/stages/boss_venado/boss_venado.py --json` |
-| `src/engine/input/**` | `CERT-INPUT` | `pytest tests/test_input_manager.py tests/test_keybinding_scene.py` |
-| `src/engine/scene/**`, `src/engine/core/game_context.py` | `CERT-STATE` | `pytest tests/test_game_state*.py tests/test_state_integration.py` |
+| `src/engine/input/**` | `CERT-INPUT` | `pytest tests/test_input_manager.py` |
+| `src/engine/scene/**`, `src/engine/core/game_context.py` | `CERT-STATE` | `pytest tests/test_game_state*.py tests/test_game_state_integration.py` |
 | `src/engine/audio/**` | `CERT-AUDIO` | `pytest tests/test_audio*.py && python scripts/check_loudness.py` |
 | `src/engine/core/save*.py`, `src/engine/core/user_settings.py` | `CERT-SAVE` | `pytest tests/test_save*.py tests/test_persistence*.py` |
 | `src/engine/scenes/**`, `src/framework/ui/**` | `CERT-UI` | `pytest tests/test_ui*.py tests/test_accessibility.py && python scripts/check_contrast.py` |

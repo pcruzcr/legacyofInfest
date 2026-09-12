@@ -18,7 +18,7 @@ def _video():
 
 
 def _rey():
-    from src.stages.stage2_4.boss_rey import BossRey
+    from src.stages.boss_rey.boss_rey import BossRey
 
     return BossRey(pygame.Vector2(400.0, 300.0))
 

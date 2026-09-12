@@ -123,6 +123,10 @@ ESCENARIOS_CON_HABILIDADES_LIBRES: frozenset[str] = frozenset({
     "stage2_1", "stage2_2", "3-1", "stage3_3_el_patio",
     "stage3_4_boss_gavilan", "hall", "stage_template",
     "stage_mecanicas", "boss_venado", "boss_rey", "boss_paburu",
+    # AUD-839 — stage4_1 volvió al árbol público (AUD-814) y con él su
+    # exención: la medición de arriba lo lista entre los que desarrollan
+    # huecos imposibles sin ella. Se perdió al desvincular el track privado.
+    "stage4_1",
 })
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15
 PLAYER_LONG_ATTACK_DURATION: float = 0.4

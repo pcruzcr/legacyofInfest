@@ -83,8 +83,24 @@ LARGO = (
 
 
 class TestElTextoLargoSePagina:
+    @staticmethod
+    def _largo_para_dos_paginas(sistema) -> str:
+        """AUD-839 — el párrafo solo ya cabe en el cuadro con la tipografía
+        del kit (AUD-834): se duplica hasta desbordar, para que la prueba
+        siga midiendo la paginación y no una talla de fuente concreta."""
+        texto = LARGO
+        for _ in range(6):
+            sistema.start_dialogue(_arbol(texto))
+            if sistema.paginas > 1:
+                return texto
+            texto = texto + " " + LARGO
+        pytest.fail(
+            "el cuadro se tragó seis párrafos sin paginar: mira "
+            "ALTO_CUADRO / _lineas_por_pagina"
+        )
+
     def test_un_texto_largo_ocupa_varias_paginas(self, sistema) -> None:
-        sistema.start_dialogue(_arbol(LARGO))
+        sistema.start_dialogue(_arbol(self._largo_para_dos_paginas(sistema)))
 
         assert sistema.paginas > 1, (
             "el texto entra en una sola página: o el cuadro creció o esta "
@@ -105,7 +121,7 @@ class TestElTextoLargoSePagina:
             assert palabra in junto, f"se perdió «{palabra}» al paginar"
 
     def test_confirmar_avanza_de_pagina_antes_que_de_nodo(self, sistema) -> None:
-        sistema.start_dialogue(_arbol(LARGO))
+        sistema.start_dialogue(_arbol(self._largo_para_dos_paginas(sistema)))
         sistema._full_text_visible = True
 
         sistema.confirmar()
@@ -123,7 +139,7 @@ class TestElTextoLargoSePagina:
 
     def test_cada_pagina_reinicia_la_maquina_de_escribir(self, sistema) -> None:
         """Si no, la página 2 aparecería entera de golpe."""
-        sistema.start_dialogue(_arbol(LARGO))
+        sistema.start_dialogue(_arbol(self._largo_para_dos_paginas(sistema)))
         sistema._full_text_visible = True
         sistema.confirmar()
 

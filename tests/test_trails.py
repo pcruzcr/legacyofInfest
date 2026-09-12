@@ -189,6 +189,14 @@ class TestLaEstelaLlegaAlJuego:
         escena.awake()
         escena.start()
         escena.on_enter()
+        # AUD-839 — los infectados del prólogo patrullan, y su contacto (o el
+        # knockback de ese contacto) ES movimiento legítimo: dejarlos en el
+        # laboratorio volvía la prueba una lotería de patrones de patrulla.
+        # El contrato medido aquí es la puerta del jugador: quieto, sin
+        # estela; con dash, estela.
+        escenario = getattr(escena, "_stage_data", None)
+        if escenario is not None and hasattr(escenario, "entity_list"):
+            escenario.entity_list.clear()
         for _ in range(90):
             escena.update(1 / 60)
             escena.draw(lienzo)

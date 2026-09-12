@@ -576,7 +576,7 @@ Nunca borrar entradas - marcar como resueltas.
   cubierta, lee «esta losa está tomada», que es lo que explica por qué resbala.
 
   Los GID son un contrato entre `CEM_ORDEN` y las constantes de
-  `tools/generate_stage4_1.py`, y hay una prueba que compara las dos listas:
+  `tools/generar_stage41_tmx.py`, y hay una prueba que compara las dos listas:
   reordenar la hoja sin tocar el mapa lo repintaría entero con las baldosas
   equivocadas sin que fallara nada, que es exactamente cómo `stage_mecanicas`
   estuvo semanas pintando las tres primeras casillas de su hoja (AUD-115).
@@ -2376,7 +2376,7 @@ está.
   se cierra con **parallax dibujado por código**, no con arte de tileset:
   `assets/maps/stage4_1/stage4_1.tmx` ya tiene `BG_Far`/`BG_Mid` con
   baldosas pintadas a mano (comprobado leyendo el XML — rangos de gid
-  contiguos, no ceros) y `tools/generate_stage4_1.py` se niega a
+  contiguos, no ceros) y `tools/generar_stage41_tmx.py` se niega a
   regenerar el mapa sin `--forzar` en cuanto lo detecta
   (`tiene_arte_pintado()`); forzarlo para añadir una silueta habría
   borrado ese trabajo. `siluetas.dibujar_horizonte` (nueva, procedural,
@@ -2424,7 +2424,7 @@ está.
 
 ## ~~[GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 1 — El Cementerio que Recuerda», comparado contra el
   estado real por Claude Code el mismo día.
@@ -2451,7 +2451,7 @@ está.
     gancho en el código.
   - **El fondo está vacío.** El TMX ya trae `BG_Far`/`BG_Mid`/`BG_Near`
     como capas separadas (la estructura de tres planos que pide el punto
-    11 existe), pero `tools/generate_stage4_1.py::generar()` las rellena
+    11 existe), pero `tools/generar_stage41_tmx.py::generar()` las rellena
     con ceros para las seis fases — ninguna silueta de fondo, ninguna
     señal a lo lejos.
   - **Sin capas de sonido natural.** El silencio de la Fase 1 es literal
@@ -2682,7 +2682,7 @@ está.
 
 ## ~~[GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generate_stage4_1.py` (`WindZone`)
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generar_stage41_tmx.py` (`WindZone`)
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 3 — El Ascenso de la Serpiente», comparado contra el
   estado real por Claude Code el mismo día.
@@ -2828,7 +2828,7 @@ está.
   alfa de las osamentas gigantes sube de 60 a 190 durante el relámpago).
   **La mitad navegable de las osamentas:** AUD-582 — el arco de costillas
   (`trazado.COSTILLA_NAVEGABLE`) es una plataforma one-way real
-  (`Platform` en el TMX, generada por `tools/generate_stage4_1.py`) con su
+  (`Platform` en el TMX, generada por `tools/generar_stage41_tmx.py`) con su
   silueta llena en primer plano; se cruza caminando, no sólo mirándola
   (pruebas en `tests/test_las_costillas_son_navegables.py`). El eje
   vertical quedó cerrado por decisión del dueño (2026-08-16, arriba).
@@ -3064,7 +3064,7 @@ está.
   740) caen dentro del tramo final de la Fase 5, encendidas por el mismo
   mecanismo de proximidad de siempre, sin código nuevo (pruebas en
   `TestLasGrietasAdelantadasDeLaFase5`; TMX regenerado con
-  `tools/generate_stage4_1.py`). **Sigue pendiente:** el canto ancestral
+  `tools/generar_stage41_tmx.py`). **Sigue pendiente:** el canto ancestral
   sigue sin paneo espacial, y los eventos atados al estado de la luna
   (figuras, procesión, cambios de decoración) siguen sin construirse.
 
@@ -3119,7 +3119,7 @@ está.
 
 ## ~~[GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 6 — El Camino hacia Paburu», comparado contra el estado
   real por Claude Code el mismo día. Cierra la serie de revisión por fases
@@ -3240,7 +3240,7 @@ está.
   queda 2,5 s, y vuelve. Se añadió un objeto `Cutscene` nuevo
   (`COLUMNA_MIRADOR_FASE6`, `trazado.py`) al TMX comprometido con un
   parche quirúrgico del XML —sólo la capa `Objects`, con el bloque exacto
-  que produce `tools/generate_stage4_1.py::_objetos()`, para que
+  que produce `tools/generar_stage41_tmx.py::_objetos()`, para que
   `TestElMapaSigueAtadoASuGenerador` no distinga el mapa del que
   generaría el código— en vez de regenerar el mapa completo, que habría
   borrado el arte de `BG_Far`/`BG_Mid` (ver la nota de [[GAP-058]]).
@@ -3278,7 +3278,7 @@ está.
 
 ## ~~[GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento de síntesis «Legacy of InFest — Stage 4.1: La Entrada al
   Cementerio Sagrado», que mira las seis fases como un sistema único.
@@ -3351,7 +3351,7 @@ está.
     estos GAP.
   - **La lista de «lo que evitaría» (§18) se cumple en su totalidad**:
     cero enemigos, cero coleccionables (no hay un solo objeto
-    `Recogible`/`Collectible` en `tools/generate_stage4_1.py`), cero
+    `Recogible`/`Collectible` en `tools/generar_stage41_tmx.py`), cero
     plataformas de precisión, la Fase 5 nunca llega a negro real
     (AUD-476), y los tres espíritus se liberan con una sola interacción
     de botón, no con una lista de misiones.
@@ -3891,7 +3891,7 @@ tanto, el código no cambia: el fallback es el contrato.
     en el catálogo (`perfil.MATERIALES`, sin cambiar fricción ni
     restitución — el freno real sigue siendo el `multiplicador`, sin
     tocar), se declaró `material="lodo"` en el generador
-    (`tools/generate_stage4_1.py`) y se parcheó quirúrgicamente el TMX
+    (`tools/generar_stage41_tmx.py`) y se parcheó quirúrgicamente el TMX
     comprometido (mismo patrón que el musgo de AUD-522: dos
     `FrictionZone` objects, ids 118/120). Nuevo evento
     `Events.SFX_PLAYER_FOOTSTEP_LODO`, nueva rama en

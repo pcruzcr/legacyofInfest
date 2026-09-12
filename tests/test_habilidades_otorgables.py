@@ -48,7 +48,7 @@ def test_los_botines_de_todos_los_jefes_pasan_el_filtro() -> None:
     from src.framework.entities.boss_base import normalizar_skill_drop
     from src.stages.boss_rey.boss_rey import BossRey
     from src.stages.boss_venado.boss_venado import BossVenado
-    from src.stages.stage2_4.boss_rey import BossRey as BossRey24
+    from src.stages.boss_rey.boss_rey import BossRey as BossRey24
     from src.stages.stage3_4_boss_gavilan.boss_gavilan import BossGavilan
 
     inv = get_inventory()
