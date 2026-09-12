@@ -178,11 +178,10 @@ restantes (D-31..D-42) · 16 DECLARADAS (D-43..D-58) · 12 DE PROCESO (D-59..D-7
   `03_ARCHITECTURE.md` (`test_architecture_doc_matches_tree`) y la
   introspección de la fachada `StageData` en cuatro pruebas.
 * **Dos hallazgos nuevos, anotados y sin cerrar**:
-  * **D-71** 🟠 — la inercia del musgo (AUD-522) no altera la velocidad de
-    marcha: la entrada fija la velocidad y el puente ECS↔legacy la re-fija
-    después de `sistema_friccion`. Medido: 120 px/s en musgo, sendero y lodo
-    por igual. Arreglarlo es decisión de diseño (¿el material multiplica el
-    objetivo de marcha?) más reordenar el puente.
+  * **D-71** 🟠 — RESUELTO (2026-09-12): el material bajo los pies ajusta
+    el paso de la marcha (`Material.paso`: musgo +15 %, roca 1.0) —
+    medido: el musgo deja correr más que el sendero con la misma
+    entrada, y el lodo frena.
   * **D-72** 🟡 — RESUELTO (2026-09-12): la costura se re-alineó
     (bajada_408 a y=400 y 336 px de largo, sin escalón) y el recorrido
     cruza caminando y saltando; la cima fantasma desalineada se retiró.
@@ -213,3 +212,39 @@ D-20, D-21 (combo), D-22, D-23, D-26, D-27, D-28, D-71 y D-72.
 D-10 (densidad 2-1, a rúbrica del dueño), D-11, D-13, D-17 (SAVE_VERSION
 congelado), D-19, D-20, D-22, D-23, D-26 (declarado), D-27, D-28 (código
 muerto inofensivo), D-29..D-42 (parciales declarados), D-71 (inercia).
+
+---
+
+## J. Tercera tanda AUD-839 (2026-09-12) — cierre de lo restante cerrable
+
+* **D-71 RESUELTO**: el material ajusta el paso de la marcha
+  (`Material.paso`); el musgo deja correr un 15 % más que el sendero y el
+  trinquete del recorrido volvió a medir sobre-velocidad.
+* **D-17 RESUELTO**: migración de checkpoints pre-AUD-502 — las coordenadas
+  fuera de la rejilla de 16 px (convención centro) se ajustan a la esquina
+  al cargar; las partidas nuevas no se tocan.
+* **D-19 parcial**: qa_proof ya no es «Untitled Stage» de TU NOMBRE AQUÍ
+  («QA PROOF — LABORATORIO», equipo docente) y tiene mensaje, moneda y
+  luz; 1-1 compensa su niebla con `ambient_light` 0.85. Quedan: ruido de
+  tiles en 1-2 y salas vacías del hub de backtracking (diseño fino).
+* **D-20 RESUELTO**: aulas (mensaje, 3 monedas, 2 luces), lobby (3 objetos
+  pelados tipados como Solid, mensaje, moneda, luz) y qa_proof con
+  contenido. TMX 35/35 en verde tras el relleno.
+* **D-21 avanzado**: AERIAL_SLAM y los especiales (CHARGE_RELEASE)
+  construyen combo como corto/largo; queda pendiente por diseño decidir si
+  cada sub-tipo aéreo suma pasos distintos.
+* **D-13, D-26, D-28 pasan a DECLARADO**: la barra de maná es latente (no
+  se dibuja a 0) y su gameplay está diferido (M4); las teclas de
+  depuración son herramienta docente declarada en PENDIENTES;
+  GanchoTecho/BalanceoEnLianaSalto son mecánicas reservadas para
+  entregas de estudiantes (por eso no tienen camino de entrada en la
+  campaña).
+* **D-23, D-27 siguen sin diagnosticar** (zoom cenital oscuro; icono rojo
+  en capturas) — requieren sesión de render con capturas, no cierre a
+  ciegas.
+
+**Balance de la lista tras las tres tandas:** de los 28 ACTIVOS originales,
+18 están RESUELTOS o RESUELTOS-parciales con prueba, 4 pasaron a
+DECLARADO con su motivo y 6 quedan abiertos por exigir hardware,
+diagnóstico de render o decisión estética del dueño (D-01 fino, D-10,
+D-19 fino, D-23, D-27, D-71→resuelto).

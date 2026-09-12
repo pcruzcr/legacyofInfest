@@ -5,6 +5,25 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.3.2] - 2026-09-12
+
+Tercera tanda del cierre de la lista 103: lo que quedaba cerrable.
+
+- **El musgo se siente musgo (D-71):** el material bajo los pies ajusta el
+  paso de la marcha — el musgo deja correr un 15 % más que el sendero y el
+  lodo frena. Medido en el recorrido del 4.1.
+- **Migración de partidas antiguas (D-17):** los checkpoints guardados en
+  convención centro (pre-AUD-502) se ajustan a la esquina al cargar; ya no
+  desplazan media baldosa el reaparecer.
+- **Maps con contenido (D-20):** las aulas, el lobby y el laboratorio de QA
+  tienen mensaje, monedas y luces donde no había nada; los tres objetos
+  pelados del lobby son Solid de verdad.
+- **Luz (D-01):** `ambient_light` ≥ 0.8 en paburu, 3-1, aulas, stage0 y
+  4.1; 1-1 compensa su niebla con 0.85.
+- **QA PROOF deja de ser «Untitled Stage»** de «TU NOMBRE AQUÍ».
+- **Combo (D-21):** el remate aéreo y los especiales construyen combo.
+- **Subtítulos (D-16):** el progreso de logros llega al canal accesible.
+
 ## [1.3.1] - 2026-09-12
 
 Segunda tanda del cierre de la lista 103.

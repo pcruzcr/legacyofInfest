@@ -746,16 +746,21 @@ class Player(BaseEntity):
     def _progresar_combo_al_conectar(self) -> None:
         """Avanza `combo_count` un paso por tajo conectado (AUD-818, P13).
 
-        Sólo los ataques corto/largo de suelo progresan el combo: los
-        aéreos y especiales nunca lo tocaron (`_start_attack` no los cubre)
-        y se conserva ese comportamiento. Un fallo (sin llamada) no mueve
-        nada: el combo lo cierran el daño recibido y el temporizador.
+        AUD-839 (D-21) — los aéreos y los especiales también construyen el
+        combo ahora (antes sólo corto/largo de suelo lo tocaban y la cola
+        de la tabla era inalcanzable jugando en el aire). Un fallo (sin
+        llamada) no mueve nada: el combo lo cierran el daño recibido y el
+        temporizador.
         """
         estado = self._state_instance.state_enum
         if estado == PlayerState.SHORT_ATTACK:
             atk_name = "SHORT_ATTACK"
         elif estado == PlayerState.LONG_ATTACK:
             atk_name = "LONG_ATTACK"
+        elif estado == PlayerState.AERIAL_SLAM:
+            atk_name = "AERIAL_SLAM"
+        elif estado in (PlayerState.CHARGE_ATTACK, PlayerState.POSSESSED):
+            atk_name = "CHARGE_RELEASE"
         else:
             return
         import src.engine.core.settings as settings

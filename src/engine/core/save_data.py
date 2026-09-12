@@ -218,6 +218,20 @@ class SaveData(BaseModel):
     def _round_pos(cls, v: float) -> float:
         return round(v, 1)
 
+    @field_validator("checkpoint_x", "checkpoint_y")
+    @classmethod
+    def _migrar_centro_a_esquina(cls, v: float) -> float:
+        """AUD-842 (D-17) — las partidas anteriores a AUD-502 guardaban el
+        checkpoint en convención de CENTRO (x+8, y+16); desde entonces la
+        convención es la esquina, en múltiplos del tile. Un checkpoint
+        guardado fuera de la rejilla desplazaba al jugador media baldosa al
+        reaparecer. Los checkpoints nuevos caen en la rejilla por
+        construcción, así que el snap sólo toca partidas viejas."""
+        en_rejilla = abs(v - round(v / 16.0) * 16.0) < 0.05
+        if en_rejilla:
+            return v
+        return float(int(v // 16.0) * 16.0)
+
     @model_validator(mode="before")
     @classmethod
     def _migrate_validator(cls, data: Any) -> Any:

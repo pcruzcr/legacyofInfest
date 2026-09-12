@@ -10,7 +10,8 @@
   <property name="background_zone" value="zone1" />
   <property name="climate" value="fog" />
   <property name="gravity_multiplier" type="float" value="1.0" />
- <property name="start_hour" value="morning" /><property name="day_length" value="900" type="int" /></properties>
+ <property name="start_hour" value="morning" /><property name="day_length" value="900" type="int" />  <property name="ambient_light" type="float" value="0.85" />
+</properties>
  <tileset firstgid="1" name="tileset_la_entrada" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="tileset_la_entrada.png" width="128" height="128" />
  </tileset>

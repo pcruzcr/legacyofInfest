@@ -135,14 +135,16 @@ class TestFisicaEnRuntime:
             _soltar(ctx, escena, real)
         return escena._player.position.x - x0
 
-    def test_musgo_se_siente_musgo(self, recorrido) -> None:
-        """El contrato entregado del musgo (AUD-522): al pisarlo, el
-        material llega al jugador (pasos y partículas propias; la inercia
-        vive en la ZonaDeFriccion). La sobre-velocidad con entrada
-        sostenida exigía un modelo de marcha por aceleración que no es el
-        del motor: la marcha fija la velocidad, así que ninguna fricción
-        puede superar el tope — hueco anotado en 103 (D-71)."""
+    def test_musgo_desliza_mas_que_sendero(self, recorrido) -> None:
+        """Con la misma entrada sostenida, el musgo deja correr más que el
+        sendero: la inercia de la zona holga el objetivo de marcha un 15 %
+        (AUD-839, cierra D-71). Y el material llega al jugador (pasos y
+        partículas propias)."""
         ctx, escena = recorrido
+        d_musgo = self._caminar(ctx, escena, 195)
+        d_sendero = self._caminar(ctx, escena, 60)
+        assert d_musgo > d_sendero > 0, (d_musgo, d_sendero)
+
         _poner(ctx, escena, 195)
         _avanzar(ctx, escena, 5)
         real = _caminar_derecha(ctx, escena)
@@ -151,17 +153,6 @@ class TestFisicaEnRuntime:
             material = getattr(escena._player, "_material_de_zona", None)
             assert material is not None and material.nombre == "musgo", (
                 f"pisando musgo el material del jugador es {material!r}"
-            )
-        finally:
-            _soltar(ctx, escena, real)
-        _poner(ctx, escena, 60)
-        _avanzar(ctx, escena, 5)
-        real = _caminar_derecha(ctx, escena)
-        try:
-            _avanzar(ctx, escena, 20)
-            material = getattr(escena._player, "_material_de_zona", None)
-            assert material is None or material.nombre != "musgo", (
-                "el sendero normal detecta musgo"
             )
         finally:
             _soltar(ctx, escena, real)
