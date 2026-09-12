@@ -561,11 +561,13 @@ COLOR_BUDGETS: list[tuple[str, int]] = [
     # atlas from the source with nearest-neighbour scaling and no lossy
     # round-trip. Tracked as refactor item R-15.
     ("tilesets/*.png", 131072),
-    # Tubería HD (roadmap 97, tools/generar_hd.py): re-renders 2×/4×/2048 de
-    # los tilesets + sus normal maps. Medido 2026-09-12: 79-88 colores por
-    # hoja (misma banda PSX de 64-128 que `tilesets/*.png`) y 13 en normales;
-    # mismo techo que las hojas base.
-    ("tilesets_hd/*.png", 131072),
+    # Tubería HD (roadmap 97, tools/generar_hd.py): se presupuesta la hoja
+    # base `_hd` (re-render 2×: medido 79-88 colores, misma banda PSX de
+    # 64-128 que `tilesets/*.png`). Las `_hd4`/`_hd_2048` son reescalados
+    # NEAREST de la base — por construcción no pueden introducir un color
+    # nuevo, así que presupuestarlas sería pagar 4,2 M px por una verdad
+    # que ya se validó en la fuente.
+    ("tilesets_hd/*_hd.png", 131072),
     # AUD-527 — el panel de 9-slice del HUD pasó de relleno plano a
     # degradado + antialiasing (decisión del dueño de modernizar el HUD).
     # Mide 77-149 colores hoy; 256 da margen para retocar el degradado sin
@@ -583,21 +585,25 @@ def check_color_budget(path: Path, budget: int) -> None:
     AUD-832B — vectorizado: el bucle por píxel no terminaba en la
     práctica sobre fondos grandes. Se cuentan los colores distintos de
     los píxeles opacos; el mensaje y el umbral no cambian.
+    2026-09-12 — una sola pasada por Pillow+numpy: `tobytes` es una copia
+    única y el empaquetado RGB→uint32 ordena enteros planos (~50× más
+    rápido que `np.unique(axis=0)` y que el rodeo por surfarray con tres
+    indexaciones booleanas, que no terminaba con las hojas HD de 2048²).
     """
     try:
-        raw = pygame.image.load(str(path))
-        img = raw.convert_alpha()
+        from PIL import Image as _PILImage
+
+        img = _PILImage.open(path).convert("RGBA")
     except Exception as e:
         ERRORS.append(f"[LOAD FAIL] {path}  ({e})")
         return
 
-    arr = pygame.surfarray.array3d(img)
-    if img.get_flags() & pygame.SRCALPHA:
-        alpha = pygame.surfarray.array_alpha(img)
-        pixeles = arr[alpha != 0]
-    else:
-        pixeles = arr.reshape(-1, 3)
-    distintos = len(np.unique(pixeles.reshape(-1, 3), axis=0))
+    crudo = np.frombuffer(img.tobytes(), dtype=np.uint8).reshape(-1, 4)
+    opacos = crudo[crudo[:, 3] != 0]
+    empaquetado = ((opacos[:, 0].astype(np.uint32) << 16)
+                   | (opacos[:, 1].astype(np.uint32) << 8)
+                   | opacos[:, 2].astype(np.uint32))
+    distintos = int(np.unique(empaquetado).size)
 
     if distintos > budget:
         rel = path.relative_to(ASSETS_DIR).as_posix()

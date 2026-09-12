@@ -32,6 +32,10 @@ import os
 import sys
 from pathlib import Path
 
+# AUD-839 — consolas Windows cp1252: el manifiesto y los avisos llevan acentos.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
