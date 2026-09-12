@@ -442,7 +442,10 @@ class InteractableSystem:
                 f"El cofre contenía: {cofre.contenido}" if cofre.contenido
                 else "El cofre estaba vacío."
             ))
-            self._emitir(EVENTO_COFRE, contenido=cofre.contenido)
+            # AUD-839 (D-07) — la posición va en el evento para que la
+            # escena pueda poner el feedback (partículas) donde está el cofre.
+            self._emitir(EVENTO_COFRE, contenido=cofre.contenido,
+                         pos=tuple(cofre.rect.center))
             if cofre.evento_al_abrir:
                 self._emitir(cofre.evento_al_abrir)
             # B3 — persistencia per-map sólo si tiene contenido y id TMX

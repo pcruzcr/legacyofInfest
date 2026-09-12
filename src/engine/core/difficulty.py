@@ -43,7 +43,10 @@ DIFFICULTY_PRESETS: dict[Difficulty, DifficultyConfig] = {
         heal_mult=1.0,
         knockback_mult=1.0,
         parry_window=0.25,
-        invincibility_duration=1.5,
+        # AUD-839 (D-08) — 1,5 s de i-frames + el cooldown de contacto de 0,3
+        # dejaban el daño por contacto máximo en ~0,33 HP/s: el jugador era
+        # casi inmune al meleé. 1,0 s dobla esa ventana sin volverse punitorio.
+        invincibility_duration=1.0,
         combo_window=0.5,
     ),
     Difficulty.HARD: DifficultyConfig(

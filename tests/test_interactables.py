@@ -366,9 +366,13 @@ class TestElTmxLosCarga:
         )
 
     def test_stage_data_tiene_las_cuatro_listas(self):
-        from src.framework.stage.stage_loader import StageData
+        # AUD-839 — StageData es la fachada; las listas viven en el dominio
+        # de progresión y la fachada las delega por getattr.
+        import dataclasses
 
-        campos = StageData.__dataclass_fields__
+        from src.framework.stage.stage_data import StageProgression
+
+        campos = {f.name for f in dataclasses.fields(StageProgression)}
         for nombre in ("recogibles", "cerraduras", "cofres", "disparadores"):
             assert nombre in campos, f"StageData no expone '{nombre}'"
 

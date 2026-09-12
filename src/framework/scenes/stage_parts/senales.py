@@ -318,6 +318,23 @@ class SenalesDeEscenario:
             self._post_processing.flash((255, 255, 255), alpha=255, duration=0.15)
             self._camera.apply_shake(amplitude=5.0, duration=0.4)
 
+        # AUD-839 (D-07) — abrir un cofre no decía nada: ni un sonido ni una
+        # chispa. El evento llega con la posición del cofre (el emisor la
+        # manda), se suena el tono de recompensa que ya existe y se emiten
+        # chispas donde está.
+        from src.framework.stage.interactable_system import EVENTO_COFRE
+
+        def _on_cofre_abierto(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("parry").emit(
+                float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
+            )
+            self._event_bus.emit(
+                Events.SFX_CHECKPOINT, pos=(float(pos[0]), float(pos[1])))
+
+        self.context.event_bus.subscribe(EVENTO_COFRE, _on_cofre_abierto)
+        self._vfx_handlers[EVENTO_COFRE] = _on_cofre_abierto
+
         self.context.event_bus.subscribe(Events.SFX_HIT_CONNECT, _on_hit_connect)
         self._vfx_handlers[Events.SFX_HIT_CONNECT] = _on_hit_connect
         self.context.event_bus.subscribe(Events.SFX_ENEMY_HIT, _on_enemy_hit)

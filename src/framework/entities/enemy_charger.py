@@ -20,8 +20,12 @@ class EnemyCharger(EnemyBase):
         self,
         spawn_position: pygame.Vector2,
         max_health: float = 4.0,
-        damage_on_contact: float = 1.5,
-        charge_speed: float = 250.0,
+        # AUD-839 (D-06) — 1,5 de contacto (30-54 % de vida) y 250 px/s
+        # (por encima del dash de 200) hacían al embestidor un castigo sin
+        # contra-juego legible. 1,0 y 210 lo dejan esquivable con dash y
+        # castigable tras el choque.
+        damage_on_contact: float = 1.0,
+        charge_speed: float = 210.0,
         zone: int = 0,
         **kwargs,
     ) -> None:
