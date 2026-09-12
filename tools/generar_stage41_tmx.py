@@ -221,7 +221,7 @@ def construir() -> ET.Element:
                  ("background_zone", ""), ("climate", "clear"),
                  ("ambient_fx", "dust"), ("ambient_fx_rate", 6),
                  ("start_hour", 10), ("day_length", 3600), ("time_limit", 0),
-                 ("zone", 4), ("ambient_light", 0.70),
+                 ("zone", 4), ("ambient_light", 0.80),
                  ("bloom", 0.30), ("vignette", 0.40)):
         ET.SubElement(props, "property", {"name": k, "value": str(v)})
     for nombre, imagen, firstgid in TILESETS:

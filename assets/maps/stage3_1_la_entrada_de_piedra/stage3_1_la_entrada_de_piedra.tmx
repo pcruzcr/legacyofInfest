@@ -13,7 +13,7 @@
   <property name="day_length" type="float" value="500.0" />
   <property name="zone" type="int" value="3" />
   <property name="background_zone" value="zone3" />
-  <property name="ambient_light" type="float" value="0.55" />
+  <property name="ambient_light" type="float" value="0.8" />
   <property name="bloom" type="float" value="0.30" />
   <property name="vignette" type="float" value="0.35" />
  </properties>

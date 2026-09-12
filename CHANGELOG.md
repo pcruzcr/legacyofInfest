@@ -5,6 +5,31 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.3.1] - 2026-09-12
+
+Segunda tanda del cierre de la lista 103.
+
+- **Toda la cadena de guardado en verde (83/83):** `Stage21Oficinas` tiene
+  identidad (recupera su checkpoint guardado), y un `WarpZone` con destino
+  cuenta como salida del nivel — el portal a Paburu, con su llave, es la
+  salida legítima del 4.1.
+- **Los jefes aguantan una pelea de verdad:** Venado 36, Rey 45, Gavilán 42
+  y Paburu 60 de vida (triple), con los umbrales de fase escalados; la
+  batería de jefes pasa 69/69 con las simulaciones escaladas.
+- **Paridad generador↔TMX byte a byte** en `stage_mecanicas` y `stage0`
+  (las colas del track privado se emiten verbatim); `stage0` recupera sus
+  dos obstáculos saltables en el trinquete y el doc declara el tamaño real.
+- **La plantilla del estudiante vuelve a demostrar todo:** los seis tipos
+  que no enseñaba, dos checkpoints, coleccionables, hueco exigente y nota
+  92.3 (antes 82.3).
+- **Juice del jugador:** recibir daño pide hit-stop, destello rojo y
+  sacudida; curarse suelta partículas; descubrir secreto tiene ceremonia;
+  el progreso de logros llega a los subtítulos de accesibilidad.
+- **Combo:** los escalones 8-10 ya no son planos (×3.2/×3.6/×4.0).
+- **Luz:** `ambient_light` ≥ 0.8 en paburu, 3-1, aulas, stage0 y 4.1.
+- **El descenso de la loma 408 del 4.1 funciona** (costura realineada y
+  cima fantasma retirada) — D-72.
+
 ## [1.3.0] - 2026-09-11
 
 Cierre de la lista 103 (gaps, errores y bugs): los defectos que se podían

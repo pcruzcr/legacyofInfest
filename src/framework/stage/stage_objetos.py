@@ -742,6 +742,11 @@ class ObjetosDeTiled:
             props["destino_x"] = 0
             props["destino_y"] = 0
         requires_skill = str(props.get("requires_skill", "") or "").strip()
+        if destino_stage_id:
+            # AUD-839 (D-25) — un warp a otro escenario es una salida del
+            # nivel (con la llave o el pulso que pida): queda registrada para
+            # la cadena "todo nivel se puede terminar".
+            stage.salidas_warp.append(cls._rect_de(obj))
         stage.warps.append(ZonaDeWarp(
             rect=cls._rect_de(obj),
             destino=pygame.Vector2(float(props.get("destino_x", 0)),

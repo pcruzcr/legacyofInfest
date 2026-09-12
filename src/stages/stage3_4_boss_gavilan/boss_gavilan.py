@@ -33,7 +33,7 @@ class BossGavilan(BossBase):
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         super().__init__(
             spawn_position=spawn_position,
-            max_health=14.0,
+            max_health=42.0,
             damage_on_contact=0.75,
         )
         self.set_boss_name("EL GAVILAN")
@@ -56,14 +56,14 @@ class BossGavilan(BossBase):
         self.set_phases([
             BossPhase(
                 phase_index=0,
-                health_threshold=10.0,
+                health_threshold=30.0,
                 attack_patterns=["DIVE", "FEATHER_STORM"],
                 movement_type="orbit",
                 speed_multiplier=1.0,
             ),
             BossPhase(
                 phase_index=1,
-                health_threshold=5.0,
+                health_threshold=15.0,
                 attack_patterns=["DIVE", "FEATHER_STORM", "ORBIT_SHRINK"],
                 movement_type="orbit",
                 speed_multiplier=1.4,

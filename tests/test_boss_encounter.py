@@ -766,7 +766,10 @@ class TestBossBaseIntegration:
         # Se observan efectos, no llamadas: telegrafiados, proyectiles y
         # embestidas. Cualquier jefe que ataque de verdad deja alguno.
         vistos: set[str] = set()
-        for step in range(600):
+        # AUD-839 (D-09) — el venado triplicó su vida (12 -> 36): la
+        # ventana y el golpe se escalan igual para recorrer el mismo arco
+        # de la pelea (F1 -> castigo -> retirada).
+        for step in range(1800):
             # Se mueve al jugador para que distintos rangos se activen.
             player_rect.x = int(ARENA_CX) - 100 + (step % 200)
             venado.update(FRAME)
@@ -779,10 +782,10 @@ class TestBossBaseIntegration:
                 vistos.add("CHARGE_ACTIVO")
             for p in venado._projectiles:
                 vistos.add(f"PROYECTIL_{p['type']}")
-            if step == 300:
+            if step in (300, 900, 1500):
                 venado.apply_hit(6.5, (player_rect.centerx, player_rect.centery))
 
-        assert len(vistos) >= 3, f"apenas atacó en 10 s: {sorted(vistos)}"
+        assert len(vistos) >= 3, f"apenas atacó en 30 s: {sorted(vistos)}"
 
 
 class TestArenaBounds:

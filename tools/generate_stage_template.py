@@ -12,14 +12,19 @@ SUELO_Y=38
 SUELO_SUPERFICIE=1
 VACIO=0
 
+# AUD-839 — hueco exigente de 4 baldosas (64 px): enseña el salto que el
+# calificador clasifica "exigente" sin ser imposible.
+HUECO_X0, HUECO_X1 = 40, 44
+
 def generar():
-    # Terrain: suelo en y 38..44
+    # Terrain: suelo en y 38..44, con hueco exigente de ejemplo
     g=[[VACIO]*MW for _ in range(MH)]
     for x in range(MW):
+        if HUECO_X0 <= x < HUECO_X1:
+            continue
         g[SUELO_Y][x]=SUELO_SUPERFICIE
         for y in range(SUELO_Y+1, MH):
             g[y][x]=SUELO_SUPERFICIE
-    # hueco ejemplo? no, mantener suelo continuo para template
     csv = ",".join(str(g[y][x]) for y in range(MH) for x in range(MW))
     ceros = ",".join(["0"] * (MW * MH))
 
@@ -73,9 +78,46 @@ def generar():
    <object id="7" type="Slope" name="Slope_Baja_Ejemplo" x="700" y="560" width="96" height="48">
     <properties><property name="sube" value="izquierda"/></properties>
    </object>
+   <object id="8" type="Checkpoint" name="Checkpoint_02" x="768" y="544" width="16" height="32">
+    <properties><property name="checkpoint_id" type="int" value="1"/></properties>
+   </object>
+   <object id="9" type="Pickup" name="Pickup_moneda_01" x="640" y="560" width="16" height="16">
+    <properties>
+     <property name="item_id" value="moneda"/>
+     <property name="automatico" type="bool" value="true"/>
+    </properties>
+   </object>
+   <object id="10" type="Pickup" name="Pickup_moneda_02" x="656" y="560" width="16" height="16">
+    <properties>
+     <property name="item_id" value="moneda"/>
+     <property name="automatico" type="bool" value="true"/>
+    </properties>
+   </object>
+   <object id="11" type="Flying" name="Flying_ejemplo_01" x="560" y="400" width="24" height="20"/>
+   <object id="12" type="Shooter" name="Shooter_ejemplo_01" x="1000" y="544" width="16" height="24">
+    <properties>
+     <property name="fire_rate" type="float" value="2.0"/>
+     <property name="projectile_speed" type="float" value="100.0"/>
+     <property name="projectile_damage" type="float" value="1.0"/>
+    </properties>
+   </object>
+   <object id="13" type="HazardZone" name="HazardZone_ejemplo_01" x="896" y="576" width="48" height="32">
+    <properties><property name="dano" type="float" value="0.5"/></properties>
+   </object>
+   <object id="14" type="MessageTrigger" name="MessageTrigger_bienvenida" x="200" y="544" width="48" height="48">
+    <properties><property name="text" value="Flechas para moverte, Espacio para saltar."/></properties>
+   </object>
+   <object id="15" type="Objective" name="Objective_llegar_al_final" x="1184" y="528" width="0" height="0">
+    <properties>
+     <property name="objective_id" value="llegar_al_final"/>
+     <property name="text" value="Llega a la salida"/>
+     <property name="kind" value="bandera"/>
+    </properties>
+   </object>
   </objectgroup>
   <objectgroup id="7" name="Collision">
-   <object id="20" type="Solid" name="Solid_Floor" x="0" y="608" width="1280" height="112"/>
+   <object id="20" type="Solid" name="Solid_Floor_A" x="0" y="608" width="640" height="112"/>
+   <object id="23" type="Solid" name="Solid_Floor_B" x="704" y="608" width="576" height="112"/>
    <object id="21" type="Solid" name="Solid_LeftWall" x="-16" y="0" width="16" height="720"/>
    <object id="22" type="Solid" name="Solid_RightWall" x="1280" y="0" width="16" height="720"/>
   </objectgroup>

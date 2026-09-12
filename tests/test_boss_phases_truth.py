@@ -32,7 +32,7 @@ class TestReyTresFasesJugables:
 
     def test_fase_dos_parte_el_cuerpo_en_dos_mitades(self) -> None:
         rey = _rey()
-        rey.apply_hit(6.0, (400, 300))  # 15 → 9, bajo el umbral 10
+        rey.apply_hit(18.0, (400, 300))  # AUD-839: 45 → 27, bajo el umbral 30
         assert rey.is_transitioning is True
         rey.update(3.0)  # termina la transición base (2,5 s)
         assert rey.current_phase == 1, "no entró a La División"
@@ -42,7 +42,7 @@ class TestReyTresFasesJugables:
 
     def test_fase_tres_arranca_al_caer_las_mitades(self) -> None:
         rey = _rey()
-        rey.apply_hit(6.0, (400, 300))
+        rey.apply_hit(18.0, (400, 300))
         rey.update(3.0)
         assert rey.current_phase == 1
         for mitad in list(rey._mitades):

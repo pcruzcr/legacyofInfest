@@ -208,15 +208,11 @@ class TestFisicaEnRuntime:
             _avanzar(ctx, escena, 400)
         finally:
             _soltar(ctx, escena, real)
-        # Coronó la subida_408 y está pisando la cima_llana (6896..6928):
-        # caminar + hops reales la suben sin teletransporte.
-        #
-        # AUD-839 — el descenso completo por bajada_408 queda fuera: la
-        # costura cima(447)/bajada(432) dejó un escalón de 16 px que frena
-        # la marcha; hallazgo anotado como D-72 en 103 para decisión de
-        # nivel (mover la bajada 16 px), no se arregla aquí a ciegas.
-        assert escena._player.position.x > 429 * 16, escena._player.position.x
-        assert escena._player.position.y < y0 - 40
+        # Coronó la loma y cruzó la bajada_408 (termina en 7200): la costura
+        # quedó alineada (subida y bajada coronan a 384), así que el
+        # descenso caminando ya no se frena — D-72 cerrado.
+        assert escena._player.position.x > 446 * 16, escena._player.position.x
+        assert abs(escena._player.position.y - y0) < 60
 
 
 class TestTormentaEnRuntime:

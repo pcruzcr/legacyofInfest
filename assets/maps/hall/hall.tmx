@@ -292,6 +292,7 @@
   <object id="1" name="PlayerSpawn_01" type="PlayerSpawn" x="32" y="528" width="16" height="16" />
   <object id="2" name="DeathPit_hall" type="DeathPit" x="400" y="528" width="16" height="80" />
   <object id="3" name="Checkpoint_00" type="Checkpoint" x="896" y="496" width="16" height="32"> <properties><property name="checkpoint_id" value="0" /></properties></object>
+  <object id="700" name="Checkpoint_01" type="Checkpoint" x="96" y="496" width="16" height="32"> <properties><property name="checkpoint_id" value="1" /></properties></object>
   <object id="4" name="NextTrigger_01" type="NextTrigger" x="720" y="192" width="16" height="64" />
   <object id="5" name="WalkerPalom_5" type="WalkerPalom" x="176" y="496" width="16" height="32" />
   <object id="6" name="WalkerPalom_6" type="WalkerPalom" x="256" y="496" width="16" height="32" />

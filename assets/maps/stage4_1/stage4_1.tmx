@@ -15,7 +15,7 @@
   <property name="day_length" value="3600" />
   <property name="time_limit" value="0" />
   <property name="zone" value="4" />
-  <property name="ambient_light" value="0.7" />
+  <property name="ambient_light" value="0.8" />
   <property name="bloom" value="0.3" />
   <property name="vignette" value="0.4" />
  </properties>
@@ -351,14 +351,9 @@
     <property name="sube" value="derecha" />
    </properties>
   </object>
-  <object id="107" name="rampa_bajada_408" type="Slope" x="6912" y="384" width="288" height="128">
+  <object id="107" name="rampa_bajada_408" type="Slope" x="6912" y="400" width="336" height="128">
    <properties>
     <property name="sube" value="izquierda" />
-   </properties>
-  </object>
-  <object id="108" name="cima_llana_408" type="Slope" x="6896" y="383" width="32" height="1">
-   <properties>
-    <property name="sube" value="derecha" />
    </properties>
   </object>
   <object id="109" name="spawn_jhon_jin" type="PlayerSpawn" x="128" y="480" width="16" height="32" />

@@ -278,23 +278,24 @@ class BossRey(BossBase):
         #   Fase 1 «La Marioneta» 15 → 10   |  Fase 2 «La División» 10 → 4
         #   Fase 3 «El Frenesí»    4 → 0
         phases = [
+            # AUD-839 (D-09) — ×3 de vida; umbrales escalados igual.
             BossPhase(
                 phase_index=0,
-                health_threshold=15.0,
+                health_threshold=45.0,
                 attack_patterns=["VENOM_SPIT", "BODY_SLAM"],
                 movement_type="random_walk",
                 speed_multiplier=1.0,
             ),
             BossPhase(
                 phase_index=1,
-                health_threshold=10.0,
+                health_threshold=30.0,
                 attack_patterns=["VENOM_SPIT", "BODY_SLAM"],
                 movement_type="bezier",
                 speed_multiplier=1.6,
             ),
             BossPhase(
                 phase_index=2,
-                health_threshold=4.0,
+                health_threshold=12.0,
                 attack_patterns=["VENOM_BURST", "LUNGE"],
                 movement_type="pursuit",
                 speed_multiplier=2.6,
@@ -302,7 +303,7 @@ class BossRey(BossBase):
         ]
         super().__init__(
             spawn_position=spawn_position,
-            max_health=15.0,
+            max_health=45.0,
             damage_on_contact=0.5,
         )
         self.set_boss_name("REY TERCIOPELO")

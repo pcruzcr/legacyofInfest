@@ -158,7 +158,8 @@ COMBO_WINDOW: float = 0.5
 # AUD-COMBO: ampliado de 3 a 10 para que `combo_king` (10 hits) sea alcanzable;
 # antes 10 era imposible con COMBO_MAX=3. Primeros 3 valores conservan 1.0/1.5/2.0
 # para no romper tests ni balance existente; 4-10 escalan hasta 3.0.
-COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.0, 3.0)
+# AUD-839 (D-21): los escalones 8-10 ya no son planos.
+COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.2, 3.6, 4.0)
 COMBO_MAX: int = 10
 # AUD-COMBO-CHECK: garantiza que la tabla de multiplicadores cubre todo el combo
 assert len(COMBO_DAMAGE_MULT) == COMBO_MAX, f"COMBO_DAMAGE_MULT len {len(COMBO_DAMAGE_MULT)} != COMBO_MAX {COMBO_MAX}"

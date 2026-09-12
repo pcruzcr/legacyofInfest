@@ -10,7 +10,7 @@
   <property name="climate" value="clear"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="gravity_multiplier" type="float" value="1.0"/>
-  <property name="ambient_light" type="float" value="0.70"/>
+  <property name="ambient_light" type="float" value="0.8"/>
   <property name="start_hour" value="afternoon"/>
   <property name="day_length" type="float" value="420"/>
   <property name="season" value="autumn"/>

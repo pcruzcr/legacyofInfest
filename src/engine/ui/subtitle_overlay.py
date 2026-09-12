@@ -100,6 +100,19 @@ class SubtitleOverlay:
             # Handlers must be retained: the bus holds weak references.
             self._handlers[event_name] = handler
             self._bus.subscribe(event_name, handler)
+        # AUD-839 (D-16) — el progreso de logros se emitía y nadie lo
+        # escuchaba: ahora llega a la persona sorda como subtítulo también.
+        progress_handler = self._make_progress_handler()
+        self._handlers[Events.ACHIEVEMENT_PROGRESS] = progress_handler
+        self._bus.subscribe(Events.ACHIEVEMENT_PROGRESS, progress_handler)
+
+    def _make_progress_handler(self) -> Callable[..., None]:
+        def handler(**data: object) -> None:
+            aid = str(data.get("achievement_id", ""))
+            current = data.get("progress", 0)
+            target = data.get("target", 1)
+            self.push(f"[Logro en progreso: {aid} {current}/{target}]")
+        return handler
 
     def _make_handler(self, caption: str) -> Callable[..., None]:
         def handler(**_data: object) -> None:

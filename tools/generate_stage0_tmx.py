@@ -288,7 +288,7 @@ def _objetos() -> list[str]:
         projectile_speed=100.0, projectile_damage=2.0,
         patrol_length=48.0, patrol_speed=30.0)
     obj("Assassin", 90 * TS, suelo - 24, 16, 24)
-    obj("Walker", 93 * TS, suelo - 28, 24, 28, max_health=2.0)
+    obj("Walker", 93 * TS, suelo - 56, 24, 28, max_health=2.0)  # AUD-839: el disco lo cuelga de la plataforma de la tirolesa (y=552)
     obj("Pickup", 92 * TS, (SUELO_Y - 10) * TS, 16, 16,
         item_id="fragmento_3", automatico=True, mensaje="Fragmento 3 de 3.")
     obj("Chest", 94 * TS, (SUELO_Y - 10) * TS, TS, TS,
@@ -376,7 +376,7 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="climate" value="clear"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="gravity_multiplier" type="float" value="1.0"/>
-  <property name="ambient_light" type="float" value="0.70"/>
+  <property name="ambient_light" type="float" value="0.8"/>
   <property name="start_hour" value="afternoon"/>
   <property name="day_length" type="float" value="420"/>
   <property name="season" value="autumn"/>

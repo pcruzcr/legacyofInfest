@@ -21,6 +21,7 @@
   <property name="bloom" type="float" value="0.55" />
    <property name="sombras_proyectadas" type="bool" value="false" />
    <property name="water_effect" type="bool" value="false" />
+  <property name="ambient_light" type="float" value="0.85" />
  </properties>
  <tileset firstgid="1" name="tileset_paburu" tilewidth="16" tileheight="16" tilecount="208" columns="8">
   <image source="../../tilesets/tileset_paburu.png" width="128" height="416" />

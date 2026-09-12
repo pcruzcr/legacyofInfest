@@ -343,7 +343,7 @@ class BossVenado(BossBase):
     def __init__(self, spawn_position: pygame.Vector2) -> None:
         super().__init__(
             spawn_position=spawn_position,
-            max_health=12.0,
+            max_health=36.0,
             damage_on_contact=0.75,
         )
         self.set_boss_name("VENADO SAGRADO")
@@ -478,7 +478,9 @@ class BossVenado(BossBase):
             super().set_phases(phases)
             return
         super().set_phases([
-            BossPhase(phase_index=0, health_threshold=12.0,
+            # AUD-839 (D-09) — ×3 de vida: 12 HP caían en 6-15 s; 36 da para
+            # una pelea de minuto y pico. Umbrales escalados igual.
+            BossPhase(phase_index=0, health_threshold=36.0,
                       attack_patterns=["STOMP", "CHARGE", "VINE_TOSS"],
                       movement_type="sine", speed_multiplier=1.0),
             # Adopción V3 (D4): el crecimiento del cuerpo se DECLARA aquí, en el

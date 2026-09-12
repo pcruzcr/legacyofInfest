@@ -454,6 +454,10 @@ class StageProgression:
     checkpoints: list[Checkpoint] = field(default_factory=list)  # type: ignore[name-defined]
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
+    #: AUD-839 (D-25) — salidas por `WarpZone` con `destino_stage_id`: son
+    # salidas del nivel tanto como un NextTrigger, pero con llave o pulso.
+    #: (Nota: la cadena "se entra y no se sale" las acepta como salida.)
+    salidas_warp: list[pygame.Rect] = field(default_factory=list)
     message_triggers: list[MessageTrigger] = field(default_factory=list)
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)

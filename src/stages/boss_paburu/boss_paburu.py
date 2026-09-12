@@ -189,7 +189,7 @@ class BossPaburu(BossBase):
     }
 
     def __init__(self, spawn_position: pygame.Vector2, **props: object) -> None:
-        max_health = float(props.get("max_health", 20.0))
+        max_health = float(props.get("max_health", 60.0))  # AUD-839 (D-09) ×3
         super().__init__(
             spawn_position=spawn_position,
             max_health=max_health,
@@ -343,22 +343,22 @@ class BossPaburu(BossBase):
         if phases is None:
             phases = [
                 BossPhase(
-                    phase_index=FORM_STONE, health_threshold=20.0,
+                    phase_index=FORM_STONE, health_threshold=60.0,
                     attack_patterns=["STONE_SPIT", "EYE_BEAM", "EL_SELLO"],
                     movement_type="stationary",
                 ),
                 BossPhase(
-                    phase_index=FORM_MASK, health_threshold=15.0,
+                    phase_index=FORM_MASK, health_threshold=45.0,
                     attack_patterns=["SPIRIT_WAVE", "DUELO_DE_ECOS", "MASK_PULSE"],
                     movement_type="sine_drift",
                 ),
                 BossPhase(
-                    phase_index=FORM_RELIC, health_threshold=10.0,
+                    phase_index=FORM_RELIC, health_threshold=30.0,
                     attack_patterns=[],  # se llenan al elegir 3A/3B
                     movement_type="relic",
                 ),
                 BossPhase(
-                    phase_index=FORM_SPIRIT, health_threshold=5.0,
+                    phase_index=FORM_SPIRIT, health_threshold=15.0,
                     attack_patterns=[
                         "RELIC_SURGE", "SPIRIT_FORM", "ANCIENT_CALL",
                         "CONVERGENCE", "EL_OFRECIMIENTO",

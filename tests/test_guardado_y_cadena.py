@@ -188,7 +188,11 @@ class TestCadaNivelSePuedeTerminar:
         cls = escenarios[indice_escenario]
         escena = cls(contexto)
         datos = StageLoader.load(escena._tmx_path)
-        tiene_salida = datos.next_trigger is not None
+        # AUD-839 — salir también es salir por un WarpZone con
+        # destino_stage_id (el portal a paburu de stage4_1, con llave).
+        tiene_salida = (
+            datos.next_trigger is not None or bool(datos.salidas_warp)
+        )
         tiene_jefe = any(isinstance(e, BossBase) for e in datos.entity_list)
         assert tiene_salida or tiene_jefe, (
             f"«{escena.stage_key}» no tiene ni NextTrigger ni jefe: se entra "
@@ -298,10 +302,21 @@ class TestUnaSolaIdentidadPorEscenario:
 
         nodos = {n["id"] for n in construir_nodos()}
         claves = {c(contexto).stage_key for c in escenarios}
-        assert nodos == claves, (
-            f"el mapa del mundo y el juego no se refieren a lo mismo; nodos "
-            f"que nadie puede completar: {sorted(nodos - claves)}; escenarios "
-            f"sin nodo: {sorted(claves - nodos)}"
+        extra = nodos - claves
+        # AUD-839 — los nodos de backtracking post-game (hub + 13 vistas,
+        # AUD-BACKTRACK) no son progresión discoverable, pero sí completables:
+        # se aceptan si su mapa existe, igual que exige el guardián del mapa.
+        from src.engine.core import settings as _settings
+
+        sin_mapa = sorted(
+            n for n in extra
+            if not (_settings.ASSETS_DIR / "maps" / n / f"{n}.tmx").exists()
+        )
+        assert not sin_mapa, (
+            f"nodos que nadie puede completar (sin mapa): {sin_mapa}"
+        )
+        assert not (claves - nodos), (
+            f"escenarios sin nodo: {sorted(claves - nodos)}"
         )
 
     def test_completar_marca_el_nodo_correcto(self, contexto, escenarios) -> None:

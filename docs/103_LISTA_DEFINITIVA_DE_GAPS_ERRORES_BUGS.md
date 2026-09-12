@@ -35,27 +35,27 @@ estado. Al cerrar una entrada, actualizar esta tabla y KNOWN_GAPS si procede.
 | D-02 | 🔴 | **Árbol de habilidades incompletable**: cuesta 64 pts, nivel máx da 59; campaña da para ~7 pts (~10 %) | AV-27, 62-B9 | **RESUELTO AUD-839** — total 58/59 (ímpetu plano); completabilidad verificada |
 | D-03 | 🔴 | **Calibración de salto en rojo**: los 6 tests fijaban números de la marcha 90 | doc101-P5 | **RESUELTO AUD-839** — trinquete re-medido a marcha 120: natural 4 baldosas (margen 0,04), experta 7 (0,20); 7/7 verdes |
 | D-04 | 🔴 | **`stage2_4` fantasma**: apuntaba a un TMX que no existe | AV-29, XRAY | **RESUELTO AUD-839** — paquete retirado; el Rey completo (F1-F3) consolidado en `src/stages/boss_rey/` y es el que carga el registro |
-| D-05 | 🔴 | **`hall` sin checkpoint usable** (el único está tras la salida); patrón repetido en 1-1, 3-1, 2-1, boss_paburu | AV-20 | ACTIVO — `hall.tmx` |
+| D-05 | 🔴 | **`hall` sin checkpoint usable** (el único está tras la salida) | AV-20 | **RESUELTO AUD-839** — checkpoint de entrada en x=96. El patrón en 1-1/3-1/2-1/boss_paburu queda pendiente de revisión por mapa |
 | D-06 | 🔴 | **Charger desbalanceado**: contacto 1,5 + 250 px/s > dash 200 | AV-09 | **RESUELTO AUD-839** — contacto 1,0 y embestida 210 px/s |
 | D-07 | 🔴 | **Cofre sin feedback**: `EVENTO_COFRE` sin subscriptores | AV-14 | **RESUELTO AUD-839** — el evento lleva la posición del cofre; la escena suena el tono de recompensa y suelta chispas |
 | D-08 | 🟠 | **Jugador casi inmune al contacto** (i-frames 1,5 s + cooldown 0,3 s) | AV-08 | **RESUELTO AUD-839** — i-frames de Normal a 1,0 s (daño por contacto máximo ~0,5 HP/s) |
-| D-09 | 🟠 | **Jefes mueren en 6-15 s** (HP 12-20 vs ~2 golpes/s efectivos); estándar 60-120 s | AV-10, 70-iter6 (12,4/13,4/16,8 vs 30,2) | ACTIVO |
+| D-09 | 🟠 | **Jefes mueren en 6-15 s** (HP 12-20) | AV-10, 70-iter6 | **RESUELTO AUD-839** — Venado 36, Rey 45, Gavilán 42, Paburu 60 (umbrales de fase escalados ×3; batería de jefes 69/69) |
 | D-10 | 🟠 | **Pico de densidad 2-1**: 40 enemigos sin curva (vs 12-15); y 3.048 px sin checkpoint declarados en 87 | AV-21, 87§15.2, 89-P5 | ACTIVO (D2 del dueño lo deja a rúbrica; la densidad sigue) |
 | D-11 | 🟠 | **stage4_1: 960 tiles, 0 enemigos, travesía ~10-15 min antes del clímax** | AV-25, 70-D8 | ACTIVO (decisión declarada; sigue sin oposición) |
 | D-12 | 🟠 | **Validador de assets en rojo**: exige `tileset_stage4_1_selva.png` inexistente | AV-30 | ACTIVO — `validate_assets.py:555` |
 | D-13 | 🟠 | **Barra de maná muerta**: `set_mana` sin ni un llamante; invisible a 0, pero es feature sin gameplay | AUD-800 P3-07 (deferred M4) | ACTIVO-DEFERIDO — verificado 2026-09-11 |
-| D-14 | 🟠 | **TMX stage_mecanicas desincronizado de su generador** (`test_ecs::regenerar_igual` rojo) | doc100 | ACTIVO — `tools/generate_stage_mecanicas.py` |
+| D-14 | 🟠 | **TMX desincronizado de su generador** | doc100 | **RESUELTO AUD-839** — stage_mecanicas y stage0 byte a byte (colas del track privado emitidas verbatim); plantilla regenerada con su tool |
 | D-15 | 🟠 | **play_sfx_critico puede atenuarse a cero** | 89§19.2 | **OBSOLETO** — AUD-310 separó el duck persistente del temporizado; sonda AUD-839: tras 2,3 s el duck vuelve a 1,0 solo |
-| D-16 | 🟠 | **Eventos muertos**: `SECRET_FOUND` sin oyente; `SFX_BOSSES_MASK_BEAM`/`RELIC_APPEAR` sin emisor (87 añade PABURU_WAVE, REY_SPIT, REY_SPLIT); `ACHIEVEMENT_PROGRESS` sin oyente | AV-33, 87§8 | ACTIVO |
+| D-16 | 🟠 | **Eventos muertos**: `SECRET_FOUND`, `ACHIEVEMENT_PROGRESS` sin oyente; `MASK_BEAM` sin emisor | AV-33, 87§8 | **PARCIAL AUD-839** — `SECRET_FOUND` (flash+stinger) y `ACHIEVEMENT_PROGRESS` (subtítulo accesible) cableados; `MASK_BEAM` queda planificado (no hay ataque beam en el Gavilán) |
 | D-17 | 🟠 | **Partidas pre-AUD-502 sin migración** (checkpoint centro→esquina desplaza una vez) | doc101-P2 | ACTIVO-benigno |
-| D-18 | 🟠 | **Recibir daño sin hit-stop; curarse sin VFX; críticos nunca activos** (3 huecos de juice agrupados) | AV-15/16/17 | ACTIVO |
+| D-18 | 🟠 | **Recibir daño sin hit-stop; curarse sin VFX; críticos** | AV-15/16/17 | **PARCIAL AUD-839** — daño: hit-stop + flash rojo + shake; curación: partículas + flash verde. Los «críticos» no existen como sistema (los EVENTOS_CRITICOS de sonido sí están cableados): queda declarado |
 | D-19 | 🟠 | **Contraste/legibilidad por mapa**: 1-1 lavado (niebla), 1-2 ruido de tiles inferior, lobby/hub Backtracking salas vacías gigantes, qa_proof «Untitled Stage» | AV-02/03/04/06 | ACTIVO |
 | D-20 | 🟠 | **Ganchos de gameplay vacíos**: 1_3_aulas (5 TODO), lobby (4), qa_proof (plantilla) | AV-31 | ACTIVO |
-| D-21 | 🟡 | **Combo**: escalones 8-10 planos (×3,×3,×3) y aéreos/especiales no lo construyen | AV-11 | ACTIVO |
+| D-21 | 🟡 | **Combo**: escalones 8-10 planos (×3,×3,×3) | AV-11 | **PARCIAL AUD-839** — escalones 8-10: ×3.2/×3.6/×4.0. Que aéreos/especiales construyan combo queda pendiente (diseño) |
 | D-22 | 🟡 | **Valores muertos**: `NG_PLUS_BASE` no leído; estamina de dash apagada por defecto | AV-12 | ACTIVO |
 | D-23 | 🟡 | **Zoom de cenital casi negro** (stage_cenital, pokemon_cenital): luz no aplicada o mundo vacío en vista cenital | AV-05 | ACTIVO-sin diagnosticar |
 | D-24 | 🟡 | **2 tests de sombras en rojo** (`TestApagadoPorDefecto`) | doc100/101 | **RESUELTO AUD-839** — fuera la declaración redundante de boss_paburu; introspección por el dominio `StagePhysics` |
-| D-25 | 🟡 | **4 fallos preexistentes `test_guardado_y_cadena`** + 18 rutas de docs rotas (track ajeno) | CLOSURE/FINAL | ACTIVO-preexistente, atribuido |
+| D-25 | 🟡 | **4 fallos `guardado_y_cadena` + rutas rotas** | CLOSURE/FINAL | **RESUELTO AUD-839** — identidad `Stage21Oficinas` (STAGE_ID), salidas por WarpZone reconocidas, rutas saneadas; 83/83 |
 | D-26 | 🟡 | **Teclas de depuración activas en build normal** (declaradas en PENDIENTES; p.ej. tecla 8 llena ultimate) | PENDIENTES, CLOSURE | ACTIVO-declarado |
 | D-27 | 🟡 | **Icono/rectángulo rojo sin identificar** en capturas de varios mapas | AV-07 | ACTIVO-sin diagnosticar |
 | D-28 | 🟡 | **GanchoTecho y BalanceoEnLianaSalto inalcanzables** (estados no exportados) | XRAY | ACTIVO-dead code |
@@ -183,9 +183,9 @@ restantes (D-31..D-42) · 16 DECLARADAS (D-43..D-58) · 12 DE PROCESO (D-59..D-7
     después de `sistema_friccion`. Medido: 120 px/s en musgo, sendero y lodo
     por igual. Arreglarlo es decisión de diseño (¿el material multiplica el
     objetivo de marcha?) más reordenar el puente.
-  * **D-72** 🟡 — escalón de 16 px entre `cima_llana_408` (y=447) y
-    `bajada_408` (y=432) en `stage4_1.tmx`: el descenso caminando se frenan en
-    la costura. Mover la bajada 16 px abajo es la corrección candidata.
+  * **D-72** 🟡 — RESUELTO (2026-09-12): la costura se re-alineó
+    (bajada_408 a y=400 y 336 px de largo, sin escalón) y el recorrido
+    cruza caminando y saltando; la cima fantasma desalineada se retiró.
 
 **Quedan ACTIVOS (no se cierran sin decisión de diseño o sin re-trabajo de
 contenido, fuera del alcance seguro de un cierre):** D-01 (oscuridad: luces por
@@ -194,3 +194,22 @@ mapa), D-05 (checkpoints), D-09 (HP de jefes), D-10 (densidad 2-1), D-11
 stage0 y plantilla), D-16 (eventos muertos), D-17 (migración de partidas
 pre-AUD-502; toca SAVE_VERSION, congelado), D-18 (jugos de daño/curación), D-19,
 D-20, D-21 (combo), D-22, D-23, D-26, D-27, D-28, D-71 y D-72.
+
+---
+
+## I. Segunda tanda de cierre AUD-839 (2026-09-12)
+
+* **D-05** (hall), **D-09** (HP de jefes ×3 con umbrales escalados),
+  **D-14** (paridad byte a byte stage_mecanicas + stage0; plantilla
+  regenerada con los 6 tipos que no demostraba, hueco exigente y nota
+  92.3), **D-25** completo (83/83), **D-72**.
+* **D-16 parcial** y **D-18 parcial** (ver tabla).
+* **D-21 parcial** (escalones 8-10 escalan; ×4.0 el remate de combo).
+* **D-01** — ambient_light subido a ≥0.8 en boss_paburu (0.85, antes sin
+  la propiedad), 3-1 (0.55→0.8), aulas (0.85, antes sin la propiedad),
+  stage0 (0.7→0.8) y stage4_1 (0.7→0.8, en TMX y generador).
+
+**Sigen ACTIVOS/declarados**: D-01 (luces por sala: queda diseño fino),
+D-10 (densidad 2-1, a rúbrica del dueño), D-11, D-13, D-17 (SAVE_VERSION
+congelado), D-19, D-20, D-22, D-23, D-26 (declarado), D-27, D-28 (código
+muerto inofensivo), D-29..D-42 (parciales declarados), D-71 (inercia).

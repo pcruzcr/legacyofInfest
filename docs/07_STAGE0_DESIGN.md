@@ -71,7 +71,7 @@ También es la **calibración del calificador**: `scripts/grade_stage.py` le pon
 
 ## 2. Trazado
 
-Mapa horizontal de **100 × 38 baldosas** de 16 px = **1600 × 608 px**. El suelo
+Mapa horizontal de **160 × 45 baldosas** de 16 px = **2560 × 720 px**. El suelo
 está en la fila 30 (**y = 480 px**) y el avance es de izquierda a derecha.
 
 ```
