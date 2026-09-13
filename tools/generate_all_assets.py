@@ -3384,22 +3384,25 @@ def _gen_tileset_stage4_1_fase6(path=None, ts=16, cols=16, rows=16):
     _gen_normal_map_para_tileset(path)
 
 
-def _gen_normal_map_para_tileset(tileset_path):
+def _gen_normal_map_para_tileset(tileset_path, ts: int = 16):
     """Genera *_n.png normal map 8-bit PSX alta calidad para un tileset (Light con sombras_proyectadas).
 
     8-bit por canal (RGB 32-bit con 12 normales): plano (128,128,255) + 8 direcciones
     cardinales/diagonales + 4 esquinas diagonales internas = 12 variaciones distintas.
     El LightSystem lee la normal via sprite_batch GPU (atlas + normales); para tiles se
     usa como bump que el sombreado direccional muestrea con NEAREST sin difuminar.
-    PSX 32-bit: relieve sutil con oclusión, no blur."""
+    PSX 32-bit: relieve sutil con oclusión, no blur.
+
+    AUD-839 — `ts` paramétrico (las hojas HD son de 32 px) y devuelve la ruta
+    generada, para que el manifiesto HD pueda declararla.
+    """
     try:
         src = Image.open(str(tileset_path)).convert("RGBA")
     except Exception:
-        return
+        return None
     w, h = src.size
     normal = Image.new("RGB", (w, h), (128, 128, 255))
     n_draw = ImageDraw.Draw(normal)
-    ts = 16
     cols = w // ts
     rows = h // ts
     for gy in range(rows):
@@ -3432,6 +3435,7 @@ def _gen_normal_map_para_tileset(tileset_path):
             n_draw.line((ox+ts-1, oy+2, ox+ts-1, oy+ts-3), fill=(160, 112, 255))  # E mid
     n_path = tileset_path.with_name(tileset_path.stem + "_n.png")
     normal.save(n_path)
+    return n_path
 
 
 def _gen_tileset_liquidos(path=None, ts=16):

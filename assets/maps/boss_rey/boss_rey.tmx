@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="120" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="15">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="120" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="16">
  <properties>
   <property name="background_zone" value="zone2" />
   <property name="bgm_track" value="bgm_zone2_boss" />
@@ -9,7 +9,9 @@
   <property name="stage_name" value="El Rey Terciopelo" />
   <property name="time_limit" type="int" value="0" />
   <property name="zone" type="int" value="2" />
- </properties>
+   <property name="bloom" type="float" value="0.3" />
+  <property name="vignette" type="float" value="0.35" />
+</properties>
  <tileset firstgid="1" name="tileset_datacenter" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="../../tilesets/tileset_datacenter.png" width="256" height="256" />
  </tileset>
@@ -279,7 +281,8 @@
   <object id="11" name="LeftWall" x="0" y="272" width="16" height="320" />
   <object id="12" name="RightWall" x="1104" y="272" width="16" height="320" />
   <object id="13" name="Ceiling" x="0" y="272" width="1120" height="16" />
- </objectgroup>
+   <object id="15" name="Light_15" type="Light" x="69" y="501" width="16" height="16"><properties><property name="radius" type="int" value="140"/><property name="color" value="#a8d8ff"/><property name="intensity" type="float" value="0.8"/></properties></object>
+</objectgroup>
  <layer id="8" name="FG_Overlay" width="120" height="45">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

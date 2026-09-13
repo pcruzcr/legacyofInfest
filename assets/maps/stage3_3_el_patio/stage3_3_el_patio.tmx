@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="100" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="200">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="100" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="203">
  <properties>
   <property name="schema_version" value="1" />
   <property name="author" value="Rebeca" />
@@ -12,7 +12,10 @@
   <property name="climate" value="clear" />
   <property name="gravity_multiplier" type="float" value="1.0" />
   <property name="ambient_light" type="float" value="0.85" />
- </properties>
+   <property name="bloom" type="float" value="0.28" />
+  <property name="vignette" type="float" value="0.32" />
+  <property name="god_rays" type="float" value="0.35" />
+</properties>
  <tileset firstgid="1" source="../../tilesets/tileset_gavilan_ciudad.tsx" />
  <layer id="1" name="BG_Far" width="100" height="45">
   <data encoding="csv">
@@ -423,6 +426,9 @@
   <object id="120" name="Solid_Cajon01" x="352" y="560" width="16" height="16" />
   <object id="121" name="Solid_Cajon02" x="752" y="560" width="16" height="16" />
 
+  <object id="1023" name="Light_1023" type="Light" x="40" y="512" width="16" height="16"><properties><property name="radius" type="int" value="140"/><property name="color" value="#ffe9a8"/><property name="intensity" type="float" value="0.8"/></properties></object>
+  <object id="1024" name="Light_1024" type="Light" x="448" y="512" width="16" height="16"><properties><property name="radius" type="int" value="140"/><property name="color" value="#ffe9a8"/><property name="intensity" type="float" value="0.8"/></properties></object>
+  <object id="1025" name="Light_1025" type="Light" x="1408" y="512" width="16" height="16"><properties><property name="radius" type="int" value="140"/><property name="color" value="#ffe9a8"/><property name="intensity" type="float" value="0.8"/></properties></object>
 </objectgroup>
  <layer id="8" name="FG_Overlay" width="100" height="45">
   <data encoding="csv">

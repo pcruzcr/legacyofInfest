@@ -13,7 +13,9 @@
   <property name="stage_name" value="1-2  LA SODA" />
   <property name="start_hour" value="14:00" />
   <property name="time_limit" type="int" value="360" />
- </properties>
+   <property name="bloom" type="float" value="0.25" />
+  <property name="vignette" type="float" value="0.3" />
+</properties>
  <tileset firstgid="1" name="tileset_cafeteria" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="tileset_cafeteria_soda.png" width="128" height="128" />
  </tileset>

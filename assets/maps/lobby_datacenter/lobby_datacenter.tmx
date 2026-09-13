@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="80" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="46">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="80" height="45" tilewidth="16" tileheight="16" infinite="0" nextlayerid="9" nextobjectid="47">
  <properties>
   <property name="bgm_track" value="bgm_stage0" />
   <property name="schema_version" value="1" />
@@ -7,7 +7,9 @@
   <property name="stage_id" value="lobby_datacenter" />
   <property name="stage_name" value="2-3  EL LOBBY" />
   <property name="time_limit" type="int" value="120" />
- </properties>
+   <property name="bloom" type="float" value="0.3" />
+  <property name="vignette" type="float" value="0.35" />
+</properties>
  <tileset firstgid="1" source="../../tilesets/tileset_datacenter.tsx" />
  <layer id="1" name="BG_Far" width="80" height="45">
   <data encoding="csv">
@@ -347,7 +349,8 @@
   <object id="10" name="Solid_Floor" type="Solid" x="0" y="192" width="640" height="32" />
   <object id="39" name="Wall_Left" type="Solid" x="0" y="82" width="4" height="224" />
   <object id="42" name="Wall_Right" type="Solid" x="658.5" y="158.5" width="10" height="65" />
- </objectgroup>
+   <object id="1036" name="Light_1036" type="Light" x="320" y="96" width="16" height="16"><properties><property name="radius" type="int" value="140"/><property name="color" value="#a8d8ff"/><property name="intensity" type="float" value="0.8"/></properties></object>
+</objectgroup>
  <layer id="8" name="FG_Overlay" width="80" height="45">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

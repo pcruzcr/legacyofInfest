@@ -72,6 +72,27 @@ GRID = 16           # la grilla 16×16 de siempre (mapeo %16 intacto)
 #: Sin pintor HD propio: se entregan por NEAREST 2× (paleta intacta).
 POR_ESCALADO = {"tileset_stage0", "tileset_stage4_1b", "tileset_stage4_1b_caverna"}
 
+#: AUD-839 (cobertura total) — tilesets de AUTOR que usan los mapas y no
+#: tienen pintor paramétrico: se entregan por NEAREST 2× + normal map, igual
+#: que POR_ESCALADO. La fuente se resuelve en assets/tilesets y, si no está,
+#: en student_assets/tilesets (entregas de estudiantes).
+POR_ESCALADO_AUTOR = {
+    "tileset_aulas_yariel", "tileset_gavilan_ciudad",
+    "tileset_invenio_gothic_v5", "tileset_paburu", "tileset_parqueo",
+    "tileset_residencias_crepusculo", "tileset_residencias_crepusculo_bgfar_bruma",
+    "tileset_stage41_f1", "tileset_stage41_f2", "tileset_stage41_f3",
+    "tileset_stage41_f4", "tileset_stage41_f5", "tileset_stage41_f6",
+}
+
+
+def _fuente_autor(nombre: str) -> Path | None:
+    for raiz in (_RAIZ / "assets" / "tilesets",
+                 _RAIZ / "student_assets" / "tilesets"):
+        candidato = raiz / f"{nombre}.png"
+        if candidato.exists():
+            return candidato
+    return None
+
 
 # ══════════════════════════════════════════════════════════════
 # El pintor HD — la misma gramática, geometría proporcional a k
@@ -323,10 +344,20 @@ def generar_todo_hd(solo_temas: list[str] | None = None) -> dict:
     manifiesto: dict[str, dict] = {}
     temas = {n: t for n, t in TILESET_THEMES.items()
              if not solo_temas or n in solo_temas}
+    # AUD-839 — cobertura total de los mapas: los tilesets de autor entran
+    # por la ruta NEAREST aunque no sean temas paramétricos.
+    for nombre in POR_ESCALADO_AUTOR:
+        if not solo_temas or nombre in solo_temas:
+            temas.setdefault(nombre, None)
     for nombre, tema in sorted(temas.items()):
         hd = SALIDA / f"{nombre}_hd.png"
-        if nombre in POR_ESCALADO:
-            origen = _RAIZ / "assets" / "tilesets" / f"{nombre}.png"
+        if nombre in POR_ESCALADO or nombre in POR_ESCALADO_AUTOR:
+            origen = (_RAIZ / "assets" / "tilesets" / f"{nombre}.png")
+            if not origen.exists():
+                origen = _fuente_autor(nombre)
+            if origen is None:
+                print(f"  AVISO: sin fuente para {nombre}; se omite")
+                continue
             _escalado_nearest(origen, hd, 2)
             tecnica = "nearest_2x (pintor propio no paramétrico; paleta intacta)"
         elif tema == "gothic":
@@ -340,7 +371,7 @@ def generar_todo_hd(solo_temas: list[str] | None = None) -> dict:
             tecnica = "re-render HD (geometría ×k)"
         hd4 = _escalado_nearest(hd, SALIDA / f"{nombre}_hd4.png", 2)
         hd2048 = _escalado_nearest(hd4, SALIDA / f"{nombre}_hd_2048.png", 2)
-        normal = _gen_normal_map_para_tileset(hd)
+        normal = _gen_normal_map_para_tileset(hd, ts=TS_HD)
         manifiesto[nombre] = {
             "tecnica": tecnica,
             "hd": {"ruta": hd.name, "tam": "512x512", "tile": 32},

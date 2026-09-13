@@ -248,3 +248,29 @@ muerto inofensivo), D-29..D-42 (parciales declarados), D-71 (inercia).
 DECLARADO con su motivo y 6 quedan abiertos por exigir hardware,
 diagnóstico de render o decisión estética del dueño (D-01 fino, D-10,
 D-19 fino, D-23, D-27, D-71→resuelto).
+
+---
+
+## K. Cuarta tanda AUD-839 (2026-09-12) — HD y los últimos abiertos
+
+* **Cobertura HD total (roadmap 97):** los 17 tilesets que usan los mapas
+  tienen su hoja `_hd` (32 px), `_hd4` (64) y `_hd_2048` (128) en
+  `assets/tilesets_hd/`, más **normal map para los 31 temas** (el
+  generador ahora es paramétrico en `ts` y devuelve la ruta). Los 13 de
+  autor entran por NEAREST 2× con paleta intacta; el manifiesto declara
+  técnica, tamaños y autotile.
+* **Efectos por mapa:** bloom + viñeta en los 10 mapas que no las
+  tenían, y `god_rays` en los tres exteriores soleados (1-1, 3-3 y el
+  patio). TMX 35/35 tras el barrido.
+* **D-01 fino:** +21 luces automáticas cerca de spawn y checkpoints en
+  los 8 mapas jugables sin ellas.
+* **D-10 RESUELTO:** el 2-1 baja de 41 a 23 enemigos con curva por
+  especie (los enjambres quedan a 2, especiales intactos).
+* **D-23 DIAGNOSTICADO:** la oscuridad del cenital es intrínseca al arte
+  (tileset stage0 compartido: brillo medio 46/255) y su pase de luz casi
+  no aplica (13.5 → 14.1 con ambient 1.0). Mejorado con efectos y luces;
+  la corrección completa exige revisar el pipeline de luz de la vista
+  cenital — queda abierto con causa y medición.
+* **D-27 DIAGNOSTICADO:** NO es el placeholder del cargador (barrido de
+  los 15 escenarios: 0 sprites faltantes). Requiere sesión de capturas
+  para identificar el origen; queda abierto con la hipótesis descartada.

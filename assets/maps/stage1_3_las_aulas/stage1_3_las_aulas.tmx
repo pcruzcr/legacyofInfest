@@ -11,7 +11,9 @@
   <property name="gravity_multiplier" type="float" value="1.0" />
   <property name="climate" value="clear" />
   <property name="ambient_light" type="float" value="0.85" />
- </properties>
+   <property name="bloom" type="float" value="0.22" />
+  <property name="vignette" type="float" value="0.3" />
+</properties>
  <tileset firstgid="1" name="tileset_aulas_yariel" tilewidth="16" tileheight="16" tilecount="64" columns="8">
   <image source="../../tilesets/tileset_aulas_yariel.png" width="128" height="128" />
  </tileset>

@@ -5,6 +5,24 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.4.0] - 2026-09-12
+
+Cobertura HD completa y cierre de los últimos abiertos de la 103.
+
+- **HD 100% de los mapas (roadmap 97):** los 17 tilesets usados por los
+  niveles tienen hoja HD de 32 px, ×4 y la plancha 2048 del roadmap, con
+  **normal map en los 31 temas** del catálogo (el generador de normales
+  ahora es paramétrico y declara la ruta en el manifiesto).
+- **Efectos en todos los escenarios:** bloom y viñeta donde no las había
+  (10 mapas) y god rays en los exteriores soleados.
+- **21 luces nuevas** cerca de spawns y checkpoints en los 8 escenarios
+  que se jugaban sin ninguna.
+- **Densidad del 2-1 con curva (D-10):** de 41 a 23 enemigos, los
+  enjambres a 2 por especie y los especiales intactos.
+- **QA PROOF con identidad y contenido**; 1-1 compensa su niebla.
+- **D-23 y D-27 con diagnóstico** (arte compartido oscuro y pase de luz
+  cenital casi nulo; el icono rojo no es placeholder del cargador).
+
 ## [1.3.2] - 2026-09-12
 
 Tercera tanda del cierre de la lista 103: lo que quedaba cerrable.
