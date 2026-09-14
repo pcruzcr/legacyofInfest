@@ -109,15 +109,18 @@ def get_config(
     # gestor vivo y perdería `ranura_activa` (ver test prefere_activa).
     if ng_plus is None:
         try:
-            from src.engine.core.save_manager import SaveManager, _candado_gestor, _gestor_activo
+            from src.engine.core.save_manager import _candado_gestor, _gestor_activo
 
             mgr = None
             with _candado_gestor:
                 mgr = _gestor_activo
             if mgr is not None:
                 slot = mgr.ranura_activa
+                # AUD-842 — sin ranura ACTIVA no hay NG+: la ranura más
+                # reciente del disco puede ser una prueba del profesor con
+                # NG+23, y una partida nueva heredaría su dificultad.
                 if slot is None:
-                    slot = mgr.newest_slot()
+                    ng_plus = 0
                 if slot is not None:
                     data = mgr.load(slot)
                     if data is not None:
@@ -127,27 +130,14 @@ def get_config(
                 else:
                     ng_plus = 0
             else:
-                # Sin gestor vivo (tests sin App): leer el disco sin crear un
-                # SaveManager vivo que pisaría _gestor_activo. Si no hay
-                # ficheros, es 0 de todas formas.
-                saves_dir = SaveManager.SAVES_DIR
-                best = None
-                best_time = ""
-                for s in range(1, 6):
-                    p = saves_dir / f"slot_{s}.json"
-                    if not p.exists():
-                        continue
-                    try:
-                        from src.engine.core.save_data import SaveData as _SD
-
-                        raw = p.read_bytes()
-                        sd = _SD.from_json(raw)
-                        if sd.timestamp > best_time:
-                            best_time = sd.timestamp
-                            best = sd
-                    except Exception:
-                        continue
-                ng_plus = int(getattr(best, "ng_plus", 0) or 0) if best else 0
+                # AUD-842 — sin gestor vivo NO hay partida: NG+ es 0. La
+                # lectura antigua del disco más reciente hacía que la máquina
+                # de desarrollo (con ranuras NG+ de prueba) jugara TODAS las
+                # partidas nuevas a NG+23 — vida enemiga ×3, el tope — y el
+                # curso entero recibía una dificultad que nadie eligió. El
+                # NG+ de una partida sólo puede venir de la ranura ACTIVA
+                # (el gestor vivo de arriba); empezar de cero es NG+0.
+                ng_plus = 0
         except Exception:
             ng_plus = 0
     ng_plus = max(0, int(ng_plus or 0))

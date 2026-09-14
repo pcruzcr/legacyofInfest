@@ -69,7 +69,9 @@ class TestNGPlusCompletable:
         # La cura sigue curando y la ventana sigue siendo pulsable
         assert c5.heal_mult > 0.5
         assert c5.parry_window >= 0.15
-        assert c5.invincibility_duration >= 1.0
+        # AUD-839 — el base de i-frames pasó de 1.5 a 1.0 (D-08): NG+5 lo
+        # deja en 0.85 s, que sigue siendo ventana de gracia real.
+        assert c5.invincibility_duration >= 0.8
 
     def test_ng_plus_10_aun_tiene_iframe_y_combo(self) -> None:
         c10 = get_config(Difficulty.NORMAL, ng_plus=10)
@@ -92,9 +94,17 @@ class TestNGPlusCicloDeVida:
     def test_get_config_lee_ng_plus_del_guardado(self) -> None:
         mgr = SaveManager()
         mgr.save(1, SaveData(slot_id=1, ng_plus=3))
-        # Sin parámetro explícito, get_config lee del slot más reciente
+        # AUD-842 — el NG+ viene de la ranura ACTIVA (la que se juega), no
+        # de la más reciente del disco: una partida nueva en la máquina de
+        # alguien con ranuras NG+ de prueba no hereda esa dificultad.
+        mgr.ranura_activa = 1
         cfg = get_config(Difficulty.NORMAL, ng_plus=None)
         assert cfg.enemy_health_mult == pytest.approx(1.30)
+        # Y sin ranura activa (partida nueva), NG+ es 0 pase lo que haya
+        # en el disco.
+        mgr.ranura_activa = None
+        cfg_fresca = get_config(Difficulty.NORMAL, ng_plus=None)
+        assert cfg_fresca.enemy_health_mult == pytest.approx(1.0)
 
     def test_get_config_prefiere_ranura_activa_a_mas_reciente(self) -> None:
         """Con dos partidas, la activa manda (AUD-441)."""

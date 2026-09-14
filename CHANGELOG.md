@@ -5,6 +5,19 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.4.1] - 2026-09-12
+
+La dificultad que nadie eligió, fuera.
+
+- **Las partidas nuevas ya no heredan NG+ del disco:** el NG+ sólo viene
+  de la ranura activa. Antes, una máquina con ranuras de prueba a NG+23
+  jugaba TODAS las partidas nuevas con vida enemiga ×3 (el tope) — era el
+  «cuesta más matar enemigos» en todos los niveles.
+- **Los enemigos vuelven al suelo:** el ancla de los terrestres flotaba a
+  la altura de su último anclaje (peor tras cruzar una pendiente) y podía
+  anclarse al techo de un muro que atraviesa el mapa. Ahora bajan el
+  escalón de 16 px, caen con gravedad más allá y no se trepan a muros.
+
 ## [1.4.0] - 2026-09-12
 
 Cobertura HD completa y cierre de los últimos abiertos de la 103.

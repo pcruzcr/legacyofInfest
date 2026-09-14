@@ -942,7 +942,14 @@ class EnemyBase(BaseEntity):
         suelo_debajo = None
         for r in todos:
             if r.left < cx < r.right:
-                if abs(feet_y - r.top) <= 2.0 or (r.top <= feet_y < r.bottom):
+                if abs(feet_y - r.top) <= 2.0 or (
+                    r.top <= feet_y < r.bottom
+                    # AUD-842 — el anclaje por "pies dentro del rect" exige
+                    # que el techo esté a la altura del cuerpo: un MURO que
+                    # atraviesa todo el mapa (top=0) no es un suelo al que
+                    # trepar; antes teletransportaba al enemigo a su top.
+                    and r.top >= feet_y - self.rect.height - 2.0
+                ):
                     self.position.y = float(r.top - self.rect.height)
                     self.rect.y = int(self.position.y)
                     self._knockback_velocity.y = 0.0
@@ -960,12 +967,15 @@ class EnemyBase(BaseEntity):
                     suelo_debajo is None or r.top < suelo_debajo
                 ):
                     suelo_debajo = r.top
-        if suelo_debajo is None:
+        # AUD-842 — si el suelo bajo los pies está a más de un escalón (16
+        # px), el terrestre CAE con gravedad: antes quedaba flotando en la
+        # altura de su último anclaje (enemigos caminando en el aire).
+        if suelo_debajo is None or suelo_debajo - feet_y > 16.0:
             self._caida_vy = min(500.0, self._caida_vy + 600.0 * dt)
             self.position.y += self._caida_vy * dt
             self.rect.y = int(self.position.y)
             self._update_rects()
-        elif suelo_debajo - feet_y <= 16.0:
+        else:
             self.position.y += suelo_debajo - feet_y
             self.rect.y = int(self.position.y)
             self._caida_vy = 0.0

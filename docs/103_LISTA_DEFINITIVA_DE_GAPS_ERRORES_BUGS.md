@@ -274,3 +274,34 @@ D-19 fino, D-23, D-27, D-71→resuelto).
 * **D-27 DIAGNOSTICADO:** NO es el placeholder del cargador (barrido de
   los 15 escenarios: 0 sprites faltantes). Requiere sesión de capturas
   para identificar el origen; queda abierto con la hipótesis descartada.
+
+---
+
+## L. Quinta tanda AUD-839 (2026-09-12) — la dificultad que nadie eligió
+
+Reporte directo de juego: «hay enemigos que caminan en el aire y en todos
+los niveles es más difícil eliminar a enemigos». Ambos verificados,
+causa raíz encontrada y cerrados:
+
+* **D-73 🟠 RESUELTO — fuga de NG+ a partidas nuevas.** `get_config()` sin
+  ranura activa leía la ranura MÁS RECIENTE del disco: la máquina de
+  desarrollo tiene ranuras de prueba a NG+23, así que CUALQUIER partida
+  nueva arrancaba «Normal NG+23» — vida enemiga ×3.0 (el tope del modelo),
+  empuje ×1.69. Era exactamente «cuesta más matar enemigos en todos los
+  niveles». Ahora el NG+ sólo puede venir de la ranura ACTIVA; empezar de
+  cero es NG+0. Medido: partida nueva = «Normal», vida ×1.0.
+* **D-74 🔴 RESUELTO — enemigos caminando en el aire.** Dos defectos en el
+  ancla de suelo de los terrestres (`_mantener_en_suelo`): (1) un suelo a
+  más de 16 px no bajaba ni caía — el enemigo quedaba flotando en la
+  altura de su último anclaje (los walkers de stage0 cruzaban la pendiente
+  y seguían a 28 px del suelo); (2) si los pies quedaban dentro de un
+  sólido alto (el muro del borde), se anclaba a su TECHO. Ahora baja el
+  escalón de 16 px, cae con gravedad más allá, y el anclaje por
+  contención exige que el techo esté a la altura del cuerpo.
+* Los tres trinquetes que codificaban la conducta vieja se actualizaron
+  con su motivo (lectura de ranura activa + contra-caso de partida nueva;
+  i-frames NG+5 0.85 s; snap de migración sólo en partidas pre-AUD-502 y
+  sólo al desfase clásico de medio tile).
+
+Con esto la dificultad que juega un estudiante es la diseñada: Normal,
+vida enemiga ×1.0, sin NG+ heredado, enemigos pegados al suelo.
