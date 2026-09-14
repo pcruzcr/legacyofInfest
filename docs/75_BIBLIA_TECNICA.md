@@ -24,7 +24,7 @@ señala y gana el código (regla de precedencia de `CLAUDE.md` §5).
 | §1 | ¿Cómo instalo, corro y pruebo el juego? |
 | §2 | ¿Qué comandos CLI tiene el motor? |
 | §3 | ¿Cuáles son los controles? |
-| §4 | ¿Qué hace el jugador? (28 estados, física, combate, habilidades) |
+| §4 | ¿Qué hace el jugador? (30 estados, física, combate, habilidades) |
 | §5 | ¿Qué enemigos existen y cómo se programan? |
 | §6 | ¿Qué jefes hay y qué API usan? |
 | §7 | ¿Cómo diseño un nivel? (TMX: capas, objetos, propiedades) |
@@ -342,7 +342,7 @@ aturdimiento), `teletransportar(x, y)` (esquina superior-izquierda), `on_attack_
 
 ### 7.1 Reglas del formato
 
-- Tile 16×16, ortogonal, orden derecha-abajo, infinito **No**. Resolución interna 800×600.
+- Tile 16×16, ortogonal, orden derecha-abajo, infinito **No**. Resolución interna 1280×720 (AUD-754; era 800×600).
 - **8 capas** (en orden): `BG_Far`, `BG_Mid`, `BG_Near`, `Terrain`, `Terrain_Detail`, `Objects`,
   `Collision`, `FG_Overlay`.
 - Capa `Collision`: rectángulos con tipo `Solid` (sólido total) o `Platform` (un solo sentido,
@@ -544,7 +544,7 @@ escenario siguen funcionando sin tocarlas). El puente: `ComponentesDeEntidad` (m
 - `BaseEntity(ComponentesDeEntidad, ABC)`: `set_event_bus(bus)`, `update(dt)` (abstracto),
   `draw(surface, camera_offset)` (abstracto). Posición `pygame.Vector2`, `Rect` de colisión,
   visibilidad, activo.
-- `PlayerState(str, Enum)`: los 28 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
+- `PlayerState(str, Enum)`: los 30 estados (ver §4.1). `PlayerStateData`: 44 campos transitorios.
 - `entity_factory.ensure_registered()`: registra tipos en el StageLoader (idempotente).
 - `bestiary.py`: `BestiaryEntry(enemy_id, name, description, lore, drops, hp, damage)`,
   `Bestiary.get_instance()` → `id_de(enemigo)`, `get_entry(id)`, `get_all_entries()`,
@@ -701,11 +701,13 @@ Kit de demos (`demo_common.py`): `build_default_sources()`, `save_png`, `draw_to
 `SAVE_REQUESTED` `SHOW_MESSAGE` `HIDE_MESSAGE` `SHOW_DIALOGUE` `DIALOGUE_FINISHED`
 `ACHIEVEMENT_UNLOCKED` `ACHIEVEMENT_PROGRESS`.
 
-**SFX (39, más `MUSIC_STINGER` aparte):** `SFX_PLAYER_JUMP/LAND/FOOTSTEP/SHORT_ATTACK/LONG_ATTACK/HURT/DIE/PARRY/CROUCH/HEAL`,
+**SFX (49, más `MUSIC_STINGER` aparte):** `SFX_PLAYER_JUMP/LAND/FOOTSTEP/SHORT_ATTACK/LONG_ATTACK/HURT/DIE/PARRY/CROUCH/HEAL`,
+`SFX_PLAYER_CLIMB/WALL_SLIDE/ZIPLINE`, `SFX_PLAYER_FOOTSTEP_MUSGO/LODO/GRAVA/AHOGADO`,
 `SFX_MENU_HOVER/CONFIRM/CANCEL`, `SFX_HIT_CONNECT`, `SFX_ENEMY_HIT`, `SFX_ENEMY_DIE_SMALL/LARGE`,
 `SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_STAGE_BANNER/COMPLETE`, `SFX_HAZARD_ZONE`,
 `SFX_BOSS_HIT`, `SFX_BOSS_PHASE_CHANGE`, `SFX_UI_GAME_OVER`,
 `SFX_ENVIRONMENT_SCREEN_SHAKE/ONE_WAY_PLATFORM`, `SFX_ENEMIES_PROJECTILE_HIT_WALL`,
+`SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE`, `SFX_POISON_TICK`, `SFX_TIMER_ALERT_PULSE`,
 `SFX_BOSSES_GAVILAN_DIVE/MASK_BEAM`, `SFX_BOSSES_PABURU_EYE_BEAM/WAVE`,
 `SFX_BOSSES_RELIC_APPEAR`, `SFX_BOSSES_REY_SPIT/SPLIT`,
 `SFX_BOSSES_VENADO_CHARGE/STOMP/VINE`, `SFX_VOZ_PABURU` (AUD-443: se emite ya; sin muestra en el
@@ -713,7 +715,15 @@ banco todavía, a propósito — falta el `.wav` de autor), `MUSIC_STINGER`.
 
 > **AUD-455 (2026-08-13).** Decía «SFX (41)» y faltaba `SFX_VOZ_PABURU` en la
 > lista. Recontado contra las constantes `SFX_*` de `src/engine/core/events.py`
-> (39 exactas) más `MUSIC_STINGER`, que no lleva el prefijo y se cuenta aparte.
+> (39 exactas entonces) más `MUSIC_STINGER`, que no lleva el prefijo y se cuenta aparte.
+>
+> **Recontado 2026-09-09 (auditoría documental total).** Hoy son **49**
+> constantes `SFX_*` contadas en `events.py`: las 39 más 10 con emisor
+> verificado (`FOOTSTEP_MUSGO/LODO/GRAVA/AHOGADO` en `states/grounded.py`,
+> `CLIMB`/`ZIPLINE` en `states/rope.py`, `WALL_SLIDE` en `states/wall.py`,
+> `POISON_TICK` en `systems_zonas.py`, `TIMER_ALERT_PULSE` en `hud.py`,
+> `PEZ_ABISMAL_ACERCARSE` en `enemy_pez_abismal.py`). Tabla en
+> `docs/52_EVENT_MAP.md` §2.
 
 **VFX:** `VFX_PARRY` `VFX_CHARGE` `VFX_SLAM` `VFX_ULTIMATE` `VFX_BUBBLE`.
 
@@ -903,12 +913,12 @@ de la cola de eventos pygame antes de cada test.
 
 | Dominio | Estado medido |
 |---|---|
-| Núcleo | 800×600 @60 FPS; 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
+| Núcleo | 1280×720 @60 FPS estables (paso fijo 120 Hz); 3 relojes; time_scale compuesto; event bus por inyección; `SceneRegistry` perezoso |
 | ECS | Bajo la herencia; 20 componentes; coste medido 9.07 vs 9.42 ms por fotograma |
-| Jugador | 28 estados; 5.0 HP; combate completo; arco; estamina opt-in |
-| Enemigos | 54 tipos registrados (22 clases base + 35 especies + jefes ref) sobre 13 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
+| Jugador | 30 estados; 5.0 HP; combate completo; arco; estamina opt-in |
+| Enemigos | 55 tipos registrados (35 especies del bestiario sobre las clases base de `enemy_*.py`, más jefes y `ParryTeacher`; 55 claves medidas en `StageLoader._entity_registry`) sobre 15 estados; squad brain con sklearn (lote 9 filas: 1.82 ms vs 11.87 ms) |
 | Jefes | Fases, telegrafía, puntos débiles, parry, invocaciones, arena |
-| TMX | 50 tipos del framework + 54 de entidades, más `Solid`/`Platform` en `Collision` (104 declarables; ver §7.3); 18 propiedades; 8 capas |
+| TMX | 120 en runtime en `Objects` (51 integrados + 69 del registro con escenarios descubiertos; 122 con `Solid`/`Platform`, 108 declarables en base limpia; ver `tests/test_el_inventario_cuenta_bien.py`); 18 propiedades; 8 capas |
 | Mecánicas F5 | 11/11 en el motor (stage_mecanicas las enseña) |
 | VFX | Luz, bloom, viñeta, clima, partículas, día/noche, estaciones, niebla, agua, estelas, números de daño |
 | Persistencia | Atómica, hostil-probada |
@@ -958,8 +968,8 @@ de la cola de eventos pygame antes de cada test.
 <!-- /cita-historica -->
 - `22_API_CONTRACTS.md` (histórico): módulos eliminados (`utils/spritesheet.py`,
   `scene/transitions.py`).
-- Conteos de estados: docs 19/25/26/27 según edición; **el código tiene 28**.
-- `EnemyState`: 4 miembros en 22_API vs **13 en código**.
+- Conteos de estados: docs 19/25/26/27 según edición; **el código tiene 30**.
+- `EnemyState`: 4 miembros en 22_API vs **15 en código**.
 - Brute HP: 6.0 en GDD vs **5.0 en código**.
 - Conteos de tipos: doc 62 dice 104/54 (2026-08-30); **el código declara 50 tipos de framework** (+ 54 entidades + 2 de
   colisión = 104 declarables; ver §7.3 y `tests/test_el_inventario_cuenta_bien.py`). *(Nota 2026-08-30: doc 60 actualizado a 104 y 54; la cifra viva es la de `test_el_inventario_cuenta_bien.py`.)*

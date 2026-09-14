@@ -234,11 +234,24 @@ class CurveEditorScene(BaseScene):
             return
 
         # Mouse drag (via pygame.mouse since InputManager has no mouse property)
+        # AUD-809: migrado de DISPLAY_SCALE a letterbox — mismo modelo que sandbox_scene.
         buttons = pygame.mouse.get_pressed()
-        mx, my = pygame.mouse.get_pos()
-        scale = settings.DISPLAY_SCALE
-        mx = mx // scale
-        my = my // scale
+        mx_raw, my_raw = pygame.mouse.get_pos()
+        from src.engine.core import display as _display  # local para no ciclo
+
+        _surf = pygame.display.get_surface()
+        if _surf is not None:
+            dw, dh = _surf.get_size()
+            vp_x, vp_y, vp_w, vp_h = _display.calculate_viewport(dw, dh)
+            if vp_w > 0 and vp_h > 0:
+                mx = int((mx_raw - vp_x) * settings.INTERNAL_WIDTH / vp_w)
+                my = int((my_raw - vp_y) * settings.INTERNAL_HEIGHT / vp_h)
+            else:
+                mx = mx_raw // max(1, settings.DISPLAY_SCALE)
+                my = my_raw // max(1, settings.DISPLAY_SCALE)
+        else:
+            mx = mx_raw // max(1, settings.DISPLAY_SCALE)
+            my = my_raw // max(1, settings.DISPLAY_SCALE)
 
         if buttons[0]:
             if self._drag_idx == -1:

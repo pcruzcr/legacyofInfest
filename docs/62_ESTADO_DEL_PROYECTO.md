@@ -35,7 +35,7 @@ Tres listas, y la diferencia entre ellas importa:
 
 | Sistema | Estado |
 |---|---|
-| Bucle a 800 × 600 y 60 FPS | resolución interna fija, escalada a la ventana |
+| Bucle a 1280 × 720 y 60 FPS | resolución interna fija, escalada a la ventana (AUD-833: era 800 × 600) |
 | **Tres relojes** | `dt` (escalado), `dt_mundo` (sin hit-stop), `unscaled_dt` (real) |
 | Composición de escalas de tiempo | cada efecto registra su factor con su nombre; el resultado es el producto |
 | Tope de fotograma | `MAX_FRAME_TIME = 0.05`: un tirón hace el juego lento, no roto |
@@ -45,8 +45,9 @@ Tres listas, y la diferencia entre ellas importa:
 ### Arquitectura
 
 * **ECS por debajo de la herencia.** `World`, componentes y sistemas con fases
-  explícitas y borrado diferido. Los **17 escenarios y 4 jefes del árbol**
-  funcionan sobre él. *(La anulación parcial de 2026-08-07 —CLAUDE.md, "26
+  explícitas y borrado diferido. Los **35 directorios de `src/stages` (sin
+  `__pycache__`: 34 mapas en `assets/maps`) y 4 jefes del árbol** funcionan
+  sobre él (2026-09-09: eran 34/33; AUD-833: era «17 escenarios»). *(La anulación parcial de 2026-08-07 —CLAUDE.md, "26
   clases de escenario"— suspende la restricción histórica; el recuento actual
   del árbol es el que manda.)*
 * **Componente-como-vista.** `Transform` y `Salud` leen del dueño en vez de
@@ -56,12 +57,15 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Jugador
 
-27 estados: suelo, aire, ataque, defensa, agarre, nado y daño. Salto medido en
+30 estados: suelo, aire, ataque, defensa, agarre, nado y daño. Salto medido en
 **72 px**, que es el número con el que se decide si un obstáculo cabe.
 
 ### Enemigos y jefes
 
-* **54 tipos registrados** sobre ocho arquetipos base (22 clases + 35 especies del bestiario, varios jefes), con **13 estados** incluido
+* **55 tipos registrados** (35 especies del bestiario sobre las clases base de
+  `enemy_*.py`, más jefes y `ParryTeacher`; medido: 55 claves en
+  `StageLoader._entity_registry` en intérprete limpio tras
+  `entity_factory.ensure_registered()`; eran 54 en HEAD y «65» antes), con **15 estados** incluido
   `TELEGRAPHING`.
 * **Cerebro de escuadrón** con scikit-learn: predicción por lote, cadencia
   limitada y escalonada. Medido: 9 filas cuestan 1,82 ms en lote contra 11,87
@@ -72,11 +76,12 @@ Tres listas, y la diferencia entre ellas importa:
 
 ### Escenarios y TMX
 
-**104 tipos de objeto en runtime** (50 integrados del framework + 54 del
-registro una vez descubiertos los escenarios, más `Solid` y `Platform` en
-`Collision`; la referencia de estudiantes `STAGE_CREATION.md` cuenta el
-registro base sin descubrir: 97, y `check_tmx_coverage.py` cuenta
-base+collision: 99), **18 propiedades de mapa**, 8 capas. Incluye las once
+**120 tipos de objeto en runtime** en la capa `Objects` (51 integrados del
+framework de `tmx_diagnostics.BUILTIN_OBJECT_TYPES` + 69 del registro con los
+escenarios descubiertos; 122 con `Solid` y `Platform` de `Collision`; en base
+limpia: 106 en `Objects` —51 + 55, el 55 es `ParryTeacher`, nuevo en el
+árbol— y 108 declarables; medido con el cargador, ver
+`tests/test_el_inventario_cuenta_bien.py` y `tests/test_guia_del_motor.py`), **18 propiedades de mapa**, 8 capas. Incluye las once
 mecánicas de la fase 5 —viento, fricción, cinta, láser, onda, agua, plataforma
 móvil, hundible, bloque rítmico, liana, tirolesa— más sigilo con cono de visión
 y perseguidor, y los cuatro interactivos de F4.1.
@@ -113,11 +118,13 @@ daño y efectos de impacto. Todo configurable desde Tiled sin escribir Python.
 
 ### Calidad
 
-* **6274 casos** recogidos (`pytest --collect-only -q`, 2026-08-30).
-* 84 pruebas de humo que **arrancan, actualizan y dibujan** cada escena
-  (`test_scene_smoke.py` y `test_stage0_smoke.py`).
+* **6378 casos** recogidos (`pytest --collect-only -q`, 2026-09-09; eran 6331 el 2026-09-07 y 6274 el 2026-08-30).
+* 13 pruebas de humo que **arrancan, actualizan y dibujan** cada escena
+  (AUD-833: eran «84»; medido: 13 `def test_` en `test_scene_smoke.py` +
+  `test_stage0_smoke.py`).
 * `ruff` limpio, `mypy` en CI con trinquete, validadores en CI.
-* Stage 0: **130/130**. Los **17 escenarios del árbol**, integrados y
+* Stage 0: **130/130**. Los escenarios del árbol (35 dirs en `src/stages`,
+  34 mapas), integrados y
   calificados (media 79,0 % con `grade_stage.py`).
 
 ---
@@ -143,18 +150,19 @@ Dos cosas concretas: **no hay atlas de sprites** —58 blits sueltos— y el
 post-procesado se hace **en CPU sobre superficies**, con `gl_pipeline.py`
 (1.100 líneas con sus sombreadores) ya escrito y sin usarse para esto.
 
-### B2. `stage_scene.py` — 1.277 líneas
+### B2. `stage_scene.py` — 1.362 líneas (AUD-833: eran 1.277)
 
 Carga, actualiza, dibuja, gestiona VFX, agarres, interactuables y cámara. Es un
 objeto-dios y es donde se toca casi cualquier cambio, así que también es donde
 más fácil es romper algo sin querer. Se parte en cuatro o cinco colaboradores
-(medido `wc -l src/framework/scenes/stage_scene.py` el 2026-08-30).
+(medido `wc -l src/framework/scenes/stage_scene.py` el 2026-09-07).
 
 ### B3. Alcance del comprobador de tipos
 
 `mypy` entró en CI con **2 paquetes de unos 15** y hoy el trinquete tiene
-**9** (`mypy_scope.txt`): core, input, scene, audio, ui, utils, physics, world
-y stage. La lista existe justamente para ir subiendo; el trabajo es
+**10** (`mypy_scope.txt`; AUD-833: eran «9», faltaba `src/framework/ecs`):
+core, input, scene, audio, ui, utils, physics, world
+y stage, más ecs. La lista existe justamente para ir subiendo; el trabajo es
 real pero mecánico (AUD-371, ampliado a 9 en 2026-08-30).
 
 ### B4. Cobertura de pruebas ~48 %
@@ -163,10 +171,11 @@ El número importa menos que **dónde** está el hueco. No hay medición recient
 por módulo porque el entorno de auditoría no aguanta `pytest-cov` sobre el
 árbol entero.
 
-### B5. Documentación atada al código: sólo una de 95
+### B5. Documentación atada al código (AUD-833: eran «95»)
 
-`docs/60` tiene 22 pruebas que comparan sus cifras con el motor. Las otras 94
-no tienen nada, y este mes **tres documentos** resultaron describir cosas que
+`docs/60` tiene 22 pruebas que comparan sus cifras con el motor. El árbol
+tiene 137 `.md` en `docs/` (medido 2026-09-07); las no cubiertas no tienen
+nada, y este mes **tres documentos** resultaron describir cosas que
 no existen. Extender el patrón a las especificaciones (05, 06, 17) es el
 siguiente paso obvio.
 
@@ -203,7 +212,7 @@ bestiario. Se colocaron en las salas 8 y 9 del laboratorio
 indirecta —los cuatro jefes se colocan con su tipo directo—, medido por
 `check_tmx_coverage.py`.
 
-### B9. La curva de dificultad de los 15 escenarios nunca se ha medido
+### B9. La curva de dificultad de los escenarios nunca se ha medido (el árbol tiene 35 dirs / 34 mapas)
 
 El arnés de playtest existe. Falta que produzca un informe comparativo.
 
@@ -327,16 +336,16 @@ ningún software vivo. El techo realista por categoría está en
 
 | Área | Hay | Mejorable | Falta |
 |---|---|---|---|
-| Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.277 líneas | — |
-| Jugador | 28 estados | — | — |
-| Enemigos | 54 tipos, 13 estados, IA por lote | tipos sin usar en ningún mapa: sólo `BossSpawn` indirecto | — |
+| Motor y arquitectura | ECS, 3 relojes, escalas componibles | `stage_scene` de 1.362 líneas | — |
+| Jugador | 30 estados | — | — |
+| Enemigos | 55 tipos, 15 estados, IA por lote | tipos sin usar en ningún mapa: 13 (BossSpawn indirecto + 10 especies nuevas sin mapa) | — |
 | Jefes | fases, telegrafiado, puntos débiles | variedad entre jefes | — |
-| Escenarios | 104 tipos TMX en runtime (97 base), 11 mecánicas | stage 0 usa 4 de 11 | — |
+| Escenarios | 120 tipos TMX en runtime en `Objects` (51 integrados + 69 de registro; 122 con `Collision`, 108 declarables en base limpia), 11 mecánicas | stage 0 usa 4 de 11 | — |
 | Gráficos | luz, clima, VFX, post-procesado | atlas, batching, post en GPU | 2.5D |
-| Audio | música dinámica, ambiente, posicional | — | **reloj musical**, buses, ducking |
+| Audio | música dinámica, ambiente, posicional, reloj musical (AUD-137), buses y ducking (HECHO, ver §C1) | — | reverb por zona (imposible sobre SDL, documentado) |
 | Accesibilidad | 4 ayudas conectadas | — | — |
 | Persistencia | atómica y endurecida | — | — |
-| Calidad | 6274 pruebas, CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
+| Calidad | 6378 pruebas (`pytest --collect-only -q`, 2026-09-09; eran 6331 el 2026-09-07), CI con 5 puertas | cobertura, mypy, docs atadas | mutación, resistencia |
 | Localización | catálogos completos, política española-única desde AUD-455/2026-08-11 | ver `tests/test_documentacion_en_espanol.py` para el estado vivo | — |
 
 ---

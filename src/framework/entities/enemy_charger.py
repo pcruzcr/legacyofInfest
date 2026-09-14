@@ -20,8 +20,12 @@ class EnemyCharger(EnemyBase):
         self,
         spawn_position: pygame.Vector2,
         max_health: float = 4.0,
-        damage_on_contact: float = 1.5,
-        charge_speed: float = 250.0,
+        # AUD-839 (D-06) — 1,5 de contacto (30-54 % de vida) y 250 px/s
+        # (por encima del dash de 200) hacían al embestidor un castigo sin
+        # contra-juego legible. 1,0 y 210 lo dejan esquivable con dash y
+        # castigable tras el choque.
+        damage_on_contact: float = 1.0,
+        charge_speed: float = 210.0,
         zone: int = 0,
         **kwargs,
     ) -> None:
@@ -39,6 +43,8 @@ class EnemyCharger(EnemyBase):
         # AUD-455: el y del TMX es la esquina superior (semántica nativa de
         # Tiled); el descuento de altura hacía flotar a todos los enemigos de
         # suelo. Ver `enemy_walker` para el porqué completo.
+        # AUD-821 (P16): 28×24, a la escala del frame (14×12). El apoyo en
+        # el suelo (`EnemyBase`: apoyo con `rect.height`) se adapta solo.
         self.rect.width = 28
         self.rect.height = 24
 

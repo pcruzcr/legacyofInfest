@@ -93,7 +93,11 @@ CATALOGO: tuple[NodoDeHabilidad, ...] = (
         id="impetu",
         nombre="Ímpetu",
         descripcion="+0,15 s de ultimate por rango.",
-        rangos=4, por_rango=0.15, coste_base=2, coste_incremento=1,
+        # AUD-839 (D-02) — coste plano: con incremento el árbol sumaba 64
+        # puntos y el nivel máximo otorga 59: era incompletable por diseño.
+        # Aplanar el ímpetu deja el total en 58 — completable, con las dos
+        # ramas grandes (fuerza, coraza) conservando su coste escalonado.
+        rangos=4, por_rango=0.15, coste_base=2, coste_incremento=0,
         # Se abre con la fuerza: alargar el ultimate sin pegar más fuerte es
         # alargar un ataque flojo, y el jugador lo compraría sin notarlo.
         requiere="fuerza",

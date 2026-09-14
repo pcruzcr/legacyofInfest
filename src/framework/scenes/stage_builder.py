@@ -64,6 +64,7 @@ class StageBuilder:
         return cam
 
     def build_enemies(self, stage_data, player: Player) -> None:
+        from src.engine.core.difficulty import get_config
         from src.framework.entities.boss_base import BossBase
         from src.framework.entities.enemy_base import EnemyBase
 
@@ -73,7 +74,41 @@ class StageBuilder:
                     return zona
             return pygame.Rect(0, 0, *stage_data.map_pixel_size)
 
-        for enemy in stage_data.entity_list:
+        # NG+ elite: 12% de los no-jefe se vuelven élite (1.25× HP, tinte)
+        # Determinista por stage_id+NG+ para que recargar no cambie el reparto.
+        try:
+            ng = int(getattr(get_config(), "enemy_health_mult", 1.0) * 10 - 10)  # 0..n
+            # get_config ya resuelve NG+; derivar n desde el multiplier es frágil,
+            # así que leer directamente del save es más claro:
+            from src.engine.core.save_manager import _candado_gestor, _gestor_activo
+
+            with _candado_gestor:
+                mgr = _gestor_activo
+            if mgr is not None and mgr.ranura_activa is not None:
+
+                d = mgr.load(mgr.ranura_activa)
+                ng = int(getattr(d, "ng_plus", 0) or 0) if d else 0
+            else:
+                ng = 0
+        except Exception:
+            ng = 0
+
+        import hashlib
+
+        stage_seed = str(getattr(stage_data, "stage_id", "") or "")
+        for idx, enemy in enumerate(stage_data.entity_list):
+            # Elite solo para EnemyBase no-jefe en NG+>=1
+            if ng >= 1 and isinstance(enemy, EnemyBase) and not isinstance(enemy, BossBase):
+                h = hashlib.md5(f"{stage_seed}:{idx}:{ng}".encode()).hexdigest()
+                if int(h[:2], 16) < 31:  # 31/256 ≈12%
+                    # 1.25× HP, clamped a max del preset
+                    try:
+                        enemy.max_health = enemy.max_health * 1.25  # type: ignore[attr-defined]
+                        enemy.current_health = enemy.max_health  # type: ignore[attr-defined]
+                        # Marcar para VFX (tinte sutil, no gameplay)
+                        enemy._es_elite = True
+                    except Exception:
+                        pass
             if hasattr(enemy, "set_event_bus"):
                 enemy.set_event_bus(self.context.event_bus)
             elif not getattr(enemy, "_event_bus", None):

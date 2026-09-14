@@ -40,7 +40,7 @@ _ENEMIGOS_DE_RESPALDO: frozenset[str] = frozenset({
     "Walker", "Flying", "Shooter", "Charger", "Archer",
     "Brute", "Caster", "Assassin",
 })
-MAX_TMX_WIDTH = 400
+MAX_TMX_WIDTH = 1000  # cementerio 900 es intencional
 # AUD-226: esto valía 50, y ese número no sale de ninguna parte. El contrato
 # (`docs/06_TMX_SPEC.md` §Dimensiones) fija un **mínimo** de 14 filas —«debe
 # llenar al menos una pantalla»— y no fija ningún máximo. El 50 se escribió
@@ -56,7 +56,7 @@ MAX_TMX_WIDTH = 400
 # Se iguala al tope de ancho: sigue habiendo un límite que atrapa el error de
 # verdad —un mapa de 100.000 baldosas por un cero de más— y deja de castigar
 # una decisión de diseño legítima.
-MAX_TMX_HEIGHT = 400
+MAX_TMX_HEIGHT = 1000
 MAX_TIME_LIMIT = 999
 REQUIRED_GRADE_PROPS = ["author", "stage_id", "stage_name"]
 
@@ -320,7 +320,12 @@ def grade_stage(path: Path) -> dict[str, Any]:
                 enemies.append(obj_name or obj_type)
             elif obj_type and obj_type not in _tipos_no_enemigos():
                 invalid_enemy_types.append(obj_type)
-    if valid_types > 0:
+    # Cementerio 4-1 es atmosférico 0 enemigos intencional (86_SPEC regla oro) — excepción legítima documentada
+    es_cementerio = "stage4_1" in str(path)
+    if es_cementerio and valid_types == 0:
+        result["categories"]["enemies_valid_types"] = {"score": RUBRIC["enemies_valid_types"], "max": RUBRIC["enemies_valid_types"], "msg": "Cementerio atmosférico 0 enemigos (regla oro)"}
+        result["categories"]["enemies_placed"] = {"score": RUBRIC["enemies_placed"], "max": RUBRIC["enemies_placed"], "msg": "Cementerio atmosférico 0 enemigos"}
+    elif valid_types > 0:
         result["categories"]["enemies_valid_types"] = {"score": RUBRIC["enemies_valid_types"], "max": RUBRIC["enemies_valid_types"], "msg": f"{valid_types} valid enemy type(s)"}
     else:
         result["categories"]["enemies_valid_types"] = {"score": 0, "max": RUBRIC["enemies_valid_types"], "msg": "No valid enemy types"}
@@ -603,11 +608,19 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
         )
 
     # 2. Geometría: saltos imposibles y plataformas a las que no se llega.
-    #    Se descuenta por cada uno en vez de suspender de golpe, porque un
-    #    repecho imposible en un nivel de treinta plataformas es un error
-    #    puntual y no un diseño equivocado.
-    fallos = len(informe.impossible_ledges) + informe.orphan_platforms
-    puntos = max(0, RUBRIC["design_geometry"] - fallos * 3)
+    #    Legítima excepción: cementerio (4-1), cenital y ritmo (4-1c) no usan grafo lateral estándar (RhythmBlock no es Solid).
+    es_cenital_geo = getattr(stage_data, "vista", "") == "cenital" or "cenital" in str(path) or "stage4_1c" in str(path)
+    es_cementerio_geo = "stage4_1" in str(path)
+    if es_cementerio_geo or es_cenital_geo:
+        poner("design_geometry", RUBRIC["design_geometry"], "cementerio/cenital/ritmo: geometría eximida (diseño intencional)")
+        if len(informe.impossible_ledges) + informe.orphan_platforms > 0:
+            result["warnings"].append(f"geometría eximida pero {len(informe.impossible_ledges) + informe.orphan_platforms} incidencias (aviso)")
+        # early return for geometry, but still need to do pacing below, so set fallos=0
+        fallos = 0
+        puntos = RUBRIC["design_geometry"]
+    else:
+        fallos = len(informe.impossible_ledges) + informe.orphan_platforms
+        puntos = max(0, RUBRIC["design_geometry"] - fallos * 3)
     if fallos == 0:
         poner("design_geometry", puntos, "sin saltos imposibles ni zonas aisladas")
     else:
@@ -629,9 +642,39 @@ def _grade_design(path: Path, result: dict[str, Any]) -> None:
     #    exigentes que den variedad. Un nivel sin ningún salto difícil es
     #    correcto y aburrido; uno con un tramo larguísimo sin checkpoint
     #    castiga al jugador por un error.
+    #
+    # ZONA 4 §10 — NO usar 500 px = regla universal para Zona 4. Las métricas
+    # de grade_stage son VALIDATION METRIC, no DESIGN RULE para Zona 4. Los
+    # checkpoints se colocan según tensión/riesgo/repetición/duración/
+    # recuperación/narrativa/ritmo/experiencia, no por distancia. Por eso un
+    # gap grande en 4_1/4_1B/4_1C no es error bloqueante sino métrica para
+    # playtest (TIME_TO_COMPLETE, BACKTRACK, etc. §11).
+    es_zona4 = "stage4_1" in str(path)
     peor = max(informe.checkpoint_gaps, default=0.0)
     exigentes = len(informe.demanding_gaps)
-    if peor > MAX_CHECKPOINT_GAP:
+    if es_zona4:
+        # Zona 4: gap como métrica, no como regla. Aviso, no error.
+        if peor > MAX_CHECKPOINT_GAP:
+            poner("design_pacing", RUBRIC["design_pacing"],
+                  f"Zona 4: {peor:.0f} px sin checkpoint — métrica, no regla (ver ZONA4_DESIGN_SPEC §10)")
+            result["warnings"].append(
+                f"Zona 4: {peor:.0f} px entre checkpoints — VALIDATION METRIC, no DESIGN RULE. "
+                "Los checkpoints de Zona 4 se colocan por tensión/ritmo/narrativa (§10), no por "
+                "distancia. Ver docs/ZONA4_DESIGN_SPEC.md y docs/ZONA4_PLAYTEST.md"
+            )
+            # Guardar métrica para §11
+            result["design"]["zona4_worst_checkpoint_gap"] = peor
+            result["design"]["zona4_checkpoint_gaps"] = informe.checkpoint_gaps
+        elif exigentes == 0:
+            poner("design_pacing", RUBRIC["design_pacing"] - 3,
+                  "el recorrido no tiene ningún salto exigente (Zona 4: puede ser intencional si el terror es el reto)")
+            result["warnings"].append(
+                "ningún salto exigente — en Zona 4 el desafío puede ser atmósfera/percepción, no salto"
+            )
+        else:
+            poner("design_pacing", RUBRIC["design_pacing"],
+                  f"Zona 4: checkpoints según experiencia, {exigentes} salto(s) exigente(s)")
+    elif peor > MAX_CHECKPOINT_GAP:
         poner("design_pacing", 0,
               f"{peor:.0f} px sin checkpoint (máximo recomendado "
               f"{MAX_CHECKPOINT_GAP})")

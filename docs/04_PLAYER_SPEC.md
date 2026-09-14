@@ -369,6 +369,10 @@ vez. El enumerado `PlayerState` declara **28**.
 > tabla en la misma fila que ocupa en el código.
 >
 > **Recontado 2026-08-30:** son **28** — `GROUND_POUND` `player.py:116` (AUD-619) faltaba en la tabla.
+>
+> **Recontado 2026-09-07 (AUD-833):** son **30** — `STAGGER` y `POSSESSED`
+> (`player.py:200-201`, estados de debuff en `states/debuff.py`) faltaban en
+> la tabla. Se añaden abajo sin tocar las 28 filas verificadas.
 
 ### 8.1 La tabla
 
@@ -402,6 +406,8 @@ vez. El enumerado `PlayerState` declara **28**.
 | `AERIAL_SLAM` | Ataque hacia abajo en el aire | Al tocar suelo | Ninguna |
 | `GROUND_POUND` | Pisotón aéreo (AUD-619) | Al tocar suelo | Ninguna |
 | `AIR_CHASE` | Persecución aérea tras un impacto | Fin del temporizador | Mover |
+| `STAGGER` | Golpe pesado (≥1,0), BODY_SLAM o parry fallido (AUD-833) | A los 0,6 s | Ninguna (0,5× daño propio) |
+| `POSSESSED` | Veneno nivel 2 / prolongado (AUD-833) | A los 2 s o con ITEM_CONSUMED | Invertidas 2 s |
 
 La implementación está repartida por familias en
 `src/framework/entities/states/`: `grounded.py`, `airborne.py`, `attack.py`,

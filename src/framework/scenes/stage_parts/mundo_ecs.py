@@ -214,11 +214,21 @@ class MundoDelEscenario:
         # Liana clásica y tirolesa — requieren pulsar
         # Liana: GRAB (G/C) o X (ataque corto) — el mensaje de stage0 decía X y
         # los jugadores lo intentaban con X. Se aceptan ambos y también UP (W).
+        # AUD-831 — además vale GRAB sostenido: quien salta hacia la liana
+        # manteniendo G llega con el flanco ya gastado y la atraviesa, que se
+        # lee como "no se puede usar". Pasar sin pulsar sigue sin agarrar, así
+        # que la liana no se vuelve una trampa. El sostenido no vale subiendo:
+        # si no, saltar de la cuerda con G mantenida re-engancharía al
+        # fotograma siguiente y no habría forma de soltarla.
+        sostenido_subiendo = (
+            im.is_action_held(Action.GRAB) and player.velocity.y >= 0.0
+        )
         if not (
             im.is_action_just_pressed(Action.GRAB)
             or im.is_action_just_pressed(Action.SHORT_ATTACK)
             or im.is_action_just_pressed(Action.MOVE_UP)
             or im.is_action_just_pressed(Action.JUMP)
+            or sostenido_subiendo
         ):
             return
 

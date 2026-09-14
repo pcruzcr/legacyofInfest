@@ -177,6 +177,85 @@ class ActualizacionesDeEscenario:
             if getattr(self, "_nado", None) is not None and self._nado.aire_maximo > 0.0:
                 ratio = self._nado.aire / self._nado.aire_maximo if self._nado.en_agua else -1.0
                 self._hud.set_oxigeno(ratio, self._nado.avisando)
+            # B3 — % ítems del escenario: ITEM completion per-map (contrato B3)
+            # TOTAL = Pickup/Key + Chest con contenido + SecretRoom con recompensa, excluye Door/Bonfire/dinámicos
+            # COLLECTED = recogido/abierto/descubierto de esos ITEMS
+            # Cache: StageData.item_total() es determinístico; no recalcular TMX cada frame
+            try:
+                # Usar StageData.item_total si existe (cache), fallback a cálculo filtrado
+                if hasattr(stage, "item_total"):
+                    try:
+                        total_items = int(stage.item_total())  # type: ignore[operator]
+                    except Exception:
+                        total_items = 0
+                else:
+                    from src.framework.stage.interactables import (
+                        es_item_coleccionable_cofre,
+                        es_item_coleccionable_recogible,
+                    )
+
+                    total_items = sum(
+                        1 for r in getattr(stage, "recogibles", []) or [] if es_item_coleccionable_recogible(r)
+                    ) + sum(1 for c in getattr(stage, "cofres", []) or [] if es_item_coleccionable_cofre(c))
+                if total_items == 0:
+                    self._hud.set_porcentaje_items(None)
+                else:
+                    from src.framework.stage.interactables import (
+                        es_item_coleccionable_cofre,
+                        es_item_coleccionable_recogible,
+                        es_item_coleccionable_secret_room,
+                    )
+
+                    recogidos = 0
+                    for r in getattr(stage, "recogibles", []) or []:
+                        if es_item_coleccionable_recogible(r) and getattr(r, "recogido", False):
+                            recogidos += 1
+                    for c in getattr(stage, "cofres", []) or []:
+                        if es_item_coleccionable_cofre(c) and getattr(c, "abierto", False):
+                            recogidos += 1
+                    for s in getattr(stage, "secret_rooms", []) or []:
+                        if es_item_coleccionable_secret_room(s) and getattr(s, "descubierto", False):
+                            recogidos += 1
+                    # clamp COLLECTED > TOTAL (corrupción)
+                    if recogidos > total_items:
+                        recogidos = total_items
+                    pct = max(0.0, min(1.0, recogidos / total_items)) if total_items else 0.0
+                    self._hud.set_porcentaje_items(pct, recogidos, total_items)
+            except Exception:
+                pass
+            # B2 — NG+ badge: deriva de SaveData.ng_plus (single source)
+            # Usa misma resolución que difficulty.get_config (ranura_activa else newest)
+            # y fallback a pending_load para primer frame tras cargar sin save previo.
+            try:
+                ng_level = 0
+                sm = getattr(self.context, "save_manager", None)
+                if sm is not None:
+                    slot = getattr(sm, "ranura_activa", None)
+                    if slot is None:
+                        try:
+                            slot = sm.newest_slot()
+                        except Exception:
+                            slot = None
+                    if slot is not None:
+                        try:
+                            data = sm.load(slot)
+                            if data is not None:
+                                ng_level = max(0, int(getattr(data, "ng_plus", 0) or 0))
+                        except Exception:
+                            ng_level = 0
+                    if ng_level == 0:
+                        pending = getattr(self.context, "pending_load", None)
+                        if pending is not None:
+                            try:
+                                ng_p = int(getattr(pending, "ng_plus", 0) or 0)
+                                if ng_p > 0:
+                                    ng_level = ng_p
+                            except Exception:
+                                pass
+                if hasattr(self._hud, "set_ng_plus_level"):
+                    self._hud.set_ng_plus_level(ng_level)
+            except Exception:
+                pass
             self._hud.update(dt)
         self._subtitles.update(dt)
         if self._msg_box:
@@ -197,9 +276,15 @@ class ActualizacionesDeEscenario:
                 getattr(clock, "unscaled_dt", dt) if clock is not None else dt,
             )
         self._speedrun.update(dt)
+        # AUD-FANTASMA: grabar solo en Boss Rush; en historia no se genera
+        # traza para no contaminar el fantasma del modo competitivo.
         if self._fantasma is not None and self._player is not None:
-            self._fantasma.grabar_si_toca(
-                dt, self._player.position.x, self._player.position.y)
+            try:
+                if getattr(self, "_boss_rush_activo", lambda: None)() is not None:
+                    self._fantasma.grabar_si_toca(
+                        dt, self._player.position.x, self._player.position.y)
+            except Exception:
+                pass
         # AUD-249: la cámara viaja al sistema de peligros porque el borde que
         # mata en un `ScrollZone` se mueve con ella.
         self._hazards.update(dt, self._player, self._stage_data, self._camera)

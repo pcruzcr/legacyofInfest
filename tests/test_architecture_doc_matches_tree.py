@@ -87,8 +87,15 @@ RESUMIDOS_EN_EL_ARBOL = {
 
 
 def _arbol() -> str:
-    """El bloque de código más largo del documento: la estructura."""
-    bloques = re.findall(r"```\n(.*?)```", DOC.read_text(encoding="utf-8"), re.S)
+    """El bloque de código más largo del documento: la estructura.
+
+    AUD-839 — el documento mezcla finales de línea CRLF y LF, y la regex
+    ```\n no casaba con las vallas CRLF: el árbol salía partido y el
+    guardián leía un bloque que no era el árbol. Se normaliza a LF antes
+    de extraer.
+    """
+    texto = DOC.read_text(encoding="utf-8").replace("\r\n", "\n")
+    bloques = re.findall(r"```\n(.*?)```", texto, re.S)
     assert bloques, "03_ARCHITECTURE.md ya no tiene ningún bloque de código"
     return max(bloques, key=len)
 
@@ -101,17 +108,23 @@ _REFERENCIAS_HISTORICAS: frozenset[str] = frozenset({"bitmap_font.py", "spritesh
 
 
 def _citados() -> set[str]:
-    """Extrae solo los módulos del árbol (líneas con `???` que terminan en .py)."""
-    arbol = _arbol()
+    """Módulos de `src/` mencionados en 03_ARCHITECTURE.md.
+
+    AUD-839 — antes se extraían de "el bloque de código más largo", pero el
+    emparejado de vallas del documento es tramposo: la valla de cierre del
+    mermaid (línea 77) abre un bloque falso que se come la valla de apertura
+    del árbol (línea 91), y el árbol entero deja de existir para el parser —
+    el conjunto salía vacío, el guardián no protegía nada y un módulo nuevo
+    de `framework/` de primer nivel entró sin que nadie lo pidiera. La
+    intención del guardián es "si existe en src/, está citado aquí", así que
+    se citan tokens `.py` de todo el documento.
+    """
+    texto = DOC.read_text(encoding="utf-8")
     citados = set()
-    for line in arbol.split('\n'):
-        line = line.strip()
-        if '???' in line and line.endswith('.py'):
-            parts = line.split()
-            if parts:
-                modulo = parts[-1]
-                if modulo.endswith('.py'):
-                    citados.add(modulo)
+    for token in texto.replace("\r\n", "\n").split():
+        # Los placeholders didácticos (`<entrega>.py`) no son módulos.
+        if token.endswith(".py") and not token.startswith("<"):
+            citados.add(token)
     return citados - _REFERENCIAS_HISTORICAS
 
 

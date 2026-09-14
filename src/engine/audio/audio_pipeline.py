@@ -253,6 +253,16 @@ class AudioPipeline:
         mixed = np.clip(norm + wet, -1.0, 1.0) * max_int
         return seg._spawn(struct.pack(f"<{len(mixed)}h", *mixed.astype(np.int16)))
 
+    def _apply_reverb(self, seg, decay: float = 1.0):
+        """AUD-829A — alias compatible con el nombre anterior a AUD-639.
+
+        AUD-639 renombró esto a `_apply_reverb_effect` y dejó colgando el
+        test de AUD-314, que es el que vigila que la mezcla recorte en vez
+        de envolver a int16. El nombre con guion bajo es el punto de entrada
+        que esa regresión usa; delega sin cambiar la señal.
+        """
+        return self._apply_reverb_effect(seg, decay)
+
     def _load_cached(self, name: str) -> bytes | None:
         if self._cache_dir is None:
             return None

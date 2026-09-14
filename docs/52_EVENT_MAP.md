@@ -207,7 +207,7 @@ Sitios de `subscribe` en total: **36**
 | **Suscriptores** | Mapeado en `stage_parts/sonido.py` a `"sfx_bosses_phase_change"` |
 
 ### SFX_BOSSES_* (7 eventos: GAVILAN_DIVE, GAVILAN_MASK_BEAM, PABURU_EYE_BEAM, PABURU_WAVE, RELIC_APPEAR, REY_SPIT, REY_SPLIT)
-AUD-254: `PABURU_EYE_BEAM` dejó de estar huérfano — lo emite `src/stages/boss_paburu/boss_paburu.py:438`, mapeado en `sonido.py`. Los otros seis siguen sin emisor a propósito: pertenecen a ataques de jefes de estudiantes todavía no implementados.
+AUD-254: `PABURU_EYE_BEAM` dejó de estar huérfano — lo emite `src/stages/boss_paburu/boss_paburu.py:438`, mapeado en `sonido.py`. AUD-831: `GAVILAN_DIVE` también dejó de ser huérfano — lo emite `src/stages/stage3_4_boss_gavilan/boss_gavilan.py` (`_do_dive`, `Events.SFX_BOSSES_GAVILAN_DIVE`; test `tests/test_audio_wiring.py`, lista `AWAITING_THEIR_BOSS` que sólo puede encoger). Los otros cinco siguen sin emisor a propósito: pertenecen a ataques de jefes de estudiantes todavía no implementados.
 
 ### SFX_BOSSES_VENADO_CHARGE / STOMP / VINE
 | Campo | Valor |
@@ -379,6 +379,25 @@ AUD-254: `PABURU_EYE_BEAM` dejó de estar huérfano — lo emite `src/stages/bos
 | **Suscriptores** | Mapeado vía `sfx_map` de StageScene (en `stage_parts/sonido.py` desde AUD-290) |
 | **Se dispara** | Cuando el jugador hace un ataque corto/rápido |
 
+### SFX añadidos tras AUD-455 (11, todos con emisor VERIFIED)
+
+La lista de «SFX (39)» de AUD-455 quedó corta: hoy hay **49** constantes
+`SFX_*` en `src/engine/core/events.py` (contadas) + `MUSIC_STINGER` aparte.
+Los 11 que faltaban en este mapa, con su emisor medido:
+
+| Evento | Emisor | Se dispara |
+|---|---|---|
+| `SFX_PLAYER_FOOTSTEP_MUSGO` / `_LODO` / `_GRAVA` / `_AHOGADO` | `WalkingState` (`states/grounded.py:111-126`) | Paso según la superficie |
+| `SFX_PLAYER_CLIMB` | `states/rope.py:73` | Al trepar |
+| `SFX_PLAYER_WALL_SLIDE` | `WallSlideState` (`states/wall.py:23-37`, cada 0,32 s) | Al deslizarse por un muro |
+| `SFX_PLAYER_ZIPLINE` | `states/rope.py:141,179` | Al engancharse y avanzar en tirolesa |
+| `SFX_POISON_TICK` | `systems_zonas.py:224` (`pos=p`: posicional) | Cada tic de veneno por zona |
+| `SFX_TIMER_ALERT_PULSE` | `hud.py:734,752` | Pulso del cronómetro en alerta |
+| `SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE` | `enemy_pez_abismal.py:131` (AUD-830, una vez por encuentro) | El pez abismal avisa antes de perseguir |
+| `SFX_VOZ_PABURU` | `load_game_scene.py:223`, `menu_sfx.py:44` → `"sfx_voz_paburu_risa"` | Risa de Paburu (sin muestra `.wav` de autor a propósito, como dice `75_BIBLIA_TECNICA.md`) |
+
+Todos mapeados en `sfx_map` (`stage_parts/sonido.py`). Ninguno es huérfano.
+
 ### SFX_PROJECTILE_FIRE
 | Campo | Valor |
 |-------|-------|
@@ -464,13 +483,13 @@ AUD-254: `PABURU_EYE_BEAM` dejó de estar huérfano — lo emite `src/stages/bos
 
 **AUD-455 — esta tabla decía 18 huérfanos; el §0 (AUD-254, 2026-08-04) ya
 documentaba en prosa que 13 de esos 18 habían dejado de serlo, pero nunca se
-actualizó esta tabla.** Quedan realmente **6** eventos sin emisor, y es una
+actualizó esta tabla.** AUD-831 saca además `SFX_BOSSES_GAVILAN_DIVE` de la
+lista (lo emite `boss_gavilan.py`). Quedan realmente **5** eventos sin emisor, y es una
 decisión de diseño (ataques de jefes de estudiantes aún no implementados),
 no un defecto:
 
 | Evento | Notas |
 |-------|-------|
-| `SFX_BOSSES_GAVILAN_DIVE` | Jefe futuro |
 | `SFX_BOSSES_GAVILAN_MASK_BEAM` | Jefe futuro |
 | `SFX_BOSSES_PABURU_WAVE` | Jefe futuro |
 | `SFX_BOSSES_RELIC_APPEAR` | Mecánica de jefe futura |

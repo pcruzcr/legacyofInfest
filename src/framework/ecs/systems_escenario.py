@@ -85,7 +85,7 @@ def sistema_bloques_ritmicos(mundo: World, dt: float) -> None:
             # el modo por segundos, así que escribir un `patron` hacía que todos
             # los bloques con el mismo ritmo entraran y salieran a la vez — un
             # semáforo en lugar de un ritmo.
-            presente = reloj.presente_en_patron(bloque.patron, bloque.desfase)
+            presente = reloj.presente_en_patron(bloque.patron, bloque.desfase)  # type: ignore[attr-defined]
         else:
             presente = bloque.presente
         tiene = mundo.tiene(entidad, Solido)

@@ -357,9 +357,17 @@ class TestElMapaDelMundoTieneLosEscenariosDeVerdad:
         return construir_nodos()
 
     def test_hay_un_nodo_por_escenario_descubierto(self, _video) -> None:
+        """AUD-839 — el mapa creció a 30 nodos: progresión + demos académicas
+        libres (dojo, cenitales…). La invariante que se vigila es que cada
+        escenario de la progresión tenga su nodo, no que no existan otros."""
         from src.engine.core.stage_registry import discover_stages
 
-        assert len(self._nodos()) == len(discover_stages())
+        ids = {n["id"] for n in self._nodos()}
+        for clase in discover_stages():
+            stage_id = getattr(clase, "STAGE_ID", clase.__name__)
+            assert stage_id and stage_id in ids, (
+                f"la progresión {stage_id} no tiene nodo en el mapa"
+            )
 
     def test_estan_los_escenarios_de_los_estudiantes(self, _video) -> None:
         """Los once niveles entregados no aparecían en el mapa del mundo."""
@@ -419,7 +427,16 @@ class TestElMapaDelMundoTieneLosEscenariosDeVerdad:
         escena._save_data = None
         escena._build_nodes()
         assert escena._nodes[0]["unlocked"] is True
-        assert not any(n["unlocked"] for n in escena._nodes[1:])
+        # AUD-839 — la progresión se abre en orden; los nodos de demos
+        # académicas están libres por diseño y quedan fuera de la verificación.
+        from src.engine.core.stage_registry import discover_stages
+
+        progreso = [getattr(c, "STAGE_ID", c.__name__) for c in discover_stages()]
+        for nodo in escena._nodes:
+            if nodo["id"] in progreso and progreso.index(nodo["id"]) > 0:
+                assert nodo["unlocked"] is False, (
+                    f"«{nodo['id']}» amaneció desbloqueado sin partida"
+                )
 
     def test_entrar_en_un_nodo_bloqueado_no_hace_nada(self, contexto) -> None:
         from src.engine.scenes.world_map_scene import WorldMapScene
@@ -428,7 +445,14 @@ class TestElMapaDelMundoTieneLosEscenariosDeVerdad:
         contexto.scene_manager.push(escena)
         escena._save_data = None
         escena._build_nodes()
-        assert escena._entrar(escena._nodes[-1]) is False
+        # AUD-839 — el último nodo ya no es de progresión sino una demo libre
+        # (entra por diseño): el bloqueo se comprueba contra el último escenario
+        # de la progresión.
+        from src.engine.core.stage_registry import discover_stages
+
+        ultimo = getattr(discover_stages()[-1], "STAGE_ID", None)
+        nodo = next(n for n in escena._nodes if n["id"] == ultimo)
+        assert escena._entrar(nodo) is False
 
     def test_entrar_en_el_primero_lo_abre(self, contexto) -> None:
         from src.engine.scenes.world_map_scene import WorldMapScene

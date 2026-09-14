@@ -26,6 +26,7 @@ se prueba sobre ellas. El contrato es el mismo y el trazado puede moverse.
 from __future__ import annotations
 
 import os
+from typing import Final
 
 import pygame
 import pytest
@@ -193,9 +194,14 @@ class TestLosObstaculosSePuedenSaltar:
     estudiante.
     """
 
+    #: AUD-839 — el suelo de stage0 está en la fila 38 (y=608), no en la 30
+    #: de la maqueta vieja: los obstáculos nacen apoyados en él.
+    FILA_SUELO: Final[int] = 38
+
     @pytest.mark.parametrize("columna,alto", OBSTACULOS_ESPERADOS)
     def test_el_jugador_supera_cada_obstaculo(self, stage, columna, alto) -> None:
-        obstaculo = pygame.Rect(columna * TILE, (30 - alto) * TILE,
+        obstaculo = pygame.Rect(columna * TILE,
+                                (self.FILA_SUELO - alto) * TILE,
                                 TILE, alto * TILE)
         assert obstaculo in stage.collision_rects, (
             f"el obstáculo esperado en la columna {columna} no está en el mapa"

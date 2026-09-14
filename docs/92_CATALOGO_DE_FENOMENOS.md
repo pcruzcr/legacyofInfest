@@ -135,7 +135,7 @@ olvidar actualizar uno.
 | Eclipses solar/lunar | 🟢 | Como *evento del calendario* con un multiplicador sobre la luz. Barato — si se pretende que caigan en fechas astronómicamente correctas, es 🔴 |
 | Superluna / microluna / luz cenicienta | 🟢 | Escala y brillo del disco |
 | **Latitud/longitud reales** | 🔴 | Efemérides de verdad (declinación, ecuación del tiempo, refracción). Semanas de trabajo y un modelo que hay que validar contra tablas |
-| Planetas visibles | ⛔ | Mecánica celeste. Nadie va a distinguir Saturno de una estrella en un juego 2D a 800×600 |
+| Planetas visibles | ⛔ | Mecánica celeste. Nadie va a distinguir Saturno de una estrella en un juego 2D a 1280×720 |
 
 ### 3.5 Fenómenos ópticos
 
@@ -254,4 +254,4 @@ completo.
 - `docs/91_PLAN_DE_CIERRE.md` — el plan de ocho lotes; esto es el lote 5
 - `docs/03_ARCHITECTURE.md` — `framework/world/` en el árbol
 - `docs/70_INFORME_DE_AUDITORIA_VIVO.md` — AUD-357 y AUD-358
-- `docs/niveles/15_DISENO_4_1_EL_CEMENTERIO.md` — el 4-1 **que existe**, en cinco actos
+- `docs/niveles/13_STAGE_4_1.md` — el 4-1 **que existe**, en cinco actos

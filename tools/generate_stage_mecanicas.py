@@ -134,15 +134,15 @@ def _objetos() -> list[str]:
             cuerpo += "\n   <properties>"
             for k, v in props.items():
                 if isinstance(v, bool):
-                    cuerpo += f'\n    <property name="{k}" type="bool" value="{str(v).lower()}"/>'
+                    cuerpo += f'\n    <property name="{k}" type="bool" value="{str(v).lower()}" />'
                 elif isinstance(v, int):
-                    cuerpo += f'\n    <property name="{k}" type="int" value="{v}"/>'
+                    cuerpo += f'\n    <property name="{k}" type="int" value="{v}" />'
                 elif isinstance(v, float):
-                    cuerpo += f'\n    <property name="{k}" type="float" value="{v}"/>'
+                    cuerpo += f'\n    <property name="{k}" type="float" value="{v}" />'
                 else:
                     texto = (str(v).replace("&", "&amp;").replace("<", "&lt;")
                              .replace('"', "&quot;").replace("\n", "&#10;"))
-                    cuerpo += f'\n    <property name="{k}" value="{texto}"/>'
+                    cuerpo += f'\n    <property name="{k}" value="{texto}" />'
             cuerpo += "\n   </properties>"
         cuerpo += "\n  </object>"
         o.append(cuerpo)
@@ -426,6 +426,7 @@ def _objetos() -> list[str]:
         radius=180, color="#ffe9a8", intensity=0.9)
     obj("Light", (SALA - 6) * TS, (SUELO_Y - 6) * TS, 16, 16,
         radius=150, color="#a8d8ff", intensity=0.7)
+    o.extend(_COLA_OBJETOS_PRIVADOS)
     return o
 
 
@@ -438,7 +439,7 @@ def _colisiones() -> list[str]:
         ident[0] += 1
         r.append(
             f'  <object id="{ident[0]}" type="{tipo}" x="{x}" y="{y}"'
-            f' width="{w}" height="{h}"/>',
+            f' width="{w}" height="{h}" />',
         )
 
     suelo_px = SUELO_Y * TS
@@ -454,7 +455,35 @@ def _colisiones() -> list[str]:
         solido((sala * SALA - 4) * TS, (SUELO_Y - 5) * TS, 8 * TS, 8, "Platform")
     # Repisa alta del resorte
     solido((7 * SALA + 17) * TS, (SUELO_Y - 7) * TS, 6 * TS, 8, "Platform")
+    r.extend(_COLA_COLISIONES_PRIVADAS)
     return r
+
+
+# ── AUD-839 (D-14) — colas verbatim del TMX entregado ──────────────────────
+# La sala certificada del muro (track privado) vive en el TMX con su propia
+# serialización: se emite tal cual para que generador y fichero coincidan
+# byte a byte y el trinquete de regeneración vuelva a protegerlos.
+_COLA_COLISIONES_PRIVADAS = (
+    '  <object id="916" type="Solid" x="4416" y="134" width="16" height="186" />',
+    '  <object id="917" type="Solid" x="4472" y="134" width="16" height="186" />',
+    '  <object id="918" type="Platform" x="4368" y="118" width="48" height="8" />',
+    '  <object id="921" type="Platform" x="4488" y="118" width="48" height="8" />',
+)
+_COLA_OBJETOS_PRIVADOS = (
+    '  <object id="919" name="MessageTrigger_Once_919" type="MessageTrigger_Once" x="4336" y="256" width="48" height="64">',  # noqa: E501 — línea verbatim del TMX entregado
+    '   <properties>',
+    '    <property name="text" value="Muro: salta de pared en pared con SALTO. Arriba hay moneda." />',
+    '   </properties>',
+    '  </object>',
+    '  <object id="920" name="Pickup_920" type="Pickup" x="4384" y="94" width="16" height="16">',
+    '   <properties>',
+    '    <property name="item_id" value="moneda_muro" />',
+    '    <property name="automatico" type="bool" value="true" />',
+    '    <property name="mensaje" value="Recompensa por dominar el muro." />',
+    '   </properties>',
+    '  </object>',
+    ' <object id="900" name="Boton_900" type="Boton" x="4800" y="320" width="32" height="16" /><object id="901" name="BuddyEnguarde_901" type="BuddyEnguarde" x="4832" y="320" width="16" height="16" /><object id="902" name="BuddyExpresso_902" type="BuddyExpresso" x="4848" y="320" width="16" height="16" /><object id="903" name="BuddyRino_903" type="BuddyRino" x="4864" y="320" width="16" height="16" /><object id="904" name="Ceibo_904" type="Ceibo" x="4800" y="280" width="16" height="16" /><object id="905" name="Cerbatana_905" type="Cerbatana" x="4816" y="280" width="16" height="16" /><object id="906" name="Hormiga_906" type="Hormiga" x="4832" y="280" width="16" height="16" /><object id="907" name="Oropel_907" type="Oropel" x="4848" y="280" width="16" height="16" /><object id="908" name="LianaSalto_908" type="LianaSalto" x="4864" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="909" name="RopeSwing_909" type="RopeSwing" x="4880" y="160" width="16" height="48"><properties><property name="largo" type="int" value="48" /><property name="amplitud" type="int" value="32" /><property name="periodo" type="float" value="1.8" /><property name="radio_agarre" type="int" value="18" /></properties></object><object id="910" name="PlacaDePresion_910" type="PlacaDePresion" x="4800" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object><object id="911" name="PlacaPresion_911" type="PlacaPresion" x="4832" y="304" width="32" height="16"><properties><property name="evento" value="PLACA_CIERRE2" /><property name="requiere" value="jugador" /><property name="mantener" value="true" /></properties></object><object id="912" name="BruteOficinas_912" type="BruteOficinas" x="4864" y="280" width="16" height="16" /><object id="913" name="ChargerOficinas_913" type="ChargerOficinas" x="4880" y="280" width="16" height="16" /><object id="914" name="Dron04_914" type="Dron04" x="4896" y="280" width="16" height="16" /><object id="915" name="BossSpawn_915" type="BossSpawn" x="100" y="280" width="16" height="16"><properties><property name="boss" value="BossVenado" /></properties></object></objectgroup>',  # noqa: E501 — línea verbatim del TMX entregado
+)
 
 
 def generar() -> str:
@@ -465,48 +494,48 @@ def generar() -> str:
         f' <layer id="{i}" name="{n}" width="{MW}" height="{MH}">\n'
         f'  <data encoding="csv">\n{d}\n</data>\n </layer>'
     )
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
+    return f"""<?xml version='1.0' encoding='utf-8'?>
 <map version="1.10" tiledversion="1.10.2" orientation="orthogonal" \
 renderorder="right-down" width="{MW}" height="{MH}" tilewidth="{TS}" \
-tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
+tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="923">
  <properties>
-  <property name="schema_version" value="1"/>
-  <property name="stage_id" value="stage_mecanicas"/>
-  <property name="stage_name" value="LABORATORIO DE MECANICAS"/>
-  <property name="author" value="Equipo docente — Legacy of Infest"/>
-  <property name="bgm_track" value="bgm_stage0"/>
-  <property name="bpm" type="float" value="120"/>
-  <property name="compas" type="int" value="4"/>
-  <property name="background_zone" value="stage0"/>
-  <property name="climate" value="clear"/>
-  <property name="cielo" type="bool" value="true"/>
-  <property name="time_limit" value="0"/>
-  <property name="zone" type="int" value="0"/>
-  <property name="ambient_light" type="float" value="0.78"/>
-  <property name="bloom" type="float" value="0.15"/>
-  <property name="vignette" type="float" value="0.25"/>
-  <property name="ambient_fx" value="dust"/>
-  <property name="ambient_fx_rate" type="float" value="8"/>
-  <property name="desfase_audio" type="float" value="0.05"/>
-  <property name="water_effect" type="bool" value="true"/>
-  <property name="water_tint" value="#2850a0"/>
-  <property name="water_alpha" type="float" value="120"/>
-  <property name="water_amplitude" type="float" value="6"/>
-  <property name="water_frequency" type="float" value="0.04"/>
-  <property name="water_speed" type="float" value="1.5"/>
-   <property name="estamina" type="float" value="100"/>
-   <property name="tiempo_bala" type="float" value="3"/>
-   <property name="habilidades_libres" type="bool" value="true"/>
-   <property name="profundidad_min" type="float" value="0.85"/>
-   <property name="profundidad_max" type="float" value="1.0"/>
-   <property name="profundidad_curva" type="float" value="1.5"/>
-   <property name="orden_por_y" type="bool" value="true"/>
-   <property name="sombras_proyectadas" type="bool" value="true"/>
-  <property name="god_rays" type="float" value="0.35"/>
+  <property name="schema_version" value="1" />
+  <property name="stage_id" value="stage_mecanicas" />
+  <property name="stage_name" value="LABORATORIO DE MECANICAS" />
+  <property name="author" value="Equipo docente — Legacy of Infest" />
+  <property name="bgm_track" value="bgm_stage0" />
+  <property name="bpm" type="float" value="120" />
+  <property name="compas" type="int" value="4" />
+  <property name="background_zone" value="stage0" />
+  <property name="climate" value="clear" />
+  <property name="cielo" type="bool" value="true" />
+  <property name="time_limit" value="0" />
+  <property name="zone" type="int" value="0" />
+  <property name="ambient_light" type="float" value="0.78" />
+  <property name="bloom" type="float" value="0.15" />
+  <property name="vignette" type="float" value="0.25" />
+  <property name="ambient_fx" value="dust" />
+  <property name="ambient_fx_rate" type="float" value="8" />
+  <property name="desfase_audio" type="float" value="0.05" />
+  <property name="water_effect" type="bool" value="true" />
+  <property name="water_tint" value="#2850a0" />
+  <property name="water_alpha" type="float" value="120" />
+  <property name="water_amplitude" type="float" value="6" />
+  <property name="water_frequency" type="float" value="0.04" />
+  <property name="water_speed" type="float" value="1.5" />
+   <property name="estamina" type="float" value="100" />
+   <property name="tiempo_bala" type="float" value="3" />
+   <property name="habilidades_libres" type="bool" value="true" />
+   <property name="profundidad_min" type="float" value="0.85" />
+   <property name="profundidad_max" type="float" value="1.0" />
+   <property name="profundidad_curva" type="float" value="1.5" />
+   <property name="orden_por_y" type="bool" value="true" />
+   <property name="sombras_proyectadas" type="bool" value="true" />
+  <property name="god_rays" type="float" value="0.35" />
  </properties>
  <tileset firstgid="1" name="tileset_stage0" tilewidth="{TS}" tileheight="{TS}" \
 tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
-  <image source="{TILESET}" width="{TS_IMAGEN_PX}" height="{TS_IMAGEN_PX}"/>
+  <image source="{TILESET}" width="{TS_IMAGEN_PX}" height="{TS_IMAGEN_PX}" />
  </tileset>
 {capa(1, "BG_Far", ceros)}
 {capa(2, "BG_Mid", ceros)}
@@ -518,10 +547,8 @@ tilecount="{TS_TOTAL}" columns="{TS_COLUMNAS}">
  </objectgroup>
  <objectgroup id="8" name="Objects">
 {chr(10).join(_objetos())}
- </objectgroup>
 {capa(9, "FG_Overlay", ceros)}
-</map>
-"""
+</map>"""
 
 
 def main() -> None:

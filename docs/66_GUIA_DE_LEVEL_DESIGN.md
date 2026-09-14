@@ -81,8 +81,8 @@ Reglas de la curva:
 
 - **Baldosa base: 16×16 px.** El suelo de los niveles horizontales está en la
   fila 30 (y = 480 px) salvo indicación contraria (estándar de `07_STAGE0_DESIGN.md`).
-- **Anchura de una pantalla de juego: 800 px** (resolución interna 800×600).
-  Un nivel de 1600 px son ~2 pantallas de scroll; 3200 px, ~4; 3840 px, ~5.
+- **Anchura de una pantalla de juego: 1280 px** (resolución interna 1280×720; era 800×600 antes de AUD-754).
+  Un nivel de 1600 px son ~1,25 pantallas de scroll; 3200 px, ~2,5; 3840 px, ~3.
 - **Límite de tiempo = 2× el tiempo de limpieza estimado.** Si el recorrido
   despejado se cruza en ~75 s, el límite es ~150 s. Esto da aire para explorar
   y para las dos soluciones, pero penaliza la deambulación.

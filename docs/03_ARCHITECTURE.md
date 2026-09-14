@@ -332,6 +332,7 @@ legacy-of-infest/                      # Raíz real del repositorio
 │   │   │   ├── environment.py               #   EnvironmentState: la foto inmutable del ambiente del fotograma
 │   │   │   └── simulation.py                #   AUD-358: WorldSimulation — reloj, calendario, estación, astronomía y clima → un estado
 │   │   │
+│   │   ├── crafting.py                 # CraftingSystem: recetas 4→vessel del inventario (AUD-839: faltaba en el árbol)
 │   │   ├── stage/
 │   │   │   ├── __init__.py
 │   │   │   ├── object_handler_registry.py # Registry Factory para objetos Tiled (AUD-724)

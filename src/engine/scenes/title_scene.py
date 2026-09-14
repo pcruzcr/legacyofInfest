@@ -100,7 +100,6 @@ class TitleScene(BaseScene):
             MenuItem("OPTIONS", value="OPTIONS"),
             MenuItem("QUIT", value="QUIT"),
         ])
-        self._scroll_offset: int = 0
         self._recalc_layout()
 
         self._bar_surf: pygame.Surface | None = None
@@ -161,7 +160,6 @@ class TitleScene(BaseScene):
 
     def on_enter(self) -> None:
         self._menu.index = 0
-        self._scroll_offset = 0
         self._recalc_layout()
         self._update_options()
         self.context.scene_manager.transition.start_fade_in(0.5)
@@ -326,8 +324,38 @@ class TitleScene(BaseScene):
         elif opt == "QUIT":
             self.context.quit()
 
+    def _ng_plus_para_continue(self) -> int:
+        """NG+ del save que CONTINUE reanudaría — B2 single source SaveData.ng_plus.
+
+        Usa la misma resolución que _activate_option CONTINUE:
+        ranura_activa si existe, si no newest_slot. Lee ese SaveData y
+        devuelve su ng_plus (0 si no hay partida o ng_plus==0). No crea
+        estado duplicado: deriva siempre de SaveData.ng_plus.
+        """
+        sm = self.context.save_manager
+        if sm is None:
+            return 0
+        slot = getattr(sm, "ranura_activa", None)
+        if slot is None:
+            try:
+                slot = sm.newest_slot()
+            except Exception:
+                slot = None
+        if slot is None:
+            return 0
+        try:
+            data = sm.load(slot)
+        except Exception:
+            return 0
+        if data is None:
+            return 0
+        try:
+            return max(0, int(getattr(data, "ng_plus", 0) or 0))
+        except Exception:
+            return 0
+
     def _update_options(self) -> None:
-        """Añade o quita CONTINUE según haya partidas guardadas."""
+        """Añade o quita CONTINUE según haya partidas guardadas — B2 expone NG+."""
         sm = self.context.save_manager
         labels = [str(item.value) for item in self._menu.items]
         has_continue = "CONTINUE" in labels
@@ -340,6 +368,15 @@ class TitleScene(BaseScene):
                 )
         elif has_continue:
             self._menu.items.pop(labels.index("CONTINUE"))
+
+        # B2 — NG+ badge en CONTINUE: trailing "NG+X" cuando ng_plus>0,
+        # vacío si 0. Usa trailing (renderizado a la derecha) para no
+        # tocar label/traducción ni navegación/orden/layout.
+        for item in self._menu.items:
+            if str(item.value) == "CONTINUE":
+                ng = self._ng_plus_para_continue()
+                item.trailing = f"NG+{ng}" if ng > 0 else ""
+                break
 
         # Quitar una fila puede dejar el foco fuera de rango.
         self._menu.ensure_valid()
@@ -424,13 +461,17 @@ class TitleScene(BaseScene):
             ("Esc", "Salir"),
         ])
 
-        if self._scroll_offset > 0:
+        # AUD-832 — las flechas leían `_scroll_offset`, fijo en 0 y sin
+        # actualizar: la de subida no salía nunca aunque hubiera opciones
+        # encima. Ahora leen la ventana real del kit.
+        visibles = self._menu.filas_visibles()
+        if visibles and visibles[0] > 0:
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, start_y - 4),
                 (settings.INTERNAL_WIDTH // 2 - 6, start_y - 10),
                 (settings.INTERNAL_WIDTH // 2 + 6, start_y - 10),
             ])
-        if self._scroll_offset + self._max_visible < len(self._menu.items):
+        if visibles and visibles[-1] < len(self._menu.items) - 1:
             bot = BOTTOM_BAR_Y - 2
             pygame.draw.polygon(surface, (200, 200, 200), [
                 (settings.INTERNAL_WIDTH // 2, bot),

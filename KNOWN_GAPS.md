@@ -576,7 +576,7 @@ Nunca borrar entradas - marcar como resueltas.
   cubierta, lee «esta losa está tomada», que es lo que explica por qué resbala.
 
   Los GID son un contrato entre `CEM_ORDEN` y las constantes de
-  `tools/generate_stage4_1.py`, y hay una prueba que compara las dos listas:
+  `tools/generar_stage41_tmx.py`, y hay una prueba que compara las dos listas:
   reordenar la hoja sin tocar el mapa lo repintaría entero con las baldosas
   equivocadas sin que fallara nada, que es exactamente cómo `stage_mecanicas`
   estuvo semanas pintando las tres primeras casillas de su hoja (AUD-115).
@@ -2376,7 +2376,7 @@ está.
   se cierra con **parallax dibujado por código**, no con arte de tileset:
   `assets/maps/stage4_1/stage4_1.tmx` ya tiene `BG_Far`/`BG_Mid` con
   baldosas pintadas a mano (comprobado leyendo el XML — rangos de gid
-  contiguos, no ceros) y `tools/generate_stage4_1.py` se niega a
+  contiguos, no ceros) y `tools/generar_stage41_tmx.py` se niega a
   regenerar el mapa sin `--forzar` en cuanto lo detecta
   (`tiene_arte_pintado()`); forzarlo para añadir una silueta habría
   borrado ese trabajo. `siluetas.dibujar_horizonte` (nueva, procedural,
@@ -2424,7 +2424,7 @@ está.
 
 ## ~~[GAP-059] `stage4_1` Fase 1 — sin anomalía ambigua de fondo, sin memoria espacial, sin capas de sonido natural~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py`, `src/stages/stage4_1/stage4_1.py`, `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 1 — El Cementerio que Recuerda», comparado contra el
   estado real por Claude Code el mismo día.
@@ -2451,7 +2451,7 @@ está.
     gancho en el código.
   - **El fondo está vacío.** El TMX ya trae `BG_Far`/`BG_Mid`/`BG_Near`
     como capas separadas (la estructura de tres planos que pide el punto
-    11 existe), pero `tools/generate_stage4_1.py::generar()` las rellena
+    11 existe), pero `tools/generar_stage41_tmx.py::generar()` las rellena
     con ceros para las seis fases — ninguna silueta de fondo, ninguna
     señal a lo lejos.
   - **Sin capas de sonido natural.** El silencio de la Fase 1 es literal
@@ -2682,7 +2682,7 @@ está.
 
 ## ~~[GAP-061] `stage4_1` Fase 3 — el viento no escala, el rayo no informa y las osamentas son decoración, no arquitectura~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generate_stage4_1.py` (`WindZone`)
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`LOMAS_FASE3`, `HUESOS_FASE3`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_rayos`), `tools/generar_stage41_tmx.py` (`WindZone`)
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 3 — El Ascenso de la Serpiente», comparado contra el
   estado real por Claude Code el mismo día.
@@ -2828,7 +2828,7 @@ está.
   alfa de las osamentas gigantes sube de 60 a 190 durante el relámpago).
   **La mitad navegable de las osamentas:** AUD-582 — el arco de costillas
   (`trazado.COSTILLA_NAVEGABLE`) es una plataforma one-way real
-  (`Platform` en el TMX, generada por `tools/generate_stage4_1.py`) con su
+  (`Platform` en el TMX, generada por `tools/generar_stage41_tmx.py`) con su
   silueta llena en primer plano; se cruza caminando, no sólo mirándola
   (pruebas en `tests/test_las_costillas_son_navegables.py`). El eje
   vertical quedó cerrado por decisión del dueño (2026-08-16, arriba).
@@ -3064,7 +3064,7 @@ está.
   740) caen dentro del tramo final de la Fase 5, encendidas por el mismo
   mecanismo de proximidad de siempre, sin código nuevo (pruebas en
   `TestLasGrietasAdelantadasDeLaFase5`; TMX regenerado con
-  `tools/generate_stage4_1.py`). **Sigue pendiente:** el canto ancestral
+  `tools/generar_stage41_tmx.py`). **Sigue pendiente:** el canto ancestral
   sigue sin paneo espacial, y los eventos atados al estado de la luna
   (figuras, procesión, cambios de decoración) siguen sin construirse.
 
@@ -3119,7 +3119,7 @@ está.
 
 ## ~~[GAP-064] `stage4_1` Fase 6 — sin silueta de Paburu, sin despedida de los espíritus y sin secuencia de despertar antes del corte~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/trazado.py` (`GRIETAS_FASE6`, `TEXTO_FINAL_BASE`), `src/stages/stage4_1/stage4_1.py` (`_actualizar_grietas`, `_actualizar_mensaje_final`), `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento «Fase 6 — El Camino hacia Paburu», comparado contra el estado
   real por Claude Code el mismo día. Cierra la serie de revisión por fases
@@ -3240,7 +3240,7 @@ está.
   queda 2,5 s, y vuelve. Se añadió un objeto `Cutscene` nuevo
   (`COLUMNA_MIRADOR_FASE6`, `trazado.py`) al TMX comprometido con un
   parche quirúrgico del XML —sólo la capa `Objects`, con el bloque exacto
-  que produce `tools/generate_stage4_1.py::_objetos()`, para que
+  que produce `tools/generar_stage41_tmx.py::_objetos()`, para que
   `TestElMapaSigueAtadoASuGenerador` no distinga el mapa del que
   generaría el código— en vez de regenerar el mapa completo, que habría
   borrado el arte de `BG_Far`/`BG_Mid` (ver la nota de [[GAP-058]]).
@@ -3278,7 +3278,7 @@ está.
 
 ## ~~[GAP-065] `stage4_1` como sistema — la progresión de color ya cuenta la historia, la relación jugador↔escenario no siempre~~ *(Resuelto)*
 
-- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generate_stage4_1.py`
+- **File:** `src/stages/stage4_1/fases.py`, `src/stages/stage4_1/stage4_1.py`, `src/stages/stage4_1/trazado.py`, `tools/generar_stage41_tmx.py`
 - **Phase:** Revisión de diseño por fases del dueño del proyecto (2026-08-14) —
   documento de síntesis «Legacy of InFest — Stage 4.1: La Entrada al
   Cementerio Sagrado», que mira las seis fases como un sistema único.
@@ -3351,7 +3351,7 @@ está.
     estos GAP.
   - **La lista de «lo que evitaría» (§18) se cumple en su totalidad**:
     cero enemigos, cero coleccionables (no hay un solo objeto
-    `Recogible`/`Collectible` en `tools/generate_stage4_1.py`), cero
+    `Recogible`/`Collectible` en `tools/generar_stage41_tmx.py`), cero
     plataformas de precisión, la Fase 5 nunca llega a negro real
     (AUD-476), y los tres espíritus se liberan con una sola interacción
     de botón, no con una lista de misiones.
@@ -3891,7 +3891,7 @@ tanto, el código no cambia: el fallback es el contrato.
     en el catálogo (`perfil.MATERIALES`, sin cambiar fricción ni
     restitución — el freno real sigue siendo el `multiplicador`, sin
     tocar), se declaró `material="lodo"` en el generador
-    (`tools/generate_stage4_1.py`) y se parcheó quirúrgicamente el TMX
+    (`tools/generar_stage41_tmx.py`) y se parcheó quirúrgicamente el TMX
     comprometido (mismo patrón que el musgo de AUD-522: dos
     `FrictionZone` objects, ids 118/120). Nuevo evento
     `Events.SFX_PLAYER_FOOTSTEP_LODO`, nueva rama en
@@ -4079,3 +4079,59 @@ tanto, el código no cambia: el fallback es el contrato.
   `tests/test_la_pantalla_del_prestigio.py` (nivel insuficiente no
   pregunta; dos pulsaciones ejecutan y resetean exp/árbol; Cancelar
   deshace y luego sale; el camino por `update` llega al mismo sitio).
+
+## [GAP-074] El zoom de cámara no existe en la ruta de GPU
+
+- **File:** `src/framework/scenes/stage_parts/dibujo.py`
+  (`DibujoDeEscenario.dibujar_mundo`), `src/engine/core/app.py` (`_draw`),
+  `src/engine/render/gl_pipeline.py`, `src/engine/render/shaders.py`
+- **Phase:** Gameplay & Runtime Hardening P12–P20 (AUD-825, 2026-09-07).
+- **Reason:** La composición del zoom (AUD-601) vive en la escena y sólo
+  corre en el camino software: `dibujar_mundo` dibuja a tamaño alterno y
+  reescala cuando `usar_gl` es falso. Con tarjeta, `App` sube el mundo 1:1
+  y la luz viaja alineada a ese mundo (superficie `light_surface` +
+  definiciones en coords de mundo): escalar la superficie en CPU
+  desalinearía ambas, así que por software no se puede sin romper la luz.
+  Ninguna pasada del pipeline lee `camera.zoom`.
+- **Impact:** Un nivel con `CameraZoomZone` se ve con zoom en CPU y sin
+  zoom con tarjeta. El comportamiento diverge según el renderer.
+- **Prescription (fase R, NO hacer ahora):** uniform de zoom + centro en
+  la pasada de composición del renderer (el mundo ya sube 1:1 y la luz ya
+  viaja alineada; sólo falta escalar UVs en el sombreador). Exige GPU
+  física para verificarlo — en CI headless no hay GL — y toca el renderer
+  CONGELADO (POST-AUD-811) con su presupuesto de 8,33 ms. Test existente
+  del lado software: `tests/test_el_zoom_llega_al_mundo.py`.
+
+## ~~[GAP-075] La barra de vida del enemigo no se ve en el dibujado de escena~~ *(Resuelto — GPL-CIERRE R-003)*
+
+- **File:** `src/framework/entities/enemy_base.py`
+  (`EnemyBase._draw_health_bar`, `EnemyBase.draw`), ruta de dibujado de
+  `StageScene`/`DrawingSystem`.
+- **Phase:** Certification Recovery (detección 2026-09-07, pendiente de AUD).
+- **Reason:** `EnemyBase.draw` sí pinta la barra (verificado llamándolo
+  directo: fondo `(28, 20, 24)` + relleno presentes), pero tras
+  `StageScene.draw` no hay ni un píxel del fondo en el lienzo aunque el
+  sprite del enemigo sí sale (atenuado por la luz). El sprite llega al
+  cuadro y la barra no: la escena no usa ese camino para este enemigo o
+  algo la tapa después. Falla en HEAD (AUD-825) limpio, así que es previo
+  a esta fase.
+- **Impact:** La funcionalidad de AUD-091 (barra tras el primer golpe) no
+  se ve jugando; el jugador no sabe si avanza. Lo vigilan
+  `tests/test_reported_ui_bugs.py::TestLosEnemigosMuestranSuVida::test_tras_el_primer_golpe_aparece`
+  y `::test_la_barra_encoge_con_la_vida` (2 fallan, 2 pasan).
+- **Prescription (NO hacer ahora):** trazar la ruta real de dibujado del
+  enemigo en escena (¿batch de sprites en vez de `entity.draw`?) antes de
+  tocar nada del renderer; la causa aún no está demostrada y un fix a
+  ciegas en dibujado es justo lo prohibido en hardening.
+- **Resolution:** causa demostrada por diagnóstico dirigido (GPL-CIERRE):
+  `EnemyBase._draw_health_bar` sí pintaba (84 píxeles en llamada directa)
+  pero `_pintar_mundo` aplica después `LightSystem.render`, cuyo
+  multiplicador apagaba la barra hasta cero píxeles en stage0 — la misma
+  familia que AUD-090 (HUD) y AUD-194 (previsualización del arco).
+  Fix mínimo en `src/framework/scenes/stage_parts/dibujo.py`:
+  `_repintar_barras_de_vida` repinta barras de enemigos vivos y dañados
+  DESPUÉS de luz + post-procesado, sin imports nuevos (duck-typing).
+  Evidencia: `tests/test_reported_ui_bugs.py` (los 2 tests que fallaban
+  ahora pasan, 15/15 en el archivo) + `tests/test_habilidades_otorgables.py`
+  (5 nuevos). Limitación: en la ruta GPU la barra viaja en la superficie
+  del mundo y el sombreador la atenúa igual; queda PARTIAL en GPU.

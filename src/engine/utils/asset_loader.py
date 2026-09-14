@@ -28,13 +28,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 PLACEHOLDER_SIZES = {
-    "player": (20, 32),
-    "enemies": (24, 24),
-    "bosses": (64, 64),
-    "ui": (32, 32),
-    "tilesets": (16, 16),
-    "backgrounds": (320, 224),
-    "splash": (320, 224),
+    "player": (40, 64),  # HD nativo 2× (20×32→40×64) sin pixelado
+    "enemies": (48, 48),  # HD 2×
+    "bosses": (128, 128),
+    "ui": (64, 64),
+    "tilesets": (32, 32),
+    "backgrounds": (640, 448),
+    "splash": (640, 448),
 }
 
 

@@ -8,20 +8,42 @@ import os
 from pathlib import Path
 from typing import Final
 
-INTERNAL_WIDTH: int = 800
-INTERNAL_HEIGHT: int = 600
-TARGET_FPS: int = 60
-# Window upscale factor. AUD-460: the window is really created at
-# interior × DISPLAY_SCALE and the frame blit is scaled to it
-# (`App._publicar_software`); before that the factor was only a promise.
-# El camino GL (App._init_pygame) y el software (App._abrir_ventana_software)
-# la aplican los dos.
+# AUD-754 — Nativo Presentation Pipeline (PS4 720p con letterbox a otros tamaños).
+# INTERNAL es la resolución de diseño que coincide con los mapas existentes
+# (45 filas *16 =720). 1280×720 es 16:9 exacto y llena el viewport sin huecos.
+# DISPLAY es la ventana física, que puede ser 1920×1080, 1649×877, 1366×768 etc.
+# La transformación única DISPLAY se calcula en src/engine/core/display.py:
+#   display = internal escalado con aspect-preserving + letterbox.
+# No confundir INTERNAL_RENDER_SIZE con DISPLAY_SIZE ni aplicar doble escalado
+# (camera zoom * display_scale). Ver NATIVE_RENDER_AUDIT.md.
+INTERNAL_WIDTH: int = 1280
+INTERNAL_HEIGHT: int = 720
+TARGET_FPS: int = 60  # AUD-827 — 60 es el objetivo real (decisión del dueño):
+  # medido 15,5 ms P50 por fotograma en CPU, el presupuesto de 8,33 ms de 120
+  # era inalcanzable; además AUD-390 diseñó los mapas para FIXED_DT = 1/60.
+  # Ver clock.py FIXED_DT.
+#: Presupuesto de fotograma: 8.33 ms a 120 / 16.67 ms a 60. Ver
+#: docs/62_ESTADO_DEL_PROYECTO.md §B1 para el reparto medido (AUD-762).
+FRAME_BUDGET_120: float = 1000.0 / 120  # 8.33 ms (referencia histórica)
+FRAME_BUDGET_60: float = 1000.0 / 60  # 16.67 ms (presupuesto vigente)
+#: El juego apunta a 60 FPS estables a 1280×720 con lightmap a media
+#: resolución; 120 es sin sombras o 1280. Ver docs/74.
+TARGET_FPS_RECOMENDADO: int = 60
+#: Lightmap a mitad de resolución: 640×360 → ~4× menos píxeles que
+#: 1280×720, sin pérdida visible (luz es baja frecuencia). Activo por
+#: defecto; desactívalo para capturas.
+LIGHTMAP_HALF_RES: bool = True
+# Window upscale factor. AUD-460: la ventana se crea a interior × DISPLAY_SCALE
+# y el fotograma se escala a ella (`App._publicar_software` y `App._init_pygame`).
+# AUD-754: se restaura el parseo desde env (1..4) con letterbox aspect-preserving.
 _raw_scale = os.environ.get("LOI_DISPLAY_SCALE", "1")
 try:
     _parsed_scale = int(_raw_scale) if _raw_scale and _raw_scale.lstrip("-").isdigit() else 1
 except ValueError:
     _parsed_scale = 1
 DISPLAY_SCALE: int = max(1, min(4, _parsed_scale))
+# Alias para el pipeline de presentación: tamaño interno vs display físico.
+INTERNAL_RENDER_SIZE: tuple[int, int] = (INTERNAL_WIDTH, INTERNAL_HEIGHT)
 
 # AUD-021: the reference-resolution auto-scale branch that used to live here was
 # unreachable — it required INTERNAL_WIDTH == 320, and INTERNAL_WIDTH is 800.
@@ -30,7 +52,7 @@ DISPLAY_SCALE: int = max(1, min(4, _parsed_scale))
 REFERENCE_WIDTH: int = 320
 REFERENCE_HEIGHT: int = 224
 
-TILE_SIZE: int = 16
+TILE_SIZE: int = 16  # PS4 720p nativo 16px 1:1 — 1280/16=80 tiles ancho, 720/16=45 alto coincide con TMX.
 
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent
 PROJECT_ROOT: Path = _PROJECT_ROOT
@@ -40,13 +62,18 @@ STUDENT_TEMPLATES_DIR: Path = _PROJECT_ROOT / "student_templates"
 
 PLAYER_MAX_HEALTH: float = 5.0
 GRAVITY: float = 800.0
-PLAYER_WALK_SPEED: float = 90.0
+# AUD-827 — 90 → 120 px/s (decisión del dueño): 90 px/s = 14,2 s por pantalla
+# de 1280 y el juego se sentía pesado; 120 px/s = 10,7 s. Revisar saltos
+# ajustados al límite si alguno deja de salir.
+PLAYER_WALK_SPEED: float = 120.0
 #: Base del deslizamiento sostenido en cuesta (AUD-326): sin entrada
 #: horizontal, la gravedad desliza al jugador cuesta abajo a
 #: `PLAYER_SLOPE_SLIDE_SPEED * sin(fi) * cos(fi)` px/s — la componente
 #: paralela de la gravedad a lo largo de la hipotenusa, como la proyección
 #: de aterrizaje de AUD-324, pero acotada: velocidad constante, no una
-#: aceleración en fuga. La mitad de `PLAYER_WALK_SPEED` como máximo (45°).
+#: aceleración en fuga. 90 px/s fijos (AUD-827: ya no es la mitad de la
+#: marcha desde que esta subió a 120; se conserva el valor para no cambiar
+#: el tacto de las cuestas).
 PLAYER_SLOPE_SLIDE_SPEED: float = 90.0
 PLAYER_JUMP_FORCE: float = -380.0
 PLAYER_MAX_FALL_SPEED: float = 500.0
@@ -94,8 +121,12 @@ PLAYER_SKILLS_REQUIRE_UNLOCK: bool = True
 ESCENARIOS_CON_HABILIDADES_LIBRES: frozenset[str] = frozenset({
     "stage0", "stage1_1", "stage1_2_la_soda", "stage1_3_las_aulas",
     "stage2_1", "stage2_2", "3-1", "stage3_3_el_patio",
-    "stage3_4_boss_gavilan", "stage4_1", "hall", "stage_template",
+    "stage3_4_boss_gavilan", "hall", "stage_template",
     "stage_mecanicas", "boss_venado", "boss_rey", "boss_paburu",
+    # AUD-839 — stage4_1 volvió al árbol público (AUD-814) y con él su
+    # exención: la medición de arriba lo lista entre los que desarrollan
+    # huecos imposibles sin ella. Se perdió al desvincular el track privado.
+    "stage4_1",
 })
 PLAYER_SHORT_ATTACK_DURATION: float = 0.15
 PLAYER_LONG_ATTACK_DURATION: float = 0.4
@@ -104,22 +135,8 @@ PLAYER_COOLDOWN_LONG: float = 0.067
 BG_COLOR: tuple[int, int, int] = (15, 15, 40)
 
 #: Píxeles más allá del encuadre que se siguen simulando y dibujando (AUD-279).
-#:
-#: Una pantalla entera por lado. El primer valor que probé fue 400 —el doble de
-#: los 360 px que recorre como mucho un `Projectile`, 120 px/s durante 3 s— y
-#: **rompió stage 0**: el mapa mide 1.600 px y cuatro de sus nueve enemigos
-#: quedaban fuera de la zona con la cámara en el arranque, así que
-#: `test_every_enemy_in_stage0_moves` los encontró convertidos en estatuas.
-#:
-#: 800 mantiene el mapa de referencia —el que copian los estudiantes— con el
-#: comportamiento exacto que tenía antes de AUD-279, y sigue sobrando sobre el
-#: alcance de cualquier proyectil. Bajarlo hace visible el congelado; subirlo lo
-#: vuelve inútil.
-#:
-#: **Cero lo apaga entero.** Está para cuando alguien sospeche que el culling le
-#: está escondiendo un fallo, que es la primera pregunta razonable ante un
-#: enemigo que no se mueve. El porqué completo, en `framework/stage/culling.py`.
-CULLING_MARGEN: int = 800
+#: Nativo 720p: 1280 es una pantalla entera a 1280×720 (antes 800 para 800×600, 1920 para 1080p).
+CULLING_MARGEN: int = 1280
 
 #: ¿Una entidad que lanza en `update()` se lleva por delante el fotograma? (AUD-289)
 #:
@@ -141,8 +158,11 @@ COMBO_WINDOW: float = 0.5
 # AUD-COMBO: ampliado de 3 a 10 para que `combo_king` (10 hits) sea alcanzable;
 # antes 10 era imposible con COMBO_MAX=3. Primeros 3 valores conservan 1.0/1.5/2.0
 # para no romper tests ni balance existente; 4-10 escalan hasta 3.0.
-COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.0, 3.0)
+# AUD-839 (D-21): los escalones 8-10 ya no son planos.
+COMBO_DAMAGE_MULT: Final[tuple[float, ...]] = (1.0, 1.5, 2.0, 2.2, 2.4, 2.6, 2.8, 3.2, 3.6, 4.0)
 COMBO_MAX: int = 10
+# AUD-COMBO-CHECK: garantiza que la tabla de multiplicadores cubre todo el combo
+assert len(COMBO_DAMAGE_MULT) == COMBO_MAX, f"COMBO_DAMAGE_MULT len {len(COMBO_DAMAGE_MULT)} != COMBO_MAX {COMBO_MAX}"
 
 # ── Accessibility and other player preferences ─────────────────
 #

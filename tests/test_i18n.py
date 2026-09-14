@@ -1038,7 +1038,12 @@ class TestLaTraduccionLlegaALasPantallas:
 
 
 
-            s = pygame.Surface((800, 600))
+            from src.engine.core import settings
+
+            # AUD-839 — el motor dibuja contra INTERNAL (1280x720); una
+            # superficie de 800x600 dejaba el widget fuera del cuadro y
+            # los dos idiomas se veian 'iguales' porque no se veia nada.
+            s = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
 
 
 
@@ -1134,7 +1139,12 @@ class TestLaTraduccionLlegaALasPantallas:
 
 
 
-            s = pygame.Surface((800, 600))
+            from src.engine.core import settings
+
+            # AUD-839 — el motor dibuja contra INTERNAL (1280x720); una
+            # superficie de 800x600 dejaba el widget fuera del cuadro y
+            # los dos idiomas se veian 'iguales' porque no se veia nada.
+            s = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
 
 
 
@@ -1238,7 +1248,12 @@ class TestLaTraduccionLlegaALasPantallas:
 
 
 
-            s = pygame.Surface((800, 600))
+            from src.engine.core import settings
+
+            # AUD-839 — el motor dibuja contra INTERNAL (1280x720); una
+            # superficie de 800x600 dejaba el widget fuera del cuadro y
+            # los dos idiomas se veian 'iguales' porque no se veia nada.
+            s = pygame.Surface((settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT))
 
 
 

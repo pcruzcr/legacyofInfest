@@ -14,7 +14,10 @@ hardware, y cómo un escenario enciende un efecto.
 
 Todos los números de este documento se midieron en la máquina de auditoría —
 **Intel HD Graphics 530, OpenGL 4.6, 800×600, Python 3.14, pygame-ce 2.5.7**—
-con contexto OpenGL real. Ninguno viene de `SDL_VIDEODRIVER=dummy`, que no da
+con contexto OpenGL real. Son medidas históricas de esa máquina y esa
+resolución (pre-AUD-754): la referencia GPU vigente es la **NVIDIA Quadro
+M2200 a 1280×720** (ver `CLAUDE.md`), y una medición tomada en la integrada
+no vale como referencia actual. Ninguno viene de `SDL_VIDEODRIVER=dummy`, que no da
 GPU y donde cualquier medida de tarjeta es ficción (es el error que documenta
 `src/engine/render/gpu_present.py`, y que dejó cinco meses de conclusiones
 falsas en el registro).

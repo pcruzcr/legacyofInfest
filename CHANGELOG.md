@@ -5,6 +5,158 @@
 > del código nuevo y la documentación de auditoría. La entrada de la 1.0.0 se
 > conserva en inglés tal y como se publicó.
 
+## [1.4.1] - 2026-09-12
+
+La dificultad que nadie eligió, fuera.
+
+- **Las partidas nuevas ya no heredan NG+ del disco:** el NG+ sólo viene
+  de la ranura activa. Antes, una máquina con ranuras de prueba a NG+23
+  jugaba TODAS las partidas nuevas con vida enemiga ×3 (el tope) — era el
+  «cuesta más matar enemigos» en todos los niveles.
+- **Los enemigos vuelven al suelo:** el ancla de los terrestres flotaba a
+  la altura de su último anclaje (peor tras cruzar una pendiente) y podía
+  anclarse al techo de un muro que atraviesa el mapa. Ahora bajan el
+  escalón de 16 px, caen con gravedad más allá y no se trepan a muros.
+
+## [1.4.0] - 2026-09-12
+
+Cobertura HD completa y cierre de los últimos abiertos de la 103.
+
+- **HD 100% de los mapas (roadmap 97):** los 17 tilesets usados por los
+  niveles tienen hoja HD de 32 px, ×4 y la plancha 2048 del roadmap, con
+  **normal map en los 31 temas** del catálogo (el generador de normales
+  ahora es paramétrico y declara la ruta en el manifiesto).
+- **Efectos en todos los escenarios:** bloom y viñeta donde no las había
+  (10 mapas) y god rays en los exteriores soleados.
+- **21 luces nuevas** cerca de spawns y checkpoints en los 8 escenarios
+  que se jugaban sin ninguna.
+- **Densidad del 2-1 con curva (D-10):** de 41 a 23 enemigos, los
+  enjambres a 2 por especie y los especiales intactos.
+- **QA PROOF con identidad y contenido**; 1-1 compensa su niebla.
+- **D-23 y D-27 con diagnóstico** (arte compartido oscuro y pase de luz
+  cenital casi nulo; el icono rojo no es placeholder del cargador).
+
+## [1.3.2] - 2026-09-12
+
+Tercera tanda del cierre de la lista 103: lo que quedaba cerrable.
+
+- **El musgo se siente musgo (D-71):** el material bajo los pies ajusta el
+  paso de la marcha — el musgo deja correr un 15 % más que el sendero y el
+  lodo frena. Medido en el recorrido del 4.1.
+- **Migración de partidas antiguas (D-17):** los checkpoints guardados en
+  convención centro (pre-AUD-502) se ajustan a la esquina al cargar; ya no
+  desplazan media baldosa el reaparecer.
+- **Maps con contenido (D-20):** las aulas, el lobby y el laboratorio de QA
+  tienen mensaje, monedas y luces donde no había nada; los tres objetos
+  pelados del lobby son Solid de verdad.
+- **Luz (D-01):** `ambient_light` ≥ 0.8 en paburu, 3-1, aulas, stage0 y
+  4.1; 1-1 compensa su niebla con 0.85.
+- **QA PROOF deja de ser «Untitled Stage»** de «TU NOMBRE AQUÍ».
+- **Combo (D-21):** el remate aéreo y los especiales construyen combo.
+- **Subtítulos (D-16):** el progreso de logros llega al canal accesible.
+
+## [1.3.1] - 2026-09-12
+
+Segunda tanda del cierre de la lista 103.
+
+- **Toda la cadena de guardado en verde (83/83):** `Stage21Oficinas` tiene
+  identidad (recupera su checkpoint guardado), y un `WarpZone` con destino
+  cuenta como salida del nivel — el portal a Paburu, con su llave, es la
+  salida legítima del 4.1.
+- **Los jefes aguantan una pelea de verdad:** Venado 36, Rey 45, Gavilán 42
+  y Paburu 60 de vida (triple), con los umbrales de fase escalados; la
+  batería de jefes pasa 69/69 con las simulaciones escaladas.
+- **Paridad generador↔TMX byte a byte** en `stage_mecanicas` y `stage0`
+  (las colas del track privado se emiten verbatim); `stage0` recupera sus
+  dos obstáculos saltables en el trinquete y el doc declara el tamaño real.
+- **La plantilla del estudiante vuelve a demostrar todo:** los seis tipos
+  que no enseñaba, dos checkpoints, coleccionables, hueco exigente y nota
+  92.3 (antes 82.3).
+- **Juice del jugador:** recibir daño pide hit-stop, destello rojo y
+  sacudida; curarse suelta partículas; descubrir secreto tiene ceremonia;
+  el progreso de logros llega a los subtítulos de accesibilidad.
+- **Combo:** los escalones 8-10 ya no son planos (×3.2/×3.6/×4.0).
+- **Luz:** `ambient_light` ≥ 0.8 en paburu, 3-1, aulas, stage0 y 4.1.
+- **El descenso de la loma 408 del 4.1 funciona** (costura realineada y
+  cima fantasma retirada) — D-72.
+
+## [1.3.0] - 2026-09-11
+
+Cierre de la lista 103 (gaps, errores y bugs): los defectos que se podían
+cerrar con prueba quedaron cerrados; los que exigen decisión de diseño o
+re-trabajo de contenido quedaron clasificados en `docs/103` (§H) con su
+motivo.
+
+### Campaña
+
+- **El Rey Terciopelo de tres fases es el jefe real del juego:** el paquete
+  fantasma `stage2_4` (que apuntaba a un mapa inexistente) se retiró y su
+  Rey completo —división en mitades y frenesí incluidos— vive en
+  `src/stages/boss_rey/`, con los sprites que ya estaban en el árbol.
+- **El árbol de habilidades se puede terminar:** coste total 58 de los 59
+  puntos que otorga el nivel máximo (era 64).
+- **El embestidor se lee antes de golpear:** contacto 1,0 y embestida a
+  210 px/s (antes 1,5 y 250, por encima del dash).
+- **Los cofres dicen algo:** abrir uno suena el tono de recompensa y suelta
+  chispas donde está.
+- **El tutorial es el hub** y el mapa del mundo (30 nodos) distingue la
+  progresión bloqueada en orden de las demos académicas libres.
+- **Los créditos firman con el nombre completo** de quien entregó cada
+  nivel, y el equipo docente se reconoce por prefijo.
+
+### Motor
+
+- **La suite no hereda tu partida:** el `SaveManager` vivo se resetea entre
+  pruebas; un NG+ del disco ya no multiplica la vida enemiga del siguiente
+  test (raíz de ~30 falsos rojos).
+- **El predictor de IA persiste en `.npz`** y re-entrena al cargar: el motor
+  ya no deserializa pickle en ninguna ruta.
+- Trinquete de salto re-medido a la marcha 120 (natural 4 baldosas, experta
+  7); i-frames de Normal a 1,0 s; `stage4_1` recupera su exención de
+  habilidades.
+
+### Documentación
+
+- Las 16 rutas rotas de la documentación corregidas o declaradas historia;
+  `crafting.py` en el árbol de arquitectura; la región de la puntuación del
+  HUD y la ficha del nombre en el diálogo descritas como las dibuja el motor
+  a 1280×720.
+
+## [1.2.0] - 2026-09-10
+
+Cierre de release de la línea 1.x: el estado certificado RC (B2/B3/B4/Zone4,
+save v6, HUD, TMX) se consolida, se integra el stage 4.1 y se dejan por
+escrito los informes de cierre. Sin features nuevas: lo que estaba
+declarado se verificó, y lo que estaba roto se reparó con prueba.
+
+### Campaña
+
+- **Stage 4.1, respiro narrativo:** nivel, tilesets, fondos, seis pistas de
+  música, efectos de ambiente y diálogos (`data/dialogues/stage4_1.json`)
+  integrados, con su spec, diseño y auditoría en `docs/`.
+- **Exámenes que faltaban:** parry con examen real en la sala Defensa del hub
+  (profesor que aturde 2 s al devolver) y chimenea de muro en
+  `stage_mecanicas` coronable por cadena de saltos + agarrarse, con bot
+  que lo demuestra.
+- **Verdad de jefes:** el Gavilán picado con telegraph, plumas proyectiles
+  y órbita que se cierra; las fases del Rey F1→F3 y las cuatro formas de
+  Paburu verificadas por transiciones, no declaradas.
+- **Reparaciones:** el escudo del blindado protegía la espalda (invertido),
+  las habilidades `skill_ground_pound` y `skill_coraza` tenían candado sin
+  entrada en el catálogo, y la luz apagaba las barras de vida enemigas.
+
+### Motor y datos
+
+- Mapas con `schema_version` y el tileset de datacenter ampliado en
+  `stage2_2`; validadores de assets/TMX y la guía de seguridad de cambios
+  actualizados a la ola final.
+
+### Cierre
+
+- Informes de cierre y finalización en la raíz, auditoría documental total,
+  rayos X del repositorio (AUD-836) y guía de juego con handoff al
+  estudiante.
+
 ## [1.1.0] - 2026-07-28
 
 Primera versión pensada para que **treinta estudiantes la usen a la vez sin

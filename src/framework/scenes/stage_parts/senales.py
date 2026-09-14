@@ -17,13 +17,17 @@ queda mudo sin un solo error en consola.
 """
 from __future__ import annotations
 
+import logging
 import random
 from typing import Any
 
 from src.engine.core import settings
 from src.engine.core.events import Events
-from src.framework.stage.interactable_system import EVENTO_RECOGIDO, EVENTO_WARP
+from src.framework.stage import collision_system
+from src.framework.stage.interactable_system import EVENTO_COFRE, EVENTO_RECOGIDO, EVENTO_WARP
 from src.framework.vfx.hit_effects import HitEffects
+
+logger = logging.getLogger(__name__)
 
 
 class SenalesDeEscenario:
@@ -103,6 +107,7 @@ class SenalesDeEscenario:
 
         def _on_warp(**data: Any) -> None:
             """AUD-287 — el salto de una punta del mapa a la otra.
+            AUD-BACKTRACK — con destino_stage_id salta de **escenario** (100% backtracking en todas las vistas).
 
             Lo aplica la escena y no `InteractableSystem` porque el jugador y la
             cámara son suyos. Y hay que hacer **tres** cosas, no una:
@@ -114,7 +119,34 @@ class SenalesDeEscenario:
                normal, un warp de 3.000 px produce medio segundo de barrido a
                toda velocidad por el nivel, que marea y además enseña partes del
                mapa que el diseño no quería enseñar todavía.
+
+            Con destino_stage_id (backtracking) hace **cambio de escenario**
+            vista-agnóstico: funciona igual en lateral, cenital, isométrica, etc.
             """
+            # AUD-BACKTRACK — warp inter-escenario
+            stage_id = data.get("destino_stage_id")
+            if stage_id:
+                try:
+                    from src.engine.core.stage_registry import discover_stages
+
+                    for cls in discover_stages():
+                        if getattr(cls, "STAGE_ID", "") == stage_id:
+                            self.context.scene_manager.replace(cls(self.context))
+                            return
+                    # Fallback genérico por TMX si no hay clase
+                    from pathlib import Path as _P
+
+                    from src.framework.scenes.stage_scene import StageScene
+
+                    p = _P(settings.ASSETS_DIR / "maps" / str(stage_id) / f"{stage_id}.tmx")
+                    if p.exists():
+                        self.context.scene_manager.replace(StageScene(self.context, p))
+                        return
+                    logger.warning("Backtrack warp: stage_id '%s' no encontrado", stage_id)
+                except Exception:
+                    logger.warning("Backtrack warp a '%s' falló", stage_id, exc_info=True)
+                return
+
             destino = data.get("destino")
             if destino is None or self._player is None:
                 return
@@ -286,6 +318,68 @@ class SenalesDeEscenario:
             self._post_processing.set_bloom(0.8, duration=0.6)
             self._post_processing.flash((255, 255, 255), alpha=255, duration=0.15)
             self._camera.apply_shake(amplitude=5.0, duration=0.4)
+
+        # AUD-839 (D-07) — abrir un cofre no decía nada: ni un sonido ni una
+        # chispa. El evento llega con la posición del cofre (el emisor la
+        # manda), se suena el tono de recompensa que ya existe y se emiten
+        # chispas donde está.
+                # AUD-839 (D-18) — recibir daño era seco: sin hit-stop, sin destello,
+        # sin temblor. El daño del jugador ahora pide hit-stop (la misma
+        # fábrica que usa el combate) y añade flash rojo y shake corto.
+        def _on_player_damaged(**data: Any) -> None:
+            amount = float(data.get("amount", 1.0) or 1.0)
+            combate = getattr(self, "_combat", None)
+            if combate is not None:
+                combate.trigger_hitstop(
+                    collision_system.CollisionSystem.hitstop_por_dano(amount))
+            post = getattr(self, "_post_processing", None)
+            if post is not None:
+                post.flash((255, 0, 0), alpha=140, duration=0.12)
+            cam = getattr(self, "_camera", None)
+            if cam is not None:
+                cam.apply_shake(amplitude=4.0, duration=0.18)
+
+        self.context.event_bus.subscribe(Events.PLAYER_DAMAGED, _on_player_damaged)
+        self._vfx_handlers[Events.PLAYER_DAMAGED] = _on_player_damaged
+
+        # AUD-839 (D-18) — curarse sólo sonaba. El mismo evento de sonido
+        # dispara ahora partículas de curación sobre el jugador.
+        def _on_player_heal(**data: Any) -> None:
+            jugador = getattr(self, "_player", None)
+            particulas = getattr(self, "_particle_system", None)
+            post = getattr(self, "_post_processing", None)
+            if jugador is None or particulas is None or post is None:
+                return
+            pos = (jugador.position.x, jugador.position.y - 8)
+            particulas.get_emitter("parry").emit(
+                float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
+            )
+            post.flash((120, 255, 120), alpha=90, duration=0.2)
+
+        self.context.event_bus.subscribe(Events.SFX_PLAYER_HEAL, _on_player_heal)
+        self._vfx_handlers[Events.SFX_PLAYER_HEAL] = _on_player_heal
+
+        # AUD-839 (D-16) — descubrir un secreto no avisaba en pantalla: el
+        # mapa del mundo lo registraba sin ceremonia. Flash + stinger propio.
+        def _on_secret_found(**data: Any) -> None:
+            post = getattr(self, "_post_processing", None)
+            if post is not None:
+                post.flash((255, 215, 90), alpha=170, duration=0.35)
+            self._event_bus.emit(Events.SFX_UI_STAGE_COMPLETE)
+
+        self.context.event_bus.subscribe(Events.SECRET_FOUND, _on_secret_found)
+        self._vfx_handlers[Events.SECRET_FOUND] = _on_secret_found
+
+        def _on_cofre_abierto(**data: Any) -> None:
+            pos = data.get("pos", (0, 0))
+            self._particle_system.get_emitter("parry").emit(
+                float(pos[0]), float(pos[1]), HitEffects.SPARK_BIG,
+            )
+            self._event_bus.emit(
+                Events.SFX_CHECKPOINT, pos=(float(pos[0]), float(pos[1])))
+
+        self.context.event_bus.subscribe(EVENTO_COFRE, _on_cofre_abierto)
+        self._vfx_handlers[EVENTO_COFRE] = _on_cofre_abierto
 
         self.context.event_bus.subscribe(Events.SFX_HIT_CONNECT, _on_hit_connect)
         self._vfx_handlers[Events.SFX_HIT_CONNECT] = _on_hit_connect

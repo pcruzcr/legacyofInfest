@@ -48,6 +48,13 @@ class Checkpoint(BaseEntity):
             radius=28.0, color=_COLOR_INACTIVO, intensity=0.55,
             flicker=True, flicker_speed=1.6, flicker_amount=0.12,
         )
+        # AUD-823 (P20) — piel opcional inyectada por el escenario
+        # (`cp._sprite` / `cp._grey_sprite`). AUD-523 retiró el sprite
+        # genérico y, de paso, el punto de extensión con el que un stage
+        # vestía sus checkpoints sin tocar el motor. Vuelve como opt-in:
+        # en `None` (los 26 escenarios) todo sigue igual, sólo el haz.
+        self._sprite: pygame.Surface | None = None
+        self._grey_sprite: pygame.Surface | None = None
 
     def update(self, dt: float) -> None:
         """El único estado por fotograma que hace falta es el parpadeo del
@@ -94,6 +101,12 @@ class Checkpoint(BaseEntity):
         centro_y = int(self.rect.centery - camera_offset.y)
         surface.blit(gradient, (centro_x - gw // 2, centro_y - gh // 2),
                      special_flags=pygame.BLEND_RGBA_ADD)
+        # AUD-823 (P20) — la piel vestida va ENCIMA del haz, que hace de
+        # halo. Blit normal: respeta el alfa del sprite.
+        piel = self._sprite if self.is_activated else self._grey_sprite
+        if piel is not None:
+            surface.blit(piel, (int(self.rect.x - camera_offset.x),
+                                int(self.rect.y - camera_offset.y)))
 
     def set_event_bus(self, event_bus: EventBus) -> None:
         """Set the event bus reference (needed when checkpoints are created before the bus is available)."""

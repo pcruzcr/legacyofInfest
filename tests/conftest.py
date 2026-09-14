@@ -11,6 +11,11 @@ import sys
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 # Also hide pygame support prompt
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+# AUD-826 — aislamiento de dificultad: get_config() lee los saves del disco
+# cuando no hay gestor vivo, así que la suite corría con el NG+ del usuario
+# (mult 1.9 en la máquina donde se detectó). Con esto, difficulty.py devuelve
+# el preset base salvo que el test cree su propio SaveManager vivo.
+os.environ["LEGACYOFINFEST_TESTING"] = "1"
 
 import warnings
 
@@ -91,6 +96,24 @@ def _reset_global_state():
     AchievementSystem._reset_instance()
     Inventory._reset_instance()
     user_settings.set_settings(user_settings.UserSettings())
+    # AUD-839 — el SaveManager vivo también es singleton de proceso: los tests
+    # de progresión (corazones, hogueras, recarga, NG+) crean gestores con
+    # ranuras NG+ y, sin este reset, el gestor sobrevivía a su prueba. La
+    # siguiente prueba que construía una entidad leía su NG+ vía
+    # difficulty.get_config() (vida enemiga ×2.0 con NG+10: `max_health=20`
+    # nacía con 40) y perdía contra un estado que nunca creó. Misma firma que
+    # AUD-545 con Inventory y AUD-826 con la dificultad.
+    from src.engine.core import save_manager as _save_manager
+
+    with _save_manager._candado_gestor:
+        _save_manager._gestor_activo = None
+    # AUD-826 — la dificultad también es estado global de proceso: un test que
+    # llame a set_difficulty() contaminaba a los siguientes (misma firma que
+    # AUD-220 con las preferencias). Se restaura NORMAL antes de cada prueba;
+    # el NG+ del disco ya lo neutraliza LEGACYOFINFEST_TESTING en difficulty.
+    from src.engine.core import difficulty as _difficulty
+
+    _difficulty.set_difficulty(_difficulty.Difficulty.NORMAL)
     # La caché de fuentes indexa por (ruta, tamaño ya escalado): si sobrevive a
     # un cambio de escala, la prueba siguiente recibe la fuente de la anterior.
     clear_font_cache()

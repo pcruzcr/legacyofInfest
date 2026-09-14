@@ -417,12 +417,18 @@ class Player(BaseEntity):
         # --- Direction ---
         self.facing_direction: int = 1  # -1 left, 1 right
 
-        # --- Rect setup ---
+        # --- Rect setup --- AUD-819 (P14): el cuerpo NACE con su tamaño
+        # lógico de pie (ANCHO/ALTO_DE_PIE, 20×32), no con el 40×64 del
+        # arte. El `spawn_point` resta ALTO_DE_PIE para dejar los pies en
+        # `obj.y` y `_update_rect_size` conserva los pies: con 40×64 al
+        # nacer, los pies quedaban 32 px dentro del suelo y el resolutor
+        # expulsaba al jugador de lado. El sprite se dibuja a su tamaño
+        # (SPRITE_W/H anclado abajo) sin depender de este rect.
         self.rect = pygame.Rect(
             int(self.position.x),
             int(self.position.y),
-            20,
-            32,
+            self.ANCHO_DE_PIE,
+            self.ALTO_DE_PIE,
         )
 
         # --- Sprite frames ---
@@ -725,10 +731,51 @@ class Player(BaseEntity):
         golpe *acertó*: llenar el medidor al lanzarlo premiaría dar palos al
         aire, que es exactamente el hábito que no interesa recompensar.
         """
+        # AUD-818 (P13) — el combo progresa al CONECTAR, no al pulsar.
+        # `CollisionSystem` sólo llama aquí con `connected=True`, una vez por
+        # tajo aunque toque a varios enemigos (`_hit_this_swing` ya dedupica
+        # por entidad): un tajo, un paso de combo. La guarda de hitbox viva
+        # impide el doble conteo si alguien llama dos veces.
+        if self._active_hitbox is not None and not self._hitbox_consumed:
+            self._progresar_combo_al_conectar()
         self._hitbox_consumed = True
         self._active_hitbox = None
         self.gain_special(self.special_gain_per_hit)
         self.arco.recargar()
+
+    def _progresar_combo_al_conectar(self) -> None:
+        """Avanza `combo_count` un paso por tajo conectado (AUD-818, P13).
+
+        AUD-839 (D-21) — los aéreos y los especiales también construyen el
+        combo ahora (antes sólo corto/largo de suelo lo tocaban y la cola
+        de la tabla era inalcanzable jugando en el aire). Un fallo (sin
+        llamada) no mueve nada: el combo lo cierran el daño recibido y el
+        temporizador.
+        """
+        estado = self._state_instance.state_enum
+        if estado == PlayerState.SHORT_ATTACK:
+            atk_name = "SHORT_ATTACK"
+        elif estado == PlayerState.LONG_ATTACK:
+            atk_name = "LONG_ATTACK"
+        elif estado == PlayerState.AERIAL_SLAM:
+            atk_name = "AERIAL_SLAM"
+        elif estado in (PlayerState.CHARGE_ATTACK, PlayerState.POSSESSED):
+            atk_name = "CHARGE_RELEASE"
+        else:
+            return
+        import src.engine.core.settings as settings
+        from src.engine.core.difficulty import get_config
+        if (self.combo_active
+                and self.combo_timer > 0
+                and self.last_attack_type == atk_name
+                and self.combo_count < settings.COMBO_MAX):
+            self.combo_count += 1
+        else:
+            self.combo_count = 1
+        self.combo_timer = float(
+            getattr(get_config(), "combo_window", settings.COMBO_WINDOW))
+        self.last_attack_type = atk_name
+        self.combo_active = True
 
     def gain_special(self, amount: float) -> None:
         """Sube el medidor de especial, con tope."""
@@ -779,6 +826,16 @@ class Player(BaseEntity):
         # tope, un futuro sexto rango podría acercarse peligrosamente a
         # "invencible", que no es lo que pide la rama.
         defensa = max(0.05, 1.0 - self._bonus_arbol_defensa)
+        # GPL-CIERRE R-002 — `skill_coraza` (botín del Gavilán) existe en el
+        # catálogo y ahora hace lo que su descripción promete: -25 % sobre el
+        # daño ya mitigado por el árbol. Va después (multiplica, no sustituye)
+        # para no pisar la progresión del árbol ni la dificultad elegida.
+        try:
+            from src.engine.core.inventory import get_inventory
+            if get_inventory().has_skill("skill_coraza"):
+                defensa *= 0.75
+        except Exception:
+            pass
         effective_damage = amount * cfg.incoming_damage_mult * defensa
         self._health = max(0.0, self._health - effective_damage)
         # AUD-608 — la sinergia **Titán** (vitalidad e ímpetu al máximo)
@@ -819,9 +876,21 @@ class Player(BaseEntity):
             self._event_bus.emit(Events.PLAYER_DIED)
             self._event_bus.emit(Events.SFX_PLAYER_DIE)
         else:
-            from src.framework.entities.states import HurtState
-            self._change_state_instance(HurtState(), force=True)
-            self._event_bus.emit(Events.SFX_PLAYER_HURT)
+            # Heavy hit (≥1.0) → STAGGER 0.6s 0.5× daño, veneno prolongado → POSSESSED
+            # Vista-agnóstico: funciona en lateral/cenital/isométrica
+            if effective_damage >= 1.0 and self._health > 0:
+                try:
+                    from src.framework.entities.states import StaggerState
+                    self._change_state_instance(StaggerState(duration=0.6), force=True)
+                    self._event_bus.emit(Events.SFX_PLAYER_HURT)
+                except Exception:
+                    from src.framework.entities.states import HurtState
+                    self._change_state_instance(HurtState(), force=True)
+                    self._event_bus.emit(Events.SFX_PLAYER_HURT)
+            else:
+                from src.framework.entities.states import HurtState
+                self._change_state_instance(HurtState(), force=True)
+                self._event_bus.emit(Events.SFX_PLAYER_HURT)
 
     def _change_state_instance(self, new_state: PlayerStateBase, force: bool = False) -> bool:
         """
@@ -1097,8 +1166,12 @@ class Player(BaseEntity):
             decaimiento = min(1.0, dt * self._SQUASH_RETORNO)
             self._squash_x += (1.0 - self._squash_x) * decaimiento
             self._squash_y += (1.0 - self._squash_y) * decaimiento
-            if abs(self._squash_x - 1.0) < 0.005 and abs(self._squash_y - 1.0) < 0.005:
-                self._squash_x = self._squash_y = 1.0
+            # AUD-747: clamp por eje — antes `and` forzaba snap de ambos
+            # aunque sólo uno estuviera cerca, cortando la interpolación del otro.
+            if abs(self._squash_x - 1.0) < 0.005:
+                self._squash_x = 1.0
+            if abs(self._squash_y - 1.0) < 0.005:
+                self._squash_y = 1.0
         if self._invincibility_timer > 0:
             self._invincibility_timer -= dt
             period = 0.1
@@ -1195,21 +1268,40 @@ class Player(BaseEntity):
         self._wall_side = 0
         self._wall_slide_timer = 0.0
 
-        vy = 0.0
+        # AUD-747: normaliza el vector de entrada, no escala velocity.x
+        # ya fijado por el estado (que puede ser walk 90 o dash 200). Antes
+        # `velocity.x *= 0.707` con `vy*0.707` dejaba dash diagonal a 154
+        # (<200) e incentivaba zigzag inverso.
+        dx = 0.0
+        dy = 0.0
         if input_manager is not None:
             from src.engine.input.action_map import Action
             if input_manager.is_action_held(Action.MOVE_UP):
-                vy -= 1.0
+                dy -= 1.0
             if input_manager.is_action_held(Action.MOVE_DOWN):
-                vy += 1.0
+                dy += 1.0
+            if input_manager.is_action_held(Action.MOVE_RIGHT):
+                dx += 1.0
+            elif input_manager.is_action_held(Action.MOVE_LEFT):
+                dx -= 1.0
 
         velocidad = self.walk_speed
-        if vy != 0.0 and self.velocity.x != 0.0:
-            # Diagonal: se reparte para que el módulo siga siendo `walk_speed`.
-            factor = 0.70710678                      # 1 / raíz de 2
-            self.velocity.x *= factor
-            vy *= factor
-        self.velocity.y = vy * velocidad
+        # Si el estado ya fijó una velocidad mayor (dash), respétala como
+        # módulo deseado en vez de imponer walk_speed.
+        if abs(self.velocity.x) > velocidad:
+            velocidad = abs(self.velocity.x)
+
+        if dx != 0.0 or dy != 0.0:
+            norm = (dx * dx + dy * dy) ** 0.5
+            if norm != 0:
+                dx /= norm
+                dy /= norm
+            self.velocity.x = dx * velocidad
+            self.velocity.y = dy * velocidad
+        else:
+            # Sin entrada en cenital, frena en seco (no hay inercia).
+            self.velocity.x = 0.0
+            self.velocity.y = 0.0
 
     def _apply_physics(self, dt: float) -> None:
         """Apply gravity. Movement integration happens per-axis in _resolve_collision."""
@@ -1227,8 +1319,19 @@ class Player(BaseEntity):
         # «el personaje no nada»). `_apply_physics` es el integrador del
         # perfil; los estados acuáticos declaran su eje Y completo y el
         # integrador se lo deja.
+        # AUD-820 (P12) — ZIPLINE y CLIMBING no reciben gravedad del
+        # perfil, como SWIMMING/SWIM_ATTACK. El estado corre ANTES que la
+        # física (`update`: estado → física → colisión) y la tirolesa mueve
+        # `position` a mano por el cable: si el integrador sumaba gravedad
+        # encima, `velocity.y` crecía sin freno y el jinete describía una
+        # parábola por debajo del cable (~80 px a media bajada). `Trepando`
+        # reescribe su velocidad cada fotograma y sólo se notaba como un
+        # hundimiento leve, pero era la misma causa. Los estados que
+        # necesitan su propia vertical (péndulo del gancho, flotación del
+        # nado) la declaran ellos; el integrador no la duplica.
         if not self.is_grounded and self._state_instance.state_enum not in (
             PlayerState.SWIMMING, PlayerState.SWIM_ATTACK,
+            PlayerState.ZIPLINE, PlayerState.CLIMBING,
         ):
             gm = self.gravity_multiplier
             # AUD-333 — gravedad, caída máxima y factores de muro salen del
@@ -1464,12 +1567,12 @@ class Player(BaseEntity):
         """Update rect size based on current state (crouching vs standing).
         Shifts position.y so the rect bottom (feet) stays at the same height."""
         old_bottom = self.position.y + self.rect.height
-        target_h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else 32
+        target_h = 20 if self._state_instance.state_enum == PlayerState.CROUCHING else self.ALTO_DE_PIE
         if self.rect.height == target_h:
             self.rect.x = int(self.position.x)
             self.rect.y = int(self.position.y)
             return
-        self.rect.width = 20
+        self.rect.width = self.ANCHO_DE_PIE
         self.rect.height = target_h
         self.position.y += old_bottom - (self.position.y + self.rect.height)
         self.rect.x = int(self.position.x)

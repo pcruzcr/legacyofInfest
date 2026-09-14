@@ -1,0 +1,657 @@
+{
+  "version": 1,
+  "barra": "PS4 HD 2D/2.5D (roadmap 97)",
+  "hojas": {
+    "tileset_aulas": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_aulas_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_aulas_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_aulas_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_aulas_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_aulas_yariel": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_aulas_yariel_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_aulas_yariel_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_aulas_yariel_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_aulas_yariel_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_cafeteria": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_cafeteria_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_cafeteria_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_cafeteria_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_cafeteria_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_datacenter": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_datacenter_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_datacenter_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_datacenter_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_datacenter_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_datacenter_ext": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_datacenter_ext_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_datacenter_ext_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_datacenter_ext_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_datacenter_ext_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_gavilan_ciudad": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_gavilan_ciudad_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_gavilan_ciudad_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_gavilan_ciudad_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_gavilan_ciudad_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_heredia_interior": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_heredia_interior_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_heredia_interior_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_heredia_interior_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_heredia_interior_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_heredia_stone": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_heredia_stone_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_heredia_stone_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_heredia_stone_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_heredia_stone_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_invenio_gothic_v5": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_invenio_gothic_v5_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_invenio_gothic_v5_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_invenio_gothic_v5_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_invenio_gothic_v5_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_jungle_stone": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_jungle_stone_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_jungle_stone_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_jungle_stone_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_jungle_stone_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_paburu": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_paburu_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_paburu_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_paburu_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_paburu_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_parqueo": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_parqueo_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_parqueo_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_parqueo_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_parqueo_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_planicie": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_planicie_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_planicie_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_planicie_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_planicie_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_residencias_crepusculo": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_residencias_crepusculo_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_residencias_crepusculo_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_residencias_crepusculo_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_residencias_crepusculo_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_residencias_crepusculo_bgfar_bruma": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_residencias_crepusculo_bgfar_bruma_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_residencias_crepusculo_bgfar_bruma_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_residencias_crepusculo_bgfar_bruma_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_residencias_crepusculo_bgfar_bruma_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage0": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage0_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage0_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage0_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage0_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f1": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f1_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f1_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f1_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f1_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f2": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f2_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f2_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f2_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f2_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f3": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f3_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f3_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f3_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f3_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f4": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f4_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f4_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f4_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f4_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f5": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f5_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f5_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f5_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f5_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage41_f6": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage41_f6_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage41_f6_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage41_f6_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage41_f6_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase1": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase1_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase1_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase1_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase1_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase2": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase2_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase2_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase2_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase2_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase3": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase3_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase3_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase3_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase3_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase4": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase4_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase4_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase4_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase4_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase5": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase5_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase5_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase5_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase5_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1_fase6": {
+      "tecnica": "pintor procedural paramétrico ts=32",
+      "hd": {
+        "ruta": "tileset_stage4_1_fase6_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1_fase6_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1_fase6_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1_fase6_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1b": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage4_1b_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1b_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1b_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1b_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1b_caverna": {
+      "tecnica": "nearest_2x (pintor propio no paramétrico; paleta intacta)",
+      "hd": {
+        "ruta": "tileset_stage4_1b_caverna_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1b_caverna_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1b_caverna_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1b_caverna_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    },
+    "tileset_stage4_1c": {
+      "tecnica": "re-render HD (geometría ×k)",
+      "hd": {
+        "ruta": "tileset_stage4_1c_hd.png",
+        "tam": "512x512",
+        "tile": 32
+      },
+      "hd4": {
+        "ruta": "tileset_stage4_1c_hd4.png",
+        "tam": "1024x1024",
+        "tile": 64
+      },
+      "hd_2048": {
+        "ruta": "tileset_stage4_1c_hd_2048.png",
+        "tam": "2048x2048",
+        "tile": 128
+      },
+      "normal": "tileset_stage4_1c_hd_n.png",
+      "autotile": "bloque 8×8 sup-izq = %8 (mapeo TMX viejo); resto = 16 variantes de borde/esquina (%16)",
+      "determinismo": "semilla = hash(nombre); NEAREST para escalados"
+    }
+  }
+}

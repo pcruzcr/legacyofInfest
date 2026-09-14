@@ -46,31 +46,10 @@ class DibujoDeEscenario:
     def draw(self, surface: pygame.Surface) -> None:
         if self._stage_data is None or self._player is None:
             return
-        # AUD-601 — GAP-072.3: el zoom cinematográfico. El mundo se dibuja
-        # a tamaño alterno y se reescala sobre el lienzo; la UI sigue a
-        # tamaño completo — es interfaz, no mundo.
-        # Fix reporte Guillermo 3: antes recortaba desde la esquina superior
-        # izquierda de la cámara, dejando al jugador fuera del cuadro con zoom
-        # >1.2 y suelo cerca del borde inferior. Ahora el recorte se centra en
-        # el mismo punto que el viewport original.
-        zoom = getattr(self._camera, "zoom", 1.0)
-        if abs(zoom - 1.0) < 1e-3:
-            self.dibujar_mundo(surface)
-        else:
-            w, h = surface.get_size()
-            base_w, base_h = max(1, int(w / zoom)), max(1, int(h / zoom))
-            base = pygame.Surface((base_w, base_h))
-            # Centrar el recorte: mismo centro que el viewport original
-            # (evita que el jugador desaparezca con zoom 1.25 en borde inferior)
-            orig_cx = self._camera.offset.x + w / 2.0
-            orig_cy = self._camera.offset.y + h / 2.0
-            saved_offset = pygame.Vector2(self._camera.offset)
-            self._camera.offset.x = orig_cx - base_w / 2.0
-            self._camera.offset.y = orig_cy - base_h / 2.0
-            self.dibujar_mundo(base)
-            self._camera.offset = saved_offset
-            escalado = pygame.transform.smoothscale(base, (w, h))
-            surface.blit(escalado, (0, 0))
+        # AUD-825 (P18) — la composición del zoom vive en `dibujar_mundo`
+        # (camino software); aquí sólo mundo + interfaz. `App` respeta el
+        # `draw` de las subclases como punto de extensión: sigue existiendo.
+        self.dibujar_mundo(surface)
         self.dibujar_ui(surface)
 
     def _contexto_de_dibujo(self, surface: pygame.Surface):
@@ -125,7 +104,46 @@ class DibujoDeEscenario:
         a la tarjeta, la luz se multiplica allí, y la interfaz (que nunca fue
         iluminada en el camino software, AUD-090) se compone después — igual
         que aquí abajo en el camino de CPU.
+
+        AUD-825 (P18) — la composición del zoom cinematográfico (AUD-601,
+        GAP-072.3) vive AQUÍ y no en `draw`: el camino software de `App`
+        llama a `dibujar_mundo` + `dibujar_ui` directamente y nunca pasaba
+        por `draw`, así que el zoom no existía en producción. El mundo se
+        dibuja a tamaño alterno y se reescala; la UI sigue a tamaño completo.
         """
+        if self._stage_data is None or self._player is None:
+            return
+        # AUD-601 — GAP-072.3: el zoom cinematográfico.
+        # Fix reporte Guillermo 3: antes recortaba desde la esquina superior
+        # izquierda de la cámara, dejando al jugador fuera del cuadro con zoom
+        # >1.2 y suelo cerca del borde inferior. Ahora el recorte se centra en
+        # el mismo punto que el viewport original.
+        zoom = getattr(self._camera, "zoom", 1.0)
+        if abs(zoom - 1.0) < 1e-3 or getattr(self.context, "usar_gl", False):
+            # zoom 1.0: identidad (los goldens no cambian). Con GL el zoom
+            # NO se aplica aquí: la luz viaja a la tarjeta como superficie
+            # alineada al mundo 1:1 y como definiciones en coords de mundo;
+            # escalar la superficie en CPU desalinearía ambas — ver GAP-074
+            # (uniform de zoom en la pasada de composición, fase R).
+            self._pintar_mundo(surface)
+            return
+        w, h = surface.get_size()
+        base_w, base_h = max(1, int(w / zoom)), max(1, int(h / zoom))
+        base = pygame.Surface((base_w, base_h))
+        # Centrar el recorte: mismo centro que el viewport original
+        # (evita que el jugador desaparezca con zoom 1.25 en borde inferior)
+        orig_cx = self._camera.offset.x + w / 2.0
+        orig_cy = self._camera.offset.y + h / 2.0
+        saved_offset = pygame.Vector2(self._camera.offset)
+        self._camera.offset.x = orig_cx - base_w / 2.0
+        self._camera.offset.y = orig_cy - base_h / 2.0
+        self._pintar_mundo(base)
+        self._camera.offset = saved_offset
+        escalado = pygame.transform.smoothscale(base, (w, h))
+        surface.blit(escalado, (0, 0))
+
+    def _pintar_mundo(self, surface: pygame.Surface) -> None:
+        """El mundo 1:1 con luz. Lo que `dibujar_mundo` compone con zoom."""
         if self._stage_data is None or self._player is None:
             return
         self._drawing.draw(self._contexto_de_dibujo(surface))
@@ -148,10 +166,95 @@ class DibujoDeEscenario:
         # sombreador multiplicaría la sombra dos veces. En el camino
         # software, `render` hace las dos cosas como siempre.
         if getattr(self.context, "usar_gl", False):
-            self._lighting.render_map(surface.get_size(), self._camera.offset)
+            # Directiva v8 — GPU lighting real. No render_map en GPU.
+            # Se publican las definiciones y el shader GPU genera el lightmap.
+            # Mantener compatibilidad CPU fallback en else.
+            try:
+                from src.engine.core import gpu_effects as _gpu
+                # Ambient en 0..1
+                b = float(getattr(self._lighting, "ambient_brightness", 0.3))
+                ac = getattr(self._lighting, "ambient_color", (255, 255, 255))
+                ambient = (ac[0] / 255.0 * b, ac[1] / 255.0 * b, ac[2] / 255.0 * b)
+                luces: list[dict] = []
+                for luz in getattr(self._lighting, "lights", []):
+                    try:
+                        # Resolver radio/intensidad actuales (con flicker)
+                        if hasattr(luz, "get_current_radius"):
+                            rad = float(luz.get_current_radius())
+                        else:
+                            rad = float(getattr(luz, "radius", 80))
+                        if hasattr(luz, "get_current_intensity"):
+                            intens = float(luz.get_current_intensity())
+                        else:
+                            intens = float(getattr(luz, "intensity", 0.8))
+                        col = getattr(luz, "color", (255, 255, 200))
+                        # Normalizar color a 0..1
+                        col_n = (col[0] / 255.0, col[1] / 255.0, col[2] / 255.0)
+                        luces.append({
+                            "x": float(luz.position.x),
+                            "y": float(luz.position.y),
+                            "radius": rad,
+                            "color": col_n,
+                            "intensity": intens,
+                            "flicker": bool(getattr(luz, "flicker", False)),
+                        })
+                    except Exception:
+                        continue
+                off = getattr(self._camera, "offset", None)
+                cam = (float(off.x), float(off.y)) if off is not None else (0.0, 0.0)
+                _gpu.publish_luces(ambient, luces, cam)
+                # Bloom: publicar intensidad efectiva aunque se salte el CPU apply
+                try:
+                    intensidad = max(
+                        float(getattr(self._post_processing, "_bloom_intensity", 0.0)),
+                        float(getattr(self._post_processing, "_bloom_base", 0.0)),
+                    )
+                    _gpu.publish_bloom(intensidad)
+                except Exception:
+                    pass
+            except Exception:
+                # Si la publicación falla, no se rompe el fotograma;
+                # el renderer caerá a textura negra y se verá oscuro, pero no reventará.
+                pass
         else:
             self._lighting.render(surface, self._camera.offset)
-        self._post_processing.apply(surface)
+            self._post_processing.apply(surface)
+            # GPL-CIERRE R-003 (GAP-075) — las barras de vida enemigas se
+            # repintan DESPUÉS de la luz y del post-procesado, en coordenadas
+            # de pantalla. Pintadas en espacio-mundo por `EnemyBase.draw`
+            # (medido: la llamada directa deja 84 píxeles), el multiplicador
+            # de luz las apagaba hasta cero píxeles en stage0 — la misma
+            # familia que AUD-090 (HUD) y AUD-194 (previsualización del arco).
+            # Se repinta sólo lo dañado y vivo; el coste es un rect por
+            # enemigo tocado, no por entidad. La marca bajo la luz queda
+            # debajo, inofensiva.
+            self._repintar_barras_de_vida(surface)
+
+    def _repintar_barras_de_vida(self, surface: pygame.Surface) -> None:
+        """Barras enemigas por encima de la luz (GAP-075, GPL-CIERRE R-003).
+
+        Sólo enemigos vivos y dañados (`_draw_health_bar` ya filtra plena
+        vida y muerte, se le deja el contrato). Sin import de entidades: se
+        usa el método si existe, para no meter la cadena de `entities` en
+        este módulo de dibujado. Con zoom >1 el lienzo base ya está a escala
+        reducida y el offset es el recortado, así que las coordenadas son
+        coherentes con lo pintado debajo.
+        """
+        datos = getattr(self, "_stage_data", None)
+        lista = getattr(datos, "entity_list", None) if datos is not None else None
+        if not lista:
+            return
+        offset = self._camera.offset
+        for entidad in lista:
+            pintar = getattr(entidad, "_draw_health_bar", None)
+            if pintar is None or not getattr(entidad, "is_alive", False):
+                continue
+            try:
+                pintar(surface,
+                       int(entidad.position.x - offset.x),
+                       int(entidad.position.y - offset.y))
+            except Exception:
+                continue
 
     def dibujar_ui(self, surface: pygame.Surface) -> None:
         """La interfaz: lo que nunca recibe la luz del escenario.

@@ -125,7 +125,14 @@ def mitigar(cantidad: float, canal: object,
     """
     if not resistencias:
         return float(cantidad)
-    factor = resistencias.get(normalizar(canal))
+    try:
+        factor = resistencias.get(normalizar(canal))
+    except Exception:
+        return float(cantidad)
     if factor is None:
         return float(cantidad)
-    return max(0.0, float(cantidad) * max(0.0, float(factor)))
+    try:
+        return max(0.0, float(cantidad) * max(0.0, float(factor)))
+    except (ValueError, TypeError):
+        logger.warning("resistencia %r para canal %r ilegible; se ignora", factor, canal)
+        return float(cantidad)

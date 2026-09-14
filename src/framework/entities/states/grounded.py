@@ -73,7 +73,13 @@ class IdleState(PlayerStateBase):
         if inp.move_x != 0 and player.is_grounded:
             from src.framework.entities.states import WalkingState
             player._change_state_instance(WalkingState())
-            player.velocity.x = float(inp.move_x) * player.walk_speed
+            # AUD-839 (D-71) — el material bajo los pies ajusta el paso
+            # (musgo +15 %): la marcha fija la velocidad cada fotograma, así
+            # que es AQUÍ donde un material puede hacer sentir su suelo.
+            paso_material = getattr(
+                getattr(player, "_material_de_zona", None), "paso", 1.0)
+            player.velocity.x = (float(inp.move_x) * player.walk_speed
+                                 * paso_material)
         else:
             player.velocity.x = 0.0
 

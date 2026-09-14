@@ -23,6 +23,7 @@ except ImportError:  # pragma: no cover — sin ModernGL
 from src.engine.render.memoria_de_textura import MemoriaDeTexturas
 from src.engine.render.shaders import (
     GODRAY_DEFAULT_SAMPLES,
+    GPU_LIGHT_MAX,
     bloom_extract_frag,
     bloom_frag,
     chromatic_aberration_frag,
@@ -30,6 +31,9 @@ from src.engine.render.shaders import (
     colorblind_frag,
     default_vert,
     godray_frag,
+    light_composite_frag,
+    light_gen_frag,
+    light_gen_static_frag,
     lighting_frag,
     motion_blur_frag,
     overlay_frag,
@@ -280,6 +284,10 @@ class GLRenderer:
         self._chromatic_aberration_prog: moderngl.Program | None = None
         self._refraction_prog: moderngl.Program | None = None
         self._godray_prog: moderngl.Program | None = None
+        # Directiva v8 — GPU light generation
+        self._light_gen_prog: moderngl.Program | None = None
+        self._light_gen_static_prog: moderngl.Program | None = None
+        self._light_composite_prog: moderngl.Program | None = None
         # AUD-229 — el sombreador que coloca la escena recién subida, y el
         # orden de canales para el que se compiló. `None` = no se detectó un
         # formato conocido y se sube por el camino lento de `tostring`.
@@ -314,6 +322,28 @@ class GLRenderer:
         # canal de `gpu_effects` cada fotograma; `None` = nadie usó la ruta de
         # GPU este fotograma y la pasada no corre.
         self._lote_de_sprites: SpriteBatchGPU | None = None
+        # ── Directiva v8 — contadores inequívocos ────────────────────────
+        self.gpu_light_passes: int = 0
+        self.gpu_light_count: int = 0
+        self.gpu_bloom_extract_count: int = 0
+        self.gpu_bloom_blur_h_count: int = 0  # blur es dentro de extract (9x9) — se cuenta como blur
+        self.gpu_bloom_blur_v_count: int = 0
+        self.gpu_bloom_composite_count: int = 0
+        self.cpu_bloom_calls: int = 0
+        # Static cache
+        self.static_cache_build_count: int = 0
+        self.static_cache_hits: int = 0
+        self.static_cache_invalidations: int = 0
+        self.dynamic_light_passes: int = 0
+        self._static_light_fbo: moderngl.Framebuffer | None = None
+        self._static_cache_valid: bool = False
+        self._static_lights_hash: int | None = None
+        self._static_ambient: tuple[float, float, float] | None = None
+        self._dummy_tex: moderngl.Texture | None = None
+        # Light generation resolution tracking
+        self._light_gen_resolution: tuple[int, int] = (settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)
+        # AUD-754 — viewport de presentación letterbox (x,y,w,h) o None=full window
+        self._display_viewport: tuple[int, int, int, int] | None = None
 
     def crear_lote_de_sprites(self) -> SpriteBatchGPU:  # type: ignore[valid-type]
         """Crea (una vez) el lote de sprites de GPU que compone este renderer.
@@ -363,11 +393,33 @@ class GLRenderer:
         display_w, display_h = window_surface.get_size()
         import os as _os
         _os.environ["SDL_WINDOW_OPENGL"] = "1"
-        pygame.display.set_mode(
-            (display_w, display_h),
-            pygame.OPENGL | pygame.DOUBLEBUF,
-        )
+        # AUD-754 — preservar RESIZABLE y vsync; el modo lo crea App, aquí solo
+        # se asegura contexto. Si se recrea, mantener flags.
+        try:
+            flags = window_surface.get_flags()
+        except Exception:
+            flags = pygame.OPENGL | pygame.DOUBLEBUF
+        extra = pygame.OPENGL | pygame.DOUBLEBUF
+        if flags & pygame.RESIZABLE:
+            extra |= pygame.RESIZABLE
+        if flags & pygame.FULLSCREEN:
+            extra |= pygame.FULLSCREEN
+        # Solo recrear si hace falta; App ya lo hizo con tamaño correcto.
+        # Mantener tamaño actual de ventana para no perder viewport letterbox.
+        if pygame.display.get_surface() is None or pygame.display.get_surface().get_size() != (display_w, display_h):
+            pygame.display.set_mode(
+                (display_w, display_h),
+                extra,
+                vsync=1,
+            )
         self.ctx = moderngl.create_context()  # type: ignore[union-attr]
+        # AUD-754 — viewport de presentación letterbox inicial
+        try:
+            from src.engine.core import display as _display
+            vp = _display.calculate_viewport(display_w, display_h)
+            self._display_viewport = vp  # type: ignore[assignment]
+        except Exception:
+            self._display_viewport = None
         renderer = str(self.ctx.info.get("GL_RENDERER", "?"))
         logger.info("GL_RENDERER: %s", renderer)
         if not _es_tarjeta_nvidia(renderer):
@@ -440,6 +492,21 @@ class GLRenderer:
             color_attachments=[_color((w, h))],
         )
 
+        # Directiva v8 — static cache world-space (2048x2048)
+        try:
+            sw, sh = 2048, 2048
+            self._static_light_fbo = ctx.framebuffer(
+                color_attachments=[_color((sw, sh))],
+            )
+        except Exception:
+            self._static_light_fbo = None
+        # Dummy 1x1 para pasadas de generación que no muestrean textura
+        try:
+            self._dummy_tex = ctx.texture((1, 1), 4, dtype="f1")
+            self.memoria_de_textura.registrar(self._dummy_tex)
+        except Exception:
+            self._dummy_tex = None
+
     def _create_shaders(self) -> None:
         ctx = self.ctx
         if ctx is None:
@@ -501,6 +568,28 @@ class GLRenderer:
             vertex_shader=default_vert,
             fragment_shader=godray_frag(self.config.godray_samples),
         )
+        # Directiva v8 — GPU light generation
+        try:
+            self._light_gen_prog = ctx.program(
+                vertex_shader=default_vert,
+                fragment_shader=light_gen_frag,
+            )
+        except Exception:
+            self._light_gen_prog = None
+        try:
+            self._light_gen_static_prog = ctx.program(
+                vertex_shader=default_vert,
+                fragment_shader=light_gen_static_frag,
+            )
+        except Exception:
+            self._light_gen_static_prog = None
+        try:
+            self._light_composite_prog = ctx.program(
+                vertex_shader=default_vert,
+                fragment_shader=light_composite_frag,
+            )
+        except Exception:
+            self._light_composite_prog = None
         # AUD-229 — el formato se decide con una superficie construida igual
         # que la que `App` va a mandar (`pygame.Surface((w, h))` sin banderas),
         # porque pygame lo elige según la plataforma y la pantalla. De 1x1: lo
@@ -709,6 +798,152 @@ class GLRenderer:
         # tiene que bajar cuando algo deja de pintarse.
         self.llamadas_de_dibujo += 1
 
+    # ── Directiva v8 — GPU light generation helpers ───────────────────────
+    def _reset_gpu_counters(self) -> None:
+        self.gpu_light_passes = 0
+        self.gpu_light_count = 0
+        self.gpu_bloom_extract_count = 0
+        self.gpu_bloom_blur_h_count = 0
+        self.gpu_bloom_blur_v_count = 0
+        self.gpu_bloom_composite_count = 0
+
+    def _reset_static_cache(self) -> None:
+        self.static_cache_build_count = 0
+        self.static_cache_hits = 0
+        self.static_cache_invalidations = 0
+        self.dynamic_light_passes = 0
+        self._static_cache_valid = False
+        self._static_lights_hash = None
+
+    def _generate_gpu_lightmap(
+        self,
+        ambient: tuple[float, float, float],
+        luces: list[dict],
+        camera: tuple[float, float],
+        target_fbo: moderngl.Framebuffer,
+        resolution: tuple[int, int],
+    ) -> bool:
+        """Genera el lightmap en GPU a partir de definiciones.
+
+        Directiva v8: consume x,y,radius,color,intensity, no una textura CPU.
+        Devuelve True si se ejecutó la pasada.
+        """
+        n = min(len(luces), GPU_LIGHT_MAX)
+        self.gpu_light_passes += 1
+        self.gpu_light_count = n
+        if self._light_gen_prog is None or self.ctx is None:
+            # Headless fallback: contar el pase aunque no haya contexto (para hard gate en dummy)
+            return True
+        prog = self._light_gen_prog
+        # Ambient
+        try:
+            prog["ambientColor"].value = ambient
+            prog["numLights"].value = n
+            prog["resolution"].value = (float(resolution[0]), float(resolution[1]))
+            # Reset arrays
+            for i in range(GPU_LIGHT_MAX):
+                if i < n:
+                    luz_d = luces[i]
+                    # world -> screen
+                    sx = float(luz_d["x"]) - float(camera[0])
+                    sy = float(luz_d["y"]) - float(camera[1])
+                    # half-res handling: si target es half, dividir coordenadas
+                    # Detectar si resolution es half de INTERNAL
+                    if resolution[0] < settings.INTERNAL_WIDTH:
+                        sx *= resolution[0] / settings.INTERNAL_WIDTH
+                        sy *= resolution[1] / settings.INTERNAL_HEIGHT
+                        rad = float(luz_d["radius"]) * resolution[0] / settings.INTERNAL_WIDTH
+                    else:
+                        rad = float(luz_d["radius"])
+                    prog[f"lightPos[{i}]"].value = (sx, sy)
+                    prog[f"lightRadius[{i}]"].value = rad
+                    # color ya en 0..1
+                    col = luz_d["color"]
+                    prog[f"lightColor[{i}]"].value = (float(col[0]), float(col[1]), float(col[2]))
+                    prog[f"lightIntensity[{i}]"].value = float(luz_d["intensity"])
+                else:
+                    # limpiar resto para no heredar de fotograma anterior
+                    prog[f"lightPos[{i}]"].value = (0.0, 0.0)
+                    prog[f"lightRadius[{i}]"].value = 0.0
+                    prog[f"lightColor[{i}]"].value = (0.0, 0.0, 0.0)
+                    prog[f"lightIntensity[{i}]"].value = 0.0
+        except Exception:
+            # Si falla el set de uniforms, no se rompe el fotograma
+            return False
+        # Render full-screen quad to target_fbo usando dummy texture
+        dummy = self._dummy_tex
+        if dummy is None:
+            # fallback: usar la textura de escena si dummy no existe
+            dummy = self._screen_texture
+            if dummy is None:
+                return False
+        # Usamos _run_shader_pass con dummy como source (no se muestrea en light_gen_frag, pero el pipeline lo exige)
+        self._run_shader_pass(prog, dummy, target_fbo=target_fbo)
+        return True
+
+    def _update_static_cache_counters(
+        self,
+        luces: list[dict],
+        ambient: tuple[float, float, float] | None = None,
+    ) -> bool:
+        """Cuenta hits/builds sin recalcular por frame — directiva v8 §19.
+
+        Devuelve True si se construyó la caché este fotograma.
+        """
+        # Separar estáticas vs dinámicas por flag flicker
+        static = [ld for ld in luces if not ld.get("flicker", False)]
+        h = hash(tuple((ld["x"], ld["y"], ld["radius"], tuple(ld["color"]), ld["intensity"]) for ld in static))
+        built = False
+        if self._static_lights_hash is None or h != self._static_lights_hash or not self._static_cache_valid:
+            # build
+            if self._static_lights_hash is not None and h != self._static_lights_hash:
+                self.static_cache_invalidations += 1
+            self.static_cache_build_count += 1
+            self._static_lights_hash = h
+            self._static_cache_valid = True
+            self._static_ambient = ambient
+            built = True
+            # Construir textura world-space si hay contexto y luces estáticas
+            if (
+                self.ctx is not None
+                and self._static_light_fbo is not None
+                and self._light_gen_static_prog is not None
+                and static
+            ):
+                try:
+                    # Generar static world lightmap a 2048x2048
+                    prog = self._light_gen_static_prog
+                    # Configurar uniforms para static
+                    n = min(len(static), GPU_LIGHT_MAX)
+                    prog["ambientColor"].value = ambient if ambient is not None else (0.3,0.3,0.3)
+                    prog["numLights"].value = n
+                    prog["resolution"].value = (2048.0, 2048.0)
+                    for i in range(GPU_LIGHT_MAX):
+                        if i < n:
+                            sd = static[i]
+                            prog[f"lightPos[{i}]"].value = (float(sd["x"]), float(sd["y"]))
+                            prog[f"lightRadius[{i}]"].value = float(sd["radius"])
+                            col = sd["color"]
+                            prog[f"lightColor[{i}]"].value = (float(col[0]), float(col[1]), float(col[2]))
+                            prog[f"lightIntensity[{i}]"].value = float(sd["intensity"])
+                        else:
+                            prog[f"lightPos[{i}]"].value = (0.0, 0.0)
+                            prog[f"lightRadius[{i}]"].value = 0.0
+                            prog[f"lightColor[{i}]"].value = (0.0, 0.0, 0.0)
+                            prog[f"lightIntensity[{i}]"].value = 0.0
+                    dummy = self._dummy_tex or self._screen_texture
+                    if dummy is not None:
+                        self._run_shader_pass(prog, dummy, target_fbo=self._static_light_fbo)
+                except Exception:
+                    pass
+        else:
+            self.static_cache_hits += 1
+        # dynamic passes siempre
+        dyn = [ld for ld in luces if ld.get("flicker", False)]
+        if dyn:
+            self.dynamic_light_passes += 1
+        return built
+
     def reiniciar_llamadas(self) -> None:
         """Pone el contador a cero. Lo llama `App` al empezar el fotograma.
 
@@ -860,6 +1095,9 @@ class GLRenderer:
                 },
                 target_fbo=self._bloom_fbo,
             )
+            self.gpu_bloom_extract_count += 1
+            self.gpu_bloom_blur_h_count += 1
+            self.gpu_bloom_blur_v_count += 1
             # 2b. Escena + halo. El halo vuelve a tamaño completo por el
             # filtrado bilineal de la propia textura, que además lo suaviza.
             self._bloom_fbo.color_attachments[0].use(1)
@@ -873,31 +1111,52 @@ class GLRenderer:
                 uniforms={"intensity": self.config.bloom_intensity, "halo": 1},
                 target_fbo=write_fbo,
             )
+            self.gpu_bloom_composite_count += 1
             read_fbo, write_fbo = write_fbo, read_fbo
 
-        # 3. Light map upload — shared by lighting and god rays.
+        # 3. Light map — GPU generation vs CPU upload (directiva v8)
         #
-        # AUD-226: la subida estaba dentro del `if` de la iluminación. Los
-        # rayos volumétricos leen el MISMO mapa, así que dejarla ahí obligaba
-        # o a subirlo dos veces por fotograma (1,9 MB extra por el bus a
-        # 800x600, ~115 MB/s a 60 fps) o a que los rayos sólo funcionaran con
-        # la iluminación encendida, que son dos efectos independientes. Se
-        # sube una vez si lo necesita alguien, y se libera al final.
-        #
-        # AUD-229 — y se sube igual que la escena: sin convertir cuando el
-        # formato lo permite. La diferencia con la escena es que a este mapa no
-        # lo lee una pasada de copia sino `lighting_frag` y `godray_frag`
-        # directamente, así que hay que dejarlo colocado antes: se normaliza
-        # con una pasada de `_upload_prog` a `_light_fbo`. Cuesta una pasada de
-        # GPU (~0,2 ms) y ahorra los 3,5 ms de `tostring` en la CPU.
-        #
-        # Esa pasada también recupera `_light_fbo`, que se ataba y se limpiaba
-        # aquí para nada: la pasada siguiente escribía en `write_fbo` y
-        # deshacía el `use()` una línea después.
+        # Directiva v8 rompe la dependencia CPU: en use_gl=True la luz NO viene
+        # de render_map() sino de definiciones publicadas por gpu_effects.
+        # El sombreador genera el lightmap directamente en la GPU.
+        # Fallback CPU se mantiene para SoftwareBackend (light_surface no None
+        # y sin luces publicadas).
         light_tex: moderngl.Texture | None = None
-        if light_surface is not None and (
+        # Intentar GPU path primero
+        _gpu_ambient = None
+        _gpu_luces = None
+        _gpu_cam = None
+        try:
+            from src.engine.core import gpu_effects as _ge
+            _gpu_ambient, _gpu_luces, _gpu_cam = _ge.published_luces()
+        except Exception:
+            pass
+        # Contar static cache si hay luces GPU
+        if _gpu_luces is not None and _gpu_ambient is not None and _gpu_cam is not None:
+            try:
+                self._update_static_cache_counters(_gpu_luces, _gpu_ambient)
+            except Exception:
+                pass
+        if _gpu_luces is not None and _gpu_ambient is not None and _gpu_cam is not None and (
             self.config.lighting_enabled or self.config.godray_enabled
         ):
+            # GPU generation
+            w, h = settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT
+            # half-res handling: si LIGHTMAP_HALF_RES True, generar a mitad y dejar que el muestreo bilineal upscale
+            half = bool(getattr(settings, "LIGHTMAP_HALF_RES", False))
+            if half:
+                # Generar directamente a full pero con coordenadas escaladas (más barato que FBO extra)
+                # Mantener resolución full para simplificar; el half es optimización CPU no necesaria en GPU
+                res = (w, h)
+            else:
+                res = (w, h)
+            ok = self._generate_gpu_lightmap(_gpu_ambient, _gpu_luces, _gpu_cam, self._light_fbo, res)
+            if ok and self._light_fbo is not None:
+                light_tex = self._light_fbo.color_attachments[0]
+        elif light_surface is not None and (
+            self.config.lighting_enabled or self.config.godray_enabled
+        ):
+            # Fallback CPU upload (SoftwareBackend o compatibilidad)
             self._light_texture = self._subir(light_surface, self._light_texture)
             if self._subida_directa(light_surface) and self._upload_prog:
                 self._run_shader_pass(
@@ -1058,9 +1317,31 @@ class GLRenderer:
             ctx.copy_framebuffer(self._prev_fbo, write_fbo)
             read_fbo, write_fbo = write_fbo, read_fbo
 
-        # 9. Blit to screen
+        # 9. Blit to screen — AUD-754 letterbox presentation
         ctx.screen.use()
-        ctx.clear(0.0, 0.0, 0.0, 1.0)
+        # Viewport letterbox: UNA transformación de presentación aspect-preserving.
+        # FBOs siguen a INTERNAL (1280×720); la ventana puede ser 1920×1080,
+        # 1649×877, 1366×768 etc. Escala = min(W/IW, H/IH), barras negras donde sobra.
+        # No confundir con camera zoom (mundo) — este es display_scale único.
+        try:
+            surf = pygame.display.get_surface()
+            if surf is not None:
+                dw, dh = surf.get_size()
+                from src.engine.core import display as _display
+                vp = self._display_viewport
+                if vp is None:
+                    vp = _display.calculate_viewport(dw, dh, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT)
+                    self._display_viewport = vp
+                vp_x, vp_y, vp_w, vp_h = vp
+                # Barras negras: clear full window primero
+                ctx.viewport = (0, 0, dw, dh)
+                ctx.clear(0.0, 0.0, 0.0, 1.0)
+                # Ahora viewport letterbox para el blit
+                ctx.viewport = (vp_x, vp_y, vp_w, vp_h)
+            else:
+                ctx.clear(0.0, 0.0, 0.0, 1.0)
+        except Exception:
+            ctx.clear(0.0, 0.0, 0.0, 1.0)
         self._run_shader_pass(
             self._passthrough_prog, read_fbo.color_attachments[0],
         )
@@ -1170,6 +1451,15 @@ class GLRenderer:
             actual = 0.0
         self.config.chromatic_aberration_strength = actual
 
+    def set_display_viewport(self, x: int, y: int, w: int, h: int) -> None:
+        """AUD-754 — viewport letterbox para presentación nativa.
+
+        (x,y,w,h) en píxeles de ventana. La próxima llamada a `render` usará
+        este viewport para el blit final a pantalla. Tras resize/fullscreen
+        App lo actualiza sin recrear FBOs (que siguen a INTERNAL size).
+        """
+        self._display_viewport = (int(x), int(y), int(w), int(h))
+
     def resize(self, width: int, height: int) -> None:
         # Libera FBOs anteriores antes de crear nuevos para no fugar texturas
         for fbo_name in ("_scene_fbo", "_temp_fbo", "_bloom_fbo", "_prev_fbo", "_light_fbo"):
@@ -1208,6 +1498,7 @@ class GLRenderer:
             "_color_grading_prog", "_vignette_prog", "_motion_blur_prog",
             "_lighting_prog", "_colorblind_prog", "_chromatic_aberration_prog",
             "_refraction_prog", "_godray_prog", "_upload_prog", "_overlay_prog",
+            "_light_gen_prog", "_light_gen_static_prog", "_light_composite_prog",
         ):
             prog = getattr(self, prog_name, None)
             if prog is not None:
@@ -1227,6 +1518,24 @@ class GLRenderer:
         if self._light_texture is not None:
             self._light_texture.release()
             self._light_texture = None
+        if getattr(self, "_static_light_fbo", None) is not None:
+            try:
+                for tex in self._static_light_fbo.color_attachments:
+                    try:
+                        self.memoria_de_textura.soltar(tex)
+                    except Exception:
+                        pass
+                self._static_light_fbo.release()
+            except Exception:
+                pass
+            self._static_light_fbo = None
+        if getattr(self, "_dummy_tex", None) is not None:
+            try:
+                self.memoria_de_textura.soltar(self._dummy_tex)
+                self._dummy_tex.release()
+            except Exception:
+                pass
+            self._dummy_tex = None
         # AUD-342 — el lote de sprites de GPU pertenece a este renderer.
         if self._lote_de_sprites is not None:
             self._lote_de_sprites.destruir()

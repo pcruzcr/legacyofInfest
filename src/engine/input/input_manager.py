@@ -216,20 +216,25 @@ class InputManager:
                 self._pulsada_en_fotograma[accion] = self._fotograma
 
     def is_action_just_pressed(self, action: Action) -> bool:
-        """True only on the frame the action's key was first pressed."""
+        """True only on the frame the action's key was first pressed.
+
+        AUD-817 (P15) — la lectura es NO destructiva. AUD-732 consumía la
+        acción en su primera lectura para que 60 fotogramas sin `pump` no
+        repitieran el flanco, pero eso convertía «¿se pulsó?» en «¿soy el
+        primero en preguntar?»: la máquina del jugador (que lee siempre
+        primero vía `_InputSnapshot`) robaba GRAB/JUMP/ATTACK a la escena
+        (`_actualizar_agarres`, `InteractableSystem`) y a las pruebas que
+        afirman el flanco antes de `update`. El flanco lo cierra `pump()`;
+        quien ejecuta una acción la gasta con `consume()` explícito.
+        """
         if action in self._consumed_actions:
             return False
         keys = self._bindings.get(action, [])
         if any(k in self._pressed_this_frame for k in keys):
-            # AUD-732 — consumir para que 60 frames sin pump no repitan 60 veces
-            # y el test de navegación no dé la vuelta completa al menú.
-            self._consumed_actions.add(action)
             return True
         if self._mouse_action_pressed(action):
-            self._consumed_actions.add(action)
             return True
         if self._action_from_controller(action):
-            self._consumed_actions.add(action)
             return True
         return False
 

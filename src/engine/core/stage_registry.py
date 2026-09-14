@@ -30,7 +30,10 @@ STAGE_ORDER: list[str] = [
     "stage1_1", "stage1_2", "stage1_3", "stage1_4_boss_venado",
     "stage2_1", "stage2_2", "stage2_3", "stage2_4_boss_rey",
     "stage3_1", "stage3_2", "stage3_3", "stage3_4_boss_gavilan",
-    "stage4_1", "stage4_2_boss_paburu",
+    # AUD-814 — reconstrucción del 4.1 en el repo público: precede al jefe
+    # y le entrega la llave `paburu_despertado` (WarpZone con key_id).
+    "stage4_1",
+    "stage4_2_boss_paburu",
 ]
 
 # Custom module import paths for stages that don't follow the {id}.{id} convention.
@@ -76,7 +79,6 @@ _STAGE_MODULE_MAP: dict[str, str] = {
 # `SceneManager._enter_next_stage` llama `next_stage_class(self._context)`
 # igual para una clase que para una función; no hace falta tocarlo.
 _STAGE_FACTORY_MAP: dict[str, str] = {
-    "stage4_1": "src.stages.stage4_1.selector.crear_stage4_1",
 }
 
 

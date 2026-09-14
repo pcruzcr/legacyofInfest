@@ -284,7 +284,9 @@ class OptionsScene(BaseScene):
             from src.engine.scenes.keybinding_scene import KeybindingScene
 
             self.context.event_bus.emit(Events.SFX_MENU_CONFIRM)
-            self.context.scene_manager.replace(KeybindingScene(self.context))
+            # AUD-833 — con origen y con `push`: ESC en Controles reanuda
+            # estas Opciones (las mismas), no una copia ni el título.
+            self.context.scene_manager.push(KeybindingScene(self.context, origen="opciones"))
         elif item.value == "VOLVER":
             self._volver()
         else:

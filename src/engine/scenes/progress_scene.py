@@ -118,8 +118,10 @@ class ProgressScene(BaseScene):
         if im is None:
             return
         if im.is_action_just_pressed(Action.CANCEL):
-            from src.engine.scenes.demo_menu_scene import DemoMenuScene
-            self.context.scene_manager.replace(DemoMenuScene(self.context))
+            # AUD-833 — `pop`, no `replace`: el temario abre con `push`, así
+            # que abajo hay un DemoMenu vivo que reanudar (con su selección).
+            # Reemplazarlo lo destruía y construía una copia.
+            self.context.scene_manager.pop()
             return
 
     def draw(self, surface: pygame.Surface) -> None:

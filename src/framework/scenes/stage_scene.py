@@ -388,6 +388,13 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         destino = pygame.Vector2(pending.checkpoint_x, pending.checkpoint_y)
         self._player.set_spawn(destino)
         self._player.set_health(pending.health)
+        # PS4 1280×720 — al cargar saved, el mapa ahora es 720 de alto (antes 608)
+        # y la cámara estaba en 0,0, así que el jugador aparecía muy abajo cortado.
+        # Snap para centrar la cámara en el checkpoint y no mostrar vacío.
+        try:
+            self._camera.snap_to_target()
+        except Exception:
+            pass
         # AUD-292 — y la experiencia. `exp_total` se guardaba desde AUD-267 y
         # **nadie la volvía a leer**: cargar una partida devolvía al jugador a
         # nivel 1 con sus puntos de habilidad a cero, que es la misma familia de
@@ -431,6 +438,57 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         # que _stage_data y _player nunca queden en estado parcial.
         assert data is not None
         self._stage_data = data
+        # B3 — hidratar ITEMS coleccionados desde SaveData (per-map)
+        try:
+            map_id = str(getattr(self._stage_data, "stage_id", "") or "")
+            save = None
+            sm = getattr(self.context, "save_manager", None)
+            if sm is not None:
+                slot = getattr(sm, "ranura_activa", None)
+                if slot is None:
+                    try:
+                        slot = sm.newest_slot()
+                    except Exception:
+                        slot = None
+                if slot is not None:
+                    try:
+                        save = sm.load(slot)
+                    except Exception:
+                        save = None
+            if save is None:
+                save = getattr(self.context, "pending_load", None)
+            if save is not None and map_id:
+                from src.framework.stage.interactables import (
+                    cofre_key,
+                    recogible_key,
+                    secret_room_key,
+                )
+
+                collected = set((getattr(save, "map_item_collected", {}) or {}).get(map_id, []) or [])
+                if collected:
+                    for r in getattr(self._stage_data, "recogibles", []) or []:
+                        if getattr(r, "tmx_object_id", 0) != 0:
+                            try:
+                                if recogible_key(map_id, r) in collected:
+                                    r.recogido = True
+                            except Exception:
+                                pass
+                    for c in getattr(self._stage_data, "cofres", []) or []:
+                        if getattr(c, "tmx_object_id", 0) != 0 and getattr(c, "contenido", ""):
+                            try:
+                                if cofre_key(map_id, c) in collected:
+                                    c.abierto = True
+                            except Exception:
+                                pass
+                    for s in getattr(self._stage_data, "secret_rooms", []) or []:
+                        if getattr(s, "tmx_object_id", 0) != 0 and getattr(s, "recompensa", ""):
+                            try:
+                                if secret_room_key(map_id, s) in collected:  # type: ignore[arg-type]
+                                    s.descubierto = True  # type: ignore[attr-defined]
+                            except Exception:
+                                pass
+        except Exception:
+            pass
         spawn = self._stage_data.spawn_point
         assert spawn is not None, "spawn_point no puede ser None tras load exitoso"
         self._player = Player(spawn, event_bus=self.context.event_bus)
@@ -535,7 +593,22 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
             bus=self.context.event_bus,
             warps=self._stage_data.warps,
             placas=getattr(self._stage_data, "placas", None),
+            fogatas=getattr(self._stage_data, "fogatas", None),
+            estaciones_recarga=getattr(self._stage_data, "estaciones_recarga", None),
         )
+        # B3 — persistencia per-map para ITEM completion
+        try:
+            self._interactables.set_persistencia(
+                str(getattr(self._stage_data, "stage_id", "") or ""),
+                getattr(self.context, "save_manager", None),
+            )
+        except Exception:
+            pass
+        # B4.3 — player ref para recarga
+        try:
+            self._interactables.set_player_ref(getattr(self, "_player", None))
+        except Exception:
+            pass
         self._montar_director_de_escenas()
         # AUD-140 — bloques empujables y destructibles del mapa.
         from src.framework.stage.bloques import SistemaDeBloques
@@ -714,6 +787,10 @@ class StageScene(MezclaDeAmbiente, SimulacionDeEscenario,
         audio = self.audio
         if audio is not None:
             audio.stop_music()
+            # AUD-829 — la capa ambiental es independiente de la música
+            # (`mixer.music` contra `Sound` en bucle): parar sólo la música
+            # dejaba el zumbido pegado en el siguiente escenario.
+            audio.stop_ambient()
         self._subtitles.destroy()
         self._achievements.save()
         self._bestiary.save()

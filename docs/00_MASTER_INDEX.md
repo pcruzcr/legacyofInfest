@@ -10,7 +10,7 @@ date_processed: "2026-08-06"
 
 # Índice maestro de documentación
 
-**Fecha:** 30 de agosto de 2026 · **Documentos:** 75 en `docs/` (72 indexados abajo + este índice + 2 de informe no indexados antes), más 5 ficheros de la raíz
+**Fecha:** 9 de septiembre de 2026 · **Documentos:** 144 en `docs/` (143 indexados abajo + este índice + 0 de informe no indexados — todos indexados), más 5 ficheros de la raíz
 (`README`, `CLAUDE`, `CONTRIBUTING`, `CHANGELOG` y `KNOWN_GAPS`), que también tienen fila.
 
 > **AUD-455 (2026-08-13).** Decía «4 ficheros» y nombraba cinco — la tabla
@@ -31,9 +31,11 @@ hacer X».
 > comandos de cada uno.
 
 **Qué pasó con los documentos que no están.** Esta documentación tenía 102
-ficheros y hoy son 70 (el encabezado de arriba los cuenta). Se retiraron 35:
-auditorías cerradas, informes
-de fase, hojas de ruta cumplidas y registros de decisiones ya tomadas. No eran
+ficheros y hoy son 142 (el encabezado de arriba los cuenta; AUD-833: el
+párrafo decía «149»). Se retiraron 35
+auditorías cerradas, informes de fase, hojas de ruta cumplidas y registros de
+decisiones ya tomadas, y se incorporaron 63 —incluyendo AUD-800 (8),
+`CHANGE_SAFETY_GUIDE`, `AUD-803_NATIVE_RENDERING_AUDIT`, `AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION` y `AUD-805_LEVEL_COMPOSITION_AUDIT`—. No eran
 documentación técnica y ninguno describía el motor de hoy — varios citaban
 pruebas y símbolos que hace tiempo que no existen. Siguen en el historial de
 git si hace falta consultarlos.
@@ -143,6 +145,9 @@ git si hace falta consultarlos.
 | [`07_STAGE0_DESIGN.md`](07_STAGE0_DESIGN.md) | Diseño del Escenario 0 |
 | [`86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md`](86_ESPECIFICACION_DE_NIVELES_Y_JEFES.md) | Especificación de Niveles y Jefes |
 | [`19_NARRATIVE_AND_LORE.md`](19_NARRATIVE_AND_LORE.md) | Narrativa y trasfondo |
+| [`STAGE_4_1_DESIGN.md`](STAGE_4_1_DESIGN.md) | Diseño del Stage 4.1 «La Entrada al Cementerio Sagrado» (rebuild AUD-812) |
+| [`STAGE_4_1_SPEC.md`](STAGE_4_1_SPEC.md) | Especificación técnica del Stage 4.1 (trazado, TMX, audio, banderas) |
+| [`STAGE_4_1_AUDIT.md`](STAGE_4_1_AUDIT.md) | Matriz de certificación del Stage 4.1 (S41-001…S41-030, veredicto) |
 | [`65_EL_LORE_EXTENSO.md`](65_EL_LORE_EXTENSO.md) | El Lore Extenso |
 
 ## Estado del proyecto y auditoría
@@ -155,6 +160,7 @@ git si hace falta consultarlos.
 | [`69_PROMPT_AUDITORIA_MAESTRO.md`](69_PROMPT_AUDITORIA_MAESTRO.md) | Prompt maestro de auditoría |
 | [`70_INFORME_DE_AUDITORIA_VIVO.md`](70_INFORME_DE_AUDITORIA_VIVO.md) | Informe de auditoría vivo — datos medidos por iteración (AUD-305: restaurado; el §7 del prompt 69 lo exige) |
 | [`AUDIT_2026-07.es.md`](AUDIT_2026-07.es.md) | Auditoría Multidisciplinaria de Producción |
+| [`83_AUDITORIA_DOCUMENTAL_TOTAL.md`](83_AUDITORIA_DOCUMENTAL_TOTAL.md) | Auditoría documental total 2026-09-09 — todo el proyecto alineado al árbol (resolución, conteos, SFX, deudas) |
 | [`89_AUDITORIA_MULTIDISCIPLINAR.md`](89_AUDITORIA_MULTIDISCIPLINAR.md) | Auditoría multidisciplinar agosto 2026 — 16 disciplinas, AUD-310 a AUD-322 |
 | [`91_PLAN_DE_CIERRE.md`](91_PLAN_DE_CIERRE.md) | Plan de cierre — inventario medido de todo lo abierto (gaps, avisos, huecos) y los ocho lotes que lo cierran; `WorldSimulation` es el último rasgo |
 | [`92_CATALOGO_DE_FENOMENOS.md`](92_CATALOGO_DE_FENOMENOS.md) | Catálogo de fenómenos ambientales — los ~90 de la taxonomía contra lo que cuesta cada uno de verdad, y los cinco que no valen la pena |
@@ -162,7 +168,73 @@ git si hace falta consultarlos.
 | [`94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md`](94_CIERRE_DE_GAPS_Y_PLAN_POR_FASES.md) | Cierre de gaps y plan por fases — estado verificado del árbol: qué hallazgo ya está resuelto, qué GAP sigue abierto, qué decisión espera al dueño, y el orden de cierre |
 | [`50_IMPROVEMENT_ROADMAP.md`](50_IMPROVEMENT_ROADMAP.md) | Roadmap M1-M8 — hitos verificables con criterios de aceptación medibles (comandos) |
 | [`PLAN_PENDIENTE_2026_08_26.md`](PLAN_PENDIENTE_2026_08_26.md) | Plan de trabajo pendiente — 15 tareas en 5 fases (A-E): pre-commit, import-linter, perf gate, scripts verificación, assist mode, playtest bot, docs, gráficos/audio |
-| [`informe_stage4_1b_gates_8_9_10.md`](informe_stage4_1b_gates_8_9_10.md) | Informe stage4_1b gates 8-10 — validación de arte/QA/polish |
+| [`NATIVE_RENDER_AUDIT.md`](NATIVE_RENDER_AUDIT.md) | Auditoría de presentación nativa — ventana/drawable/internal/viewport/cámara/HUD/letterbox |
+| [`NATIVE_COMPOSITION_AUDIT.md`](NATIVE_COMPOSITION_AUDIT.md) | Auditoría de composición nativa — 20 secciones, invariante 1280/16/80×45 |
+| [`VISUAL_COMPOSITION_AUDIT.md`](VISUAL_COMPOSITION_AUDIT.md) | Auditoría visual 25 secciones — AUD-756 composición 1280/16/80×45 |
+| [`VISUAL_ASSET_INVENTORY.md`](VISUAL_ASSET_INVENTORY.md) | Inventario visual por espacio WORLD/CAMERA/VIEWPORT/UI/DISPLAY |
+| [`VISUAL_SCALE_MATRIX.md`](VISUAL_SCALE_MATRIX.md) | Matriz de escala visual — Element Native px Tiles ref Expected |
+| [`LEVEL_VISUAL_MATRIX.md`](LEVEL_VISUAL_MATRIX.md) | Matriz visual de niveles — validación de cada stage (cámara, escala, suelo, parallax, HUD) |
+| [`LEVEL_VISUAL_COMPOSITION_MATRIX.md`](LEVEL_VISUAL_COMPOSITION_MATRIX.md) | Matriz visual por nivel 26 — Player/Platforms/Enemies/Boss/Background/Parallax/Foreground/Camera/HUD/Density |
+| [`LEVEL_NATIVE_COMPOSITION_AUDIT.md`](LEVEL_NATIVE_COMPOSITION_AUDIT.md) | Auditoría nativa por nivel — 26 levels TMX/camera/tiles/sprites/background/parallax/HUD |
+| [`TMX_SPATIAL_AUDIT.md`](TMX_SPATIAL_AUDIT.md) | Auditoría TMX espacial — tile 16, object top-left, 37 TMX |
+| [`STAGE_SPATIAL_INTEGRITY_MATRIX.md`](STAGE_SPATIAL_INTEGRITY_MATRIX.md) | Matriz integridad espacial 26 — TMX/World/Camera/Collision/Player/Enemies/Objects/Spawns/Checkpoints/Transitions/Parallax |
+| [`STAGE_SPATIAL_INTEGRITY_AUDIT.md`](STAGE_SPATIAL_INTEGRITY_AUDIT.md) | Auditoría integridad espacial 30 secciones — AUD-757 1280/80×45 |
+| [`AUD-757_FINDINGS.md`](AUD-757_FINDINGS.md) | Hallazgos AUD-757 — F01-F12 1 PNG fix |
+| [`VISUAL_REFERENCE_SHEET.md`](VISUAL_REFERENCE_SHEET.md) | Referencia visual — player 40×64 2.5×4 tiles, bosses, HUD |
+| [`LEVEL_VISUAL_QA_MATRIX.md`](LEVEL_VISUAL_QA_MATRIX.md) | Matriz QA visual 26 — Composition/Scale/Contrast/Depth/Navigation/Pixel/Lighting/HUD/FX |
+| [`AUD-758_FINDINGS.md`](AUD-758_FINDINGS.md) | Hallazgos AUD-758 — V01-V03 1 ambient_light fix |
+| [`PIXEL_PERFECT_VISUAL_QA.md`](PIXEL_PERFECT_VISUAL_QA.md) | Certificación pixel-perfect 23 secciones — 1280×720 16 80×45 |
+| [`VISUAL_NATIVE_AUDIT.md`](VISUAL_NATIVE_AUDIT.md) | Auditoría nativa visual — 1280×720 80×45 16 unidades |
+| [`RENDER_PIPELINE_AUDIT.md`](RENDER_PIPELINE_AUDIT.md) | Auditoría pipeline render — WORLD→CAMERA→VIEWPORT→DISPLAY 7 VALID |
+| [`VISUAL_LEVEL_AUDIT.md`](VISUAL_LEVEL_AUDIT.md) | Auditoría niveles visual — 26 levels composition/camera/background/lighting |
+| [`LEVEL_COMPOSITION_MATRIX.md`](LEVEL_COMPOSITION_MATRIX.md) | Matriz composición niveles — Size/Tiles/Objects/Enemies/Checkpoints/Camera/Background |
+| [`VISUAL_REGRESSION_BASELINE.md`](VISUAL_REGRESSION_BASELINE.md) | Baseline regresión visual — 13 golden frames 1280×720 |
+| [`VISUAL_FINDINGS.md`](VISUAL_FINDINGS.md) | Hallazgos visuales — VF01-VF06 1 V04 5 V10 |
+| [`DYNAMIC_VISUAL_QA.md`](DYNAMIC_VISUAL_QA.md) | QA dinámica 23 secciones — 60/120 frames camera/player/parallax/HUD |
+| [`DYNAMIC_LEVEL_QA_MATRIX.md`](DYNAMIC_LEVEL_QA_MATRIX.md) | Matriz QA dinámica 26 — Camera/Animation/Parallax/HUD/Transition/FX |
+| [`AUD-759_FINDINGS.md`](AUD-759_FINDINGS.md) | Hallazgos AUD-759 — D01-D05 5× D13 intentional |
+| [`GAME_STATE_INVENTORY.md`](GAME_STATE_INVENTORY.md) | Inventario estados 21 — Entry/Exit/Parent/Overlay/Input/Render/Persistence |
+| [`GAME_STATE_GRAPH.md`](GAME_STATE_GRAPH.md) | Grafo estados 21 transiciones — STATE→EVENT→STATE |
+| [`GAME_STATE_INTEGRATION_MATRIX.md`](GAME_STATE_INTEGRATION_MATRIX.md) | Matriz integración 21 — Entry/Operation/Exit/Persistence/Re-entry |
+| [`HISTORICAL_BUG_REGRESSION.md`](HISTORICAL_BUG_REGRESSION.md) | Regresión 13 bugs históricos — PASS |
+| [`FULL_GAME_INTEGRATION_AUDIT.md`](FULL_GAME_INTEGRATION_AUDIT.md) | Auditoría integración 40 fases — producto completo |
+| [`FINAL_VISUAL_ACCEPTANCE_REPORT.md`](FINAL_VISUAL_ACCEPTANCE_REPORT.md) | Reporte aceptación visual final — 26 levels 156 screens 0-10 |
+| [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) | Certificación RC — 1280×720 80×45 16 26/26 PASS |
+| [`RELEASE_CANDIDATE_FREEZE.md`](RELEASE_CANDIDATE_FREEZE.md) | Freeze RC — arquitectura y contenido congelado 1280×720 |
+| [`FINAL_QA_STATUS.md`](FINAL_QA_STATUS.md) | Estado QA final — 7 audits PASS 115 tests PASS |
+| [`AUD-760_FINDINGS.md`](AUD-760_FINDINGS.md) | Hallazgos AUD-760 — I01-I10 10× I12 |
+| [`NATIVE_RENDER_FIXES.md`](NATIVE_RENDER_FIXES.md) | Correcciones de presentación nativa — cada fix con causa, transform old/new, pruebas |
+| [`95_GUIA_ENTREGA_3_MADURA.md`](95_GUIA_ENTREGA_3_MADURA.md) | Guía Entrega 3 — versión 1280×720 madura, verificación y checklist |
+| [`96_GUIA_IA_DOJO_2_SEMANAS.md`](96_GUIA_IA_DOJO_2_SEMANAS.md) | Dojo IA — plan de 2 semanas con scikit-learn para BehaviorPredictor |
+| [`97_ROADMAP_PS4_HD_2D_2_5D.md`](97_ROADMAP_PS4_HD_2D_2_5D.md) | Roadmap PS4 HD 2D/2.5D — de 1280 a 1920 y plan PS4 |
+| [`98_DECISIONES_DUENO_2K26.md`](98_DECISIONES_DUENO_2K26.md) | Decisiones del dueño A1,A7,B7,C1,D2,P4,P5 — cierre 100% |
+| [`HYBRID_RENDERER_RC_CERTIFICATION.md`](HYBRID_RENDERER_RC_CERTIFICATION.md) | Certificación Hybrid Renderer — 1920 work 9.47 P95 10.50 P99 12.25 readback 0 |
+| [`PERFORMANCE_BASELINE.md`](PERFORMANCE_BASELINE.md) | Baseline de rendimiento — 1280×720 work 6.5 y 1920×1080 9.47 comparativa |
+| [`RELEASE_NOTES_RENDERER_RC.md`](RELEASE_NOTES_RENDERER_RC.md) | Notas de release Renderer RC — 1920@60 work 9.47 vs CPU 39.54 |
+| [`AUD-800_REPOSITORY_INVENTORY.md`](AUD-800_REPOSITORY_INVENTORY.md) | Inventario forense — 8.350 ficheros relevantes, 518 src, 6.556 tests, 854 assets, 37 TMX |
+| [`AUD-800_ENEMY_MATRIX.md`](AUD-800_ENEMY_MATRIX.md) | Matriz enemigos 35 — propósito, IA, daño, hitbox, niveles, fairness |
+| [`AUD-800_INPUT_MATRIX.md`](AUD-800_INPUT_MATRIX.md) | Matriz entrada 31 acciones — bindings, focus, leakage, accesibilidad |
+| [`AUD-800_PACING_MATRIX.md`](AUD-800_PACING_MATRIX.md) | Matriz pacing 26 niveles — introducción, densidad, checkpoint, curva |
+| [`AUD-800_CLEANUP_MANIFEST.md`](AUD-800_CLEANUP_MANIFEST.md) | Manifiesto limpieza — 6 temps DELETE, 1 P3 archivable, repo CLEAN |
+| [`AUD-800_REGRESSION_MATRIX.md`](AUD-800_REGRESSION_MATRIX.md) | Matriz regresión 15 subsistemas ×2 niveles — renderer→tests |
+| [`AUD-800_MASTER_SPECIFICATION.md`](AUD-800_MASTER_SPECIFICATION.md) | Especificación maestra — contrato 1280×720 80×45 16 pipeline nativo |
+| [`AUD-800_FINAL_CERTIFICATION.md`](AUD-800_FINAL_CERTIFICATION.md) | Certificación final 88/100 RC — 44 secciones, 0 P0 0 P1 7 P3 |
+| [`CHANGE_SAFETY_GUIDE.md`](CHANGE_SAFETY_GUIDE.md) | Guía de seguridad ante cambios — invariante 9, matriz CERT, validador automático |
+| [`AUD-803_NATIVE_RENDERING_AUDIT.md`](AUD-803_NATIVE_RENDERING_AUDIT.md) | Auditoría native rendering — pipeline 1280×720, camera, HUD, tilemap, pixel-perfect |
+| [`AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md`](AUD-804_VISUAL_TRUTH_RUNTIME_CERTIFICATION.md) | Certificación visual truth — falsación adversarial de AUD-803, 1.5× no integer |
+| [`AUD-805_LEVEL_COMPOSITION_AUDIT.md`](AUD-805_LEVEL_COMPOSITION_AUDIT.md) | Auditoría composición niveles — 37 TMX, player 40×64, ground 608, HUD 128, parallax |
+| [`AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md`](AUD-832_AUDITORIA_DOCUMENTAL_TMX_AUDIO.md) | Auditoría documental TMX+audio+enemigos — stage2_2, stage3_1, qa_proof, fallback, Gavilán, pipeline, BUG-826-08 |
+| [`PROJECT_IMPROVEMENT_REGISTER.md`](PROJECT_IMPROVEMENT_REGISTER.md) | Registro de mejoras del proyecto - 12 mejoras I-001..I-012 priorizadas WHY->COST->RISK |
+| [`RELEASE_READINESS.md`](RELEASE_READINESS.md) | Preparación para release - matriz RC 15 áreas, P0=0 P1=0, renderer FROZEN |
+| [`B3_ITEM_COMPLETION_CONTRACT_REVIEW.md`](B3_ITEM_COMPLETION_CONTRACT_REVIEW.md) | B3 item completion - revision de contrato CODE+DATA+TEST |
+| [`B4_2_HEART_PIECE_CONTRACT_REVIEW.md`](B4_2_HEART_PIECE_CONTRACT_REVIEW.md) | B4.2 heart piece - revision de contrato, modo analisis |
+| [`B4_MASTER_CERTIFICATION.md`](B4_MASTER_CERTIFICATION.md) | B4 master certification - bonfire, heart piece, recharge station COMPLETE |
+| [`99_AUD836_PROJECT_XRAY.md`](99_AUD836_PROJECT_XRAY.md) | Radiografía integral AUD-836 — inventario técnico verificado del proyecto real |
+| [`99_GUIA_DE_JUEGO_Y_HANDOFF.md`](99_GUIA_DE_JUEGO_Y_HANDOFF.md) | Guía de juego real y handoff — capacidades, progresión, stages y próximas tareas |
+| [`100_VERIFICACION_DE_BUGS_REPORTADOS.md`](100_VERIFICACION_DE_BUGS_REPORTADOS.md) | Verificación y cierre AUD-826 a AUD-834 — pausa, ritmo, enemigos, audio, tirolesa, liana, menús |
+| [`101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md`](101_VERIFICACION_DE_LOS_20_BUGS_DEL_MOTOR.md) | Verificación de los 20 bugs del motor reportados por el estudiante (P1-P20; adopción AUD-498..512 y AUD-817..825) — 18 resueltos, #9 parcial, #5 con regresión de AUD-827 |
+| [`102_AUDITORIA_VISUAL_Y_DE_DISENO.md`](102_AUDITORIA_VISUAL_Y_DE_DISENO.md) | Auditoría visual y de diseño integral (AV-01..36) — level design, gameplay, juice, pacing, fun factor y gaps del proyecto completo |
+| [`103_LISTA_DEFINITIVA_DE_GAPS_ERRORES_BUGS.md`](103_LISTA_DEFINITIVA_DE_GAPS_ERRORES_BUGS.md) | Lista definitiva consolidada D-01..D-70 — índice canónico de gaps/errores/bugs de toda la documentación, con estado y contradicciones resueltas |
 
 ---
 
@@ -175,5 +247,5 @@ git si hace falta consultarlos.
 | [`../KNOWN_GAPS.md`](../KNOWN_GAPS.md) | Huecos conocidos y su resolución. No se borra nunca una entrada: se tacha |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Cómo contribuir: ramas, mensajes de commit, qué pasa CI |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Historial de versiones |
-| `labs/`, `quizzes/`, `rubricas/`, `exam_bank/`, `eval_practica/` | Material de clase: 3 laboratorios, 4 cuestionarios, rúbricas y banco de exámenes |
-| `niveles/`, `entregables/`, `lore/` | Diseños de nivel, entregables del curso y material de trasfondo |
+| `colab/`, `computer-vision-course/`, `exams/` | Cuadernos, curso de visión por computadora y exámenes (raíz del repo) |
+| `student_templates/` | Plantilla de escenario para estudiantes (raíz del repo) |

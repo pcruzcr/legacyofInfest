@@ -207,15 +207,15 @@ class TestElGateLoVigila:
 
             # `errors="replace"` y no el modo estricto: el validador escribe
 
-            # acentos y en una consola cp1252 �la de Windows por defecto� la
+            # acentos y en una consola cp1252 (la de Windows por defecto) la
 
-            # salida no es UTF-8 v�lido. Sin esto, la prueba reventaba al
+            # salida no es UTF-8 válido. Sin esto, la prueba reventaba al
 
             # *decodificar* el informe en vez de al comprobarlo, que es el
 
-            # mismo defecto que AUD-303 corrigi� en el banco de sprites. Lo
+            # mismo defecto que AUD-303 corrigió en el banco de sprites. Lo
 
-            # que se juzga aqu� es el c�digo de salida; el texto s�lo sirve
+            # que se juzga aquí es el código de salida; el texto sólo sirve
 
             # para el mensaje de error.
 

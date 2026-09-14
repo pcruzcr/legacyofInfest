@@ -73,8 +73,9 @@ El HUD está implementado en `src/engine/ui/hud.py` y es un sistema del profesor
 ## 2. Layout
 
 El HUD se diseñó sobre una pantalla de 320 px de ancho y se **escala** a la
-resolución interna real (`settings.INTERNAL_WIDTH`), hoy 800×600. El factor sale
-de dividir una por otra: 800/320 = **2,5**.
+resolución interna real (`settings.INTERNAL_WIDTH`), hoy 1280×720 (AUD-754;
+era 800×600). El factor sale
+de dividir una por otra: 1280/320 = **4,0** (antes 800/320 = 2,5).
 
 AUD-451 — hasta esa auditoría, las coordenadas estaban escritas en píxeles de
 la pantalla de 320 y se dibujaban **sin escalar** sobre la de 800: el HUD
@@ -142,12 +143,13 @@ ocupa el minimapa.
 ### 2.1 Regiones del HUD
 
 Las columnas X/Y/Ancho/Alto son de **diseño** (maqueta de 320). Entre
-paréntesis, lo medido en pantalla a 800×600 (factor 2,5) — algunas barras
+paréntesis, lo medido en pantalla a 800×600 (factor 2,5, previo a AUD-754:
+hoy el factor es 4,0 sobre 1280×720) — algunas barras
 redondean su alto/paso a un píxel real de diferencia por el redondeo de
 `theme.escalar`, así que la columna de pantalla es la que manda si las dos
 no cuadran a la fracción exacta.
 
-| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5, medido) | Notas |
+| Elemento | X | Y | Ancho | Alto | En pantalla (×2,5 a 800×600, medido pre-AUD-754; hoy ×4,0 a 1280×720) | Notas |
 |---|---|---|---|---|---|---|
 | Caja de mensajes | 0 | 0 | 320 | 28 | 0,0 800×70 | Capa superior (movida desde abajo en v1.1.0) |
 | Marco del retrato | 6 | 6 | 24 | 24 | 15,15 60×60 | Círculo, no marco 9-slice (AUD-535); margen de pantalla (AUD-547) |
@@ -155,7 +157,7 @@ no cuadran a la fracción exacta.
 | Barra de vida | 6 | 32 | 24 | 5 | 15,80 60×12 | Roja, fija (AUD-547) — reemplaza la fila de corazones (AUD-535) |
 | Barra de estamina | 6 | 38 | 24 | 5 | 15,94 60×12 | Amarilla, fija (AUD-547); sin pintar y sin reservar sitio si el escenario no la enciende (AUD-565) |
 | Barra de carga | 6 | 43 | 24 | 5 | 15,108 60×12 | Azul, fija (AUD-547) — medidor especial; sube una franja si la estamina está apagada (AUD-565) |
-| Puntuación | 36 | 6 | 92 | 24 | 90,15 230×60 | Junto al bloque de identidad, no en la esquina derecha (AUD-535) |
+| Puntuación | 80 | 8 | 267 | 27 | 240,24 801×81 (región; el marcador se alinea a la derecha de ella) | Layout ancho 1280 del builder: banda centrada cx−400…cx+400 con MARGEN; el número + monedas, al borde derecho de la región (AUD-811, antes junto a la identidad: AUD-535) |
 | Minimapa | 270 | 26 | 44 | 44 | 675,65 110×110 | Rectangular cuadrado (AUD-560, revierte el círculo de AUD-547) |
 | Caja del temporizador | 134 | 6 | 52 | 16 | 335,15 130×40 | Centrada arriba, no pegada al borde derecho (AUD-535) |
 | Ícono del reloj | 137 | 7 | 12 | 12 | 342,18 30×30 | Reemplaza la etiqueta de texto "TIME" |
@@ -524,6 +526,42 @@ self.hud.draw(self.internal_surface)
 ```
 
 Los estudiantes no llaman a `HUD.draw()` directamente. La clase base de escenario lo llama automáticamente después de que termina el `draw()` propio del escenario.
+
+---
+
+## 12. Item Completion (B3)
+
+**Propósito:** mostrar el porcentaje de colección del mapa actual, per-map,
+derivado de `StageData.item_total()` y `SaveData.map_item_collected`.
+
+### 12.1 Región
+
+| Elemento | X (maqueta 320) | Y | Ancho | Alto | En pantalla 1280 | Notas |
+|---|---|---|---|---|---|---|
+| Barra ítems | 6 | ~73 | 24 | 3 | 15, ~240 96×3 | Debajo de `NIVEL` (carga.bottom+30), mismo ancho que barras de carga/vida; no mueve retrato ni reflow |
+| Texto % | 6 | ~70 | 24 | 5 | 15, ~230 96×12 | `42% (3/4)` o `42%` si no hay conteo; fuente `_e(12)` |
+| Fondo | 6 | ~70 | 24 | 12 | 15, ~230 96×14 | ` (20,25,40,160)` semitransparente, igual que `NIVEL` |
+
+No usa `MARGEN` adicional: reutiliza `carga_bar_rect.x` como ancla. Si
+`TOTAL==0` → `set_porcentaje_items(None)` → `_draw_porcentaje_items` early
+return, no se dibuja nada (evita `0%` falso). Si `TOTAL>0` y `COLLECTED==0` →
+`0%` barra vacía. Si `100%` → barra llena dorada.
+
+### 12.2 Lógica
+
+```python
+# En ActualizacionesDeEscenario._update_hud_ui, cada frame:
+total = stage.item_total()  # cache TMX
+if total == 0: hud.set_porcentaje_items(None)
+else:
+    recogidos = count flags filtrados (recogido/abierto/descubierto)
+    pct = clamp(recogidos/total, 0.0, 1.0)
+    hud.set_porcentaje_items(pct, recogidos, total)
+# HUD._draw_porcentaje_items: round(pct*100) → "42%" + barra _dibujar_barra_moderna
+```
+
+Escala: coordenadas pasan por `theme.escalar` (`_e`), por lo que a 1280
+`_e(3)`=~7 px, a 1920 análogo. No toca `viewport`/`scale`/`INTERNAL`.
 
 ---
 ## 🔗 Documentos relacionados

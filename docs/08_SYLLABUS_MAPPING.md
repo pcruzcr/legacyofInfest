@@ -53,14 +53,14 @@ Cada unidad del curso corresponde a un bloque de contenido académico. El framew
 |---|---|---|
 | Bucle de la aplicación | `src/engine/core/app.py` | Implementa el bucle de juego con delta time |
 | Reloj | `src/engine/core/clock.py` | `DeltaClock` gestiona la coherencia temporal |
-| Superficie interna | `src/engine/core/app.py` | Búfer raster de 800×600 escalado a la pantalla |
+| Superficie interna | `src/engine/core/app.py` | Búfer raster de 1280×720 escalado a la pantalla (AUD-754; era 800×600) |
 | Escalado de pantalla | `src/engine/core/app.py` | Blit a escala entera a la ventana del SO |
 
 ### 2.3 Entregable del estudiante
 
 Los estudiantes no implementan los conceptos de la Unidad I directamente en un escenario. La Unidad I la demuestra implícitamente el framework mismo. Se espera que los estudiantes documenten en el README de su escenario:
 
-- La resolución interna usada (800×600)
+- La resolución interna usada (1280×720, `settings.INTERNAL_WIDTH`/`INTERNAL_HEIGHT`; era 800×600 antes de AUD-754)
 - La tasa de fotogramas objetivo (60 FPS)
 - Una explicación de cómo se usa `dt` (delta time) en al menos una entidad de su escenario
 

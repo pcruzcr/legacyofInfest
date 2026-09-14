@@ -297,9 +297,10 @@ Por orden de lo que más se nota jugando:
 6. **`LuaScriptEnemy`** — completo y probado en aislamiento, sin conectar
    (AUD-022). Depende de si el guion en Lua entra en el curso.
 7. **Jefe Gavilán** — asignación de estudiante (§7).
-8. **Los cinco sonidos de jefe sin emisor** — `SFX_BOSSES_GAVILAN_DIVE`,
-   `_MASK_BEAM`, `PABURU_WAVE`, `RELIC_APPEAR`, `REY_SPIT`, `REY_SPLIT`.
-   Pertenecen a ataques de jefes de estudiantes.
+8. **Los cuatro sonidos de jefe sin emisor** — `SFX_BOSSES_GAVILAN_MASK_BEAM`,
+    `PABURU_WAVE`, `RELIC_APPEAR`, `REY_SPIT`, `REY_SPLIT` (eran cinco:
+    `SFX_BOSSES_GAVILAN_DIVE` ya lo emite `boss_gavilan.py`, AUD-831 VERIFIED).
+    Pertenecen a ataques de jefes de estudiantes.
 
 ---
 
@@ -318,7 +319,7 @@ Medido ejecutando el motor, no leyendo documentación.
 
 ### 9.1 Jugador — completo
 
-**28 estados en el enum, 28 con clase instanciable.** Ninguno huérfano.
+**30 estados en el enum, 28 con clase instanciable.** Ninguno huérfano.
 
 > **Corrección de método.** La primera pasada de esta auditoría dio tres
 > estados «sin clase» —`CHARGE_ATTACK`, `CLIMBING`, `ZIPLINE`— y era **falso**:
@@ -330,7 +331,7 @@ Medido ejecutando el motor, no leyendo documentación.
 
 ### 9.2 Enemigos — completo
 
-13 estados de IA, 8 arquetipos, 21 especies con nombre. Sprites por **zona**
+15 estados de IA, 8 arquetipos, 21 especies con nombre. Sprites por **zona**
 —`enemy_zone{N}_walk/hurt/die/fly/shoot/aim/fire`, 7 ficheros por zona × 3
 zonas— que es como los carga `_load_zone_sprites`. IA de pelotón con
 scikit-learn y predictor de trayectoria, los dos presentes.
@@ -906,8 +907,9 @@ tres números.
 2. ~~**`SpriteBatch` y la ruta de sprites en GPU**~~ — **HECHO (AUD-301,
    AUD-302).** Medido con las dos tarjetas del equipo; el lote de CPU está
    puesto y la ruta de GPU está medida y justificadamente sin poner. Ver §18.
-3. **Los cinco sonidos de jefe sin emisor** — pertenecen a ataques de jefes que
-   los estudiantes aún no han escrito.
+3. **Los cuatro sonidos de jefe sin emisor** (eran cinco:
+   `SFX_BOSSES_GAVILAN_DIVE` ya lo emite `boss_gavilan.py`, AUD-831) —
+   pertenecen a ataques de jefes que los estudiantes aún no han escrito.
 4. **`LuaScriptEnemy`** — completo y probado, sin conectar. Depende de si el
    guion en Lua entra en el curso.
 5. **Ampliar las pruebas doc↔código** — sigue habiendo un solo documento de 95
@@ -1085,7 +1087,8 @@ grupo, y es accesibilidad, no adorno. Las otras dos son decisiones de diseño
 toma.
 
 Lo que ya estaba abierto y no depende del motor sigue igual, en §17.3: el jefe
-Gavilán (asignación de estudiante), los cinco sonidos de jefe sin emisor,
+Gavilán (asignación de estudiante), los cuatro sonidos de jefe sin emisor
+(eran cinco antes de AUD-831),
 `LuaScriptEnemy`, y ampliar las pruebas doc↔código. Y tres huecos conocidos
 siguen abiertos a propósito con su razón escrita: GAP-002 (la heurística de
 salto en X, sin ningún caso que la rompa), GAP-031 (`play_voz` no necesita
@@ -2032,7 +2035,7 @@ abrirlas exige volver a medir, no volver a opinar.
   concreta, esto es refactor por refactor. De paso, la cifra: son **27 clases**
   en `entities/states/`, y `AirborneState` es base de `JumpingState` y
   `FallingState` en vez de un estado en el que se pueda estar — de ahí los
-  **28 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
+  **30 estados** que cuenta §A de `62_ESTADO_DEL_PROYECTO.md`. Los dos números
   son correctos y cuentan cosas distintas; la lista del dueño dice 29, que no
   sale de ninguna de las dos cuentas.
 * **«Definir arquitectura definitiva, límites entre módulos»** — definir

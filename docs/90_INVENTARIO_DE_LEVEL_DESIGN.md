@@ -78,7 +78,7 @@ tiene DSP); la decisión está documentada como no-futuro en la guía del motor
 
 ### 1.2 Gameplay
 
-El jugador tiene **28 estados** en 7 grupos (ver `04_PLAYER_SPEC.md`): suelo
+El jugador tiene **30 estados** en 7 grupos (ver `04_PLAYER_SPEC.md`): suelo
 (`IDLE` `WALKING` `CROUCHING` `SLIDE`), aire (`JUMPING` `FALLING` `DASHING`
 `WALL_SLIDE` `LEDGE_GRAB` `AIR_CHASE`), ataque (8 estados, incluido
 `ULTIMATE`, que se carga con golpes y se lanza con `U`), `PARRY`, agarre
@@ -159,7 +159,7 @@ desde el registro, no puede envejecer). El subconjunto que define mecánicas:
 | Cortes | `Cutscene` | guion de 10 órdenes; `bloquea=false` es la útil |
 | Colisión | `Solid` | 1 baldosa × 2–3 de alto = obstáculo; 4+ = muro |
 
-### 1.5 Enemigos: 36 tipos y 13 estados (AUD-455: decía 37/22)
+### 1.5 Enemigos: 36 tipos y 15 estados (AUD-455: decía 37/22)
 
 - **8 arquetipos**: `Walker`, `Flying`, `Shooter`, `Archer`, `Charger`,
   `Brute`, `Caster`, `Assassin` (roles y números en la [[66_GUIA_DE_LEVEL_DESIGN.md|guía 66 §7]]).
@@ -172,7 +172,7 @@ desde el registro, no puede envejecer). El subconjunto que define mecánicas:
   cuaderno del aula, jefes Gavilán/Rey/Paburu): solo existen dentro del
   paquete de su escenario. Registra los tuyos **al nivel del módulo** para
   que el previsualizador los construya.
-- **13 estados** (`IDLE`…`DYING`); el que importa es `TELEGRAPHING`: sin
+- **15 estados** (`IDLE`…`DYING`); el que importa es `TELEGRAPHING`: sin
   aviso no es difícil, es injusto. Reglas con cicatriz: `patrol_length`
   obligatoria (sin ella se quedan clavados); `enemigo.velocity` es siempre
   (0, 0) (deducelo del desplazamiento si lo necesitas).

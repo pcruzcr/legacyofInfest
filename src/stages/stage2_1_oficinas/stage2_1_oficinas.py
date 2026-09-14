@@ -60,6 +60,11 @@ _CHIP_POSITIONS: tuple[tuple[float, float], ...] = (
 
 
 class Stage21Oficinas(StageScene):
+    # AUD-839 (D-25) — sin identidad la escena no encontraba su checkpoint
+    # guardado (reaparecía al principio) y el mapa del mundo no podía
+    # referirse a ella. El TMX ya decía stage_id=stage2_1.
+    STAGE_ID: str = "stage2_1"
+
     TMX_PATH: Path = Path(__file__).parent / "stage2_1_oficinas.tmx"
     ZONE: int = 2
 

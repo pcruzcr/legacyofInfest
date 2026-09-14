@@ -83,6 +83,39 @@ SIN_MAPA_A_PROPOSITO: dict[str, str] = {
         "en el mismo mapa."
     ),
     "RopeSwing": "Alias de VineSwing — ver LianaSalto.",
+    # AUD-743 / AUD-749 — biblioteca genérica de enemigos nuevos (Ceibo,
+    # Cerbatana, Hormiga, Oropel): existen como tipos registrados para que
+    # cualquier escenario los instancie sin registrar a mano, pero ninguno
+    # es obligatorio en el laboratorio — su cobertura se demuestra al usar
+    # el tipo en un escenario que lo necesite, no duplicando ejemplos para
+    # subir un contador. Ver `scripts/check_tmx_coverage.py::ALTERNATIVAS`.
+    "Ceibo": "enemigo genérico nuevo (Shield+WeakPoint) — biblioteca, se demuestra al usar EnemyCeibo",
+    "Cerbatana": "enemigo genérico nuevo (PredictiveAim) — biblioteca",
+    "Hormiga": "enemigo genérico nuevo (trail ZonaDeFriccion) — biblioteca",
+    "Oropel": "enemigo genérico nuevo (luz vulnerable) — biblioteca",
+    # Jefes de zona registrados a nivel de módulo de su escenario (stage1_2,
+    # boss_paburu, etc.): aparecen en `StageLoader._entity_registry` sólo
+    # cuando su escena se importa —y varias suites lo hacen para probar el
+    # jefe—, pero no se colocan como `type="BossX"` en un TMX genérico: su
+    # escena los instancia por código. Se justifican aquí para que el guardián
+    # no dependa del orden de importación (AUD-412).
+    "BossPaburu": (
+        "jefe de zona 4-2, instanciado por `boss_paburu_scene.py`, no por "
+        "TMX; ver `assets/maps/boss_paburu/`"
+    ),
+    "LaSodaWalkerRaton": "variante de zona 1-2, registrada por `stage1_2_la_soda.py`",
+    "LaSodaFlyingCucaracha": "variante de zona 1-2, registrada por `stage1_2_la_soda.py`",
+    "LaSodaCulebra": "variante de zona 1-2, registrada por `stage1_2_la_soda.py`",
+    "LaSodaZancudo": "variante de zona 1-2, registrada por `stage1_2_la_soda.py`",
+    "LaSodaShooterCocinero": "variante de zona 1-2, registrada por `stage1_2_la_soda.py`",
+    "EstudianteInfectado": (
+        "variante de zona 1-3, registrada por `estudiante_infectado.py`"
+    ),
+    "CuadernoVolador": "variante de zona 1-3, registrada por `cuaderno_volador.py`",
+    "Murcielago": "súbdito de BossPaburu, registrado por `boss_paburu/moradores.py`",
+    "MascaraTilawa": "súbdito de BossPaburu, registrado por `boss_paburu/moradores.py`",
+    "SukiaDeCeniza": "súbdito de BossPaburu, registrado por `boss_paburu/moradores.py`",
+    "AhogadoDelPozo": "súbdito de BossPaburu, registrado por `boss_paburu/moradores.py`",
 }
 
 

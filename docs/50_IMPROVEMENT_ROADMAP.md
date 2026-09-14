@@ -19,9 +19,9 @@ date_processed: "2026-08-26"
 
 | Hito | Tema | Estado | Evidencia de aceptación |
 |---|---|---|---|
-| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (28 estados, salto 72 px calibrado) |
-| **M2** | Enemies, bosses, AI | ✅ **Completado** | 54 tipos, 8 arquetipos, 13 estados IA, bullet hell NumPy 0.072 ms |
-| **M3** | Audio system (Phase 6) | ✅ **Completado** | `validate_tmx.py --ci` 22/22, mypy limpio en engine/audio |
+| **M1** | Core engine & physics | ✅ **Completado** | `pytest tests/test_player_physics.py -v` (30 estados, salto 72 px calibrado) |
+| **M2** | Enemies, bosses, AI | ✅ **Completado** | 54 tipos, 8 arquetipos, 15 estados IA, bullet hell NumPy 0.072 ms |
+| **M3** | Audio system (Phase 6) | ✅ **Completado** | `validate_tmx.py --ci` 35/35, mypy limpio en engine/audio |
 | **M4** | Visual polish (Phase 9) | 🔄 **En curso** | color flash, parallax 5 capas, color grading, squash/stretch |
 | **M5** | Zero-Bug Policy tile validator | 📋 **Planificado** | `validate_tmx.py --ci` valida tiles, animaciones, propiedades |
 | **M6** | Regression prevention expanded | 📋 **Planificado** | mutation_check ≥ 70% en 10 módulos críticos |
@@ -35,7 +35,7 @@ date_processed: "2026-08-26"
 **Alcance:** bucle principal, tres relojes, composición de escalas de tiempo, tope de fotograma, bus de eventos, contenedor de escenas, ECS base, componente-como-vista.
 
 **Evidencia:**
-- `pytest tests/test_player_physics.py -v` → 28 estados jugador, salto 72 px
+- `pytest tests/test_player_physics.py -v` → 30 estados jugador, salto 72 px
 - `pytest tests/test_resolucion_de_movimiento.py -v` → resolutor compartido
 - `mypy src/engine/core src/engine/input src/engine/scene` → limpio
 - `ruff check src/engine/ src/framework/ tests/` → limpio
@@ -46,10 +46,10 @@ date_processed: "2026-08-26"
 
 ## M2 — Enemies, bosses, AI (COMPLETADO)
 
-**Alcance:** 54 tipos registrados, 8 arquetipos base, 13 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
+**Alcance:** 54 tipos registrados, 8 arquetipos base, 15 estados IA (incluye TELEGRAPHING), escuadrón con scikit-learn (predicción por lote), 4 jefes (Venado, Rey, Paburu, Gavilán parcial), bullet hell NumPy 2000 balas a 0.072 ms.
 
 **Evidencia:**
-- `pytest tests/test_enemy_state_machine.py -v` → 13 estados
+- `pytest tests/test_enemy_state_machine.py -v` → 15 estados
 - `pytest tests/test_boss_encounter.py -v` → 100% rúbrica (Venado vía `grade_boss.py`)
 - `pytest tests/test_squad_brain.py -v` → 1.82 ms lote vs 11.87 ms unitario
 - `pytest tests/test_mecanicas_f5.py -k TestEnjambreDeBalas -v` → 12.94 ms → 0.072 ms (EnjambreDeBalas, 2000 balas)
@@ -63,7 +63,7 @@ date_processed: "2026-08-26"
 **Alcance:** `AudioManager` con buses y ducking, `MusicStemManager` stems dinámicos con crossfade, `ReverbZoneManager` reverb por zona pre-bakeado, `AudioPipeline` normalización EBU R128 / -23 LUFS, true peak limiting.
 
 **Evidencia:**
-- `python scripts/validate_tmx.py --ci` → 22/22 OK
+- `python scripts/validate_tmx.py --ci` → 22/22 OK (medido entonces; hoy 35/35)
 - `mypy src/engine/audio` → 0 errores (8 paquetes en trinquete)
 - `pytest tests/ -k "audio" -v` → 100 passed
 - `ruff check src/engine/audio/` → limpio
@@ -100,7 +100,7 @@ date_processed: "2026-08-26"
 
 **Criterios de aceptación:**
 ```bash
-python scripts/validate_tmx.py --ci    # 22/22 passed, 0 errores tile
+python scripts/validate_tmx.py --ci    # 22/22 entonces (hoy 35/35), 0 errores tile
 ```
 
 **Checks implementados en `validate_tmx.py::_validate_tiles()`:**
@@ -200,7 +200,7 @@ pytest tests/test_environment_state.py -v   # planificado — ver `docs/91_PLAN_
 **Evidencia objetivo:**
 ```bash
 python scripts/grade_stage.py assets/maps/ --json    # 0 errores, 0 warnings críticos
-python scripts/validate_tmx.py --ci                  # 22/22
+python scripts/validate_tmx.py --ci                  # 22/22 entonces (hoy 35/35)
 python scripts/validate_assets.py --ci               # 0 errores
 ```
 
@@ -213,7 +213,7 @@ python scripts/validate_assets.py --ci               # 0 errores
 | Tests passing | 6,272 | > 6,500 |
 | Mypy scope | 9/22 paquetes | 12/22 |
 | Mutation score (core) | 5 módulos ≥ 70% | 10 módulos ≥ 70% |
-| TMX validation | 22/22 OK | 22/22 + tile checks |
+| TMX validation | 22/22 OK entonces (hoy 35/35) | 22/22 + tile checks |
 | Asset validation | 0 errores | 0 errores |
 | Stage0 grade | 100 | 100 |
 | Boss Venado grade | 100 | 100 |

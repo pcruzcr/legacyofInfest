@@ -80,6 +80,49 @@ class TestLaCurvaDeNiveles:
             if n > 1:
                 assert nivel_de(justo - 1) == n - 1
 
+    def test_nivel_de_en_frontera_30_31_32_35_y_maximo(self) -> None:
+        """AUD-759: off-by-one en la rama logarítmica (expm1 truncaba 4.99->4).
+
+        Para cada n crítico se comprueba n-1, n, n+1 con justo, justo-1, justo+1.
+        Falla contra la implementación vieja con expm1 (ver audit §1).
+        """
+        from src.engine.core.experience import NIVEL_MAXIMO
+
+        for n in (30, 31, 32, 35, NIVEL_MAXIMO):
+            justo = exp_para_nivel(n)
+            # justo pertenece a n
+            assert nivel_de(justo) == n, f"nivel_de({justo}) debe ser {n}"
+            # uno menos pertenece a n-1
+            assert nivel_de(justo - 1) == n - 1, f"nivel_de({justo-1}) debe ser {n-1}"
+            # uno más sigue siendo n (salvo en el tope)
+            if n < NIVEL_MAXIMO:
+                assert nivel_de(justo + 1) == n, f"nivel_de({justo+1}) debe ser {n}"
+                siguiente = exp_para_nivel(n + 1)
+                assert nivel_de(siguiente) == n + 1, f"nivel_de({siguiente}) debe ser {n+1}"
+            else:
+                # En el tope, justo+1 y exp infinita siguen en el tope
+                assert nivel_de(justo + 1) == n
+                assert nivel_de(10_000_000) == n
+
+    def test_regression_nivel_de_no_trunca_por_expm1(self) -> None:
+        """Reproduce el bug viejo: int(expm1(ratio)/(factor-1)) truncaba.
+
+        Con 30+extra, el float era 0.999... que int() dejaba en 0 (nivel 30
+        en vez de 31). Cada nivel 31..60 fallaba por uno. Este test es rojo
+        contra la inversión vieja y verde con la búsqueda lineal.
+        """
+        import math
+
+        from src.engine.core.experience import _EXP_LOG_FACTOR, _EXP_SOFT_CAP
+
+        for n in range(31, 36):
+            xp = exp_para_nivel(n)
+            # Lo que hacía el bug: invertir con expm1 y truncar
+            ratio = (xp - 43500) / _EXP_SOFT_CAP
+            truncado = 30 + int(math.expm1(ratio) / (_EXP_LOG_FACTOR - 1))
+            assert truncado != n, f"el truncado debería fallar en {n} (dio {truncado})"
+            assert nivel_de(xp) == n
+
 
 class TestLosPuntosDeHabilidad:
     def test_subir_de_nivel_da_un_punto(self) -> None:

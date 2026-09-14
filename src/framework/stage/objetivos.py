@@ -120,6 +120,13 @@ class SistemaDeObjetivos:
             # una lambda suelta se recogería antes del primer disparo.
             for evento in set(TIPOS_DE_OBJETIVO.values()):
                 bus.subscribe(evento, self._al_ocurrir)
+            # AUD-OBJ: tambien escuchar recogidas por InteractableSystem
+            # (EVENTO_RECOGIDO) que emite item_id pero no ITEM_COLLECTED.
+            try:
+                from src.framework.stage.interactable_system import EVENTO_RECOGIDO
+                bus.subscribe(EVENTO_RECOGIDO, self._al_ocurrir)
+            except Exception:
+                pass
             # La entrada por guion: `complete_objective:` desde un diálogo.
             bus.subscribe(Events.OBJECTIVE_REQUESTED, self._al_pedir)
 
@@ -144,16 +151,50 @@ class SistemaDeObjetivos:
         que un manejador por evento y evita el problema que lo haría necesario
         —cinco métodos casi idénticos que hay que acordarse de mantener a la
         vez—.
+
+        AUD-OBJ: `derrotar` acepta tanto `enemy_type` (sintetico/tests) como
+        `entity_id` (EnemyBase._die real) usando _tipo_de; `recoger` acepta
+        `item_id` de cualquier evento (ITEM_COLLECTED o INTERACT_ITEM_PICKED).
         """
         for objetivo in self._objetivos.values():
             if objetivo.completado:
+                continue
+            # Caso especial derrotar: puede venir como entity_id y se deriva tipo
+            if objetivo.tipo == "derrotar":
+                valor = ""
+                if "enemy_type" in datos:
+                    valor = str(datos.get("enemy_type", ""))
+                elif "entity_id" in datos:
+                    try:
+                        from src.engine.core.score_system import _tipo_de
+                        valor = _tipo_de(str(datos.get("entity_id", "")))
+                    except Exception:
+                        valor = str(datos.get("entity_id", ""))
+                else:
+                    continue
+                # Si objetivo vacio cuenta cualquiera, si no comparar case-insensitive
+                eid_raw = str(datos.get("entity_id", ""))
+                if (objetivo.objetivo
+                        and objetivo.objetivo.lower() != valor.lower()
+                        and objetivo.objetivo != eid_raw):
+                    # tambien aceptar substring para compatibilidad (boss)
+                    low_obj = objetivo.objetivo.lower()
+                    low_val = valor.lower()
+                    if low_obj not in low_val and low_val not in low_obj:
+                        # comparar contra entity_id raw tambien
+                        raw = eid_raw.lower()
+                        if low_obj not in raw:
+                            continue
+                self.avanzar(objetivo.id)
                 continue
             clave = _CLAVE_DEL_TIPO.get(objetivo.tipo, "")
             if clave not in datos:
                 continue
             valor = str(datos.get(clave, ""))
             if objetivo.objetivo and objetivo.objetivo != valor:
-                continue
+                # para recoger permitir match parcial case-insensitive?
+                if objetivo.objetivo.lower() != valor.lower():
+                    continue
             self.avanzar(objetivo.id)
 
     def _al_pedir(self, objective_id: str = "", **_: Any) -> None:

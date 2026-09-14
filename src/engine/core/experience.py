@@ -82,6 +82,13 @@ _EXP_LOG_FACTOR = 1.15
 #: Puntos de habilidad que da subir un nivel.
 PUNTOS_POR_NIVEL = 1
 
+#: Nivel máximo jugable. Con 1 punto por nivel, el árbol completo (24 rangos,
+#: 64 puntos) se alcanza a nivel 65; 60 es jugable en una partida larga y 100
+#: exige farmeo. El tope evita la meseta de la curva logarítmica (duplicados
+#: a partir de ~50264 por `int()` truncado) y la guarda del bucle infinito.
+#: AUD-759: antes el guard estaba en 10000 sin motivo jugable.
+NIVEL_MAXIMO = 60
+
 
 def exp_for(entity_id: str) -> int:
     """Experiencia que deja este enemigo al morir.
@@ -100,15 +107,21 @@ def exp_para_nivel(nivel: int) -> int:
 
     GAP-ECO-001: Curva híbrida — cuadrática hasta _EXP_SOFT_CAP, luego
     logarítmica para que los niveles altos sean alcanzables.
+
+    AUD-759: se recorta a NIVEL_MAXIMO; pedir más devuelve el tope para que
+    `nivel_de` nunca encuentre dos niveles con la misma XP (meseta por
+    `int()` a partir de ~50264).
     """
     if nivel <= 1:
         return 0
-    
+    if nivel > NIVEL_MAXIMO:
+        nivel = NIVEL_MAXIMO
+
     # Curva cuadrática original hasta el soft cap
     if nivel <= 30:
         n = nivel - 1
         return _EXP_BASE * n * (n + 1) // 2
-    
+
     # A partir del nivel 31, curva logarítmica para que sea alcanzable
     # Base a nivel 30: _EXP_BASE * 29 * 30 // 2 = 43500
     base_30 = _EXP_BASE * 29 * 30 // 2
@@ -123,23 +136,26 @@ def nivel_de(exp_total: int) -> int:
     """El nivel que corresponde a esa experiencia acumulada.
 
     Inverso de `exp_para_nivel`. Maneja tanto la parte cuadrática como la logarítmica.
+
+    AUD-759: la inversión logarítmica con `int(expm1(...) / (factor-1))` truncaba
+    por error de coma flotante (ej. 4.99 → 4, nivel 35→34). Se reemplaza por
+    búsqueda lineal desde 30 — máximo 30 iteraciones hasta el tope y sin
+    aritmética inversa, igual que la rama cuadrática. Se recorta a NIVEL_MAXIMO.
     """
-    # Parte cuadrática (niveles 1-30)
+    # Negativa o cero -> 1
+    if exp_total < 0:
+        return 1
     if exp_total < 43500:  # exp_para_nivel(30) = 43500
         nivel = 1
-        while exp_para_nivel(nivel + 1) <= exp_total:
+        while nivel < NIVEL_MAXIMO and exp_para_nivel(nivel + 1) <= exp_total:
             nivel += 1
         return nivel
-    
-    # Parte logarítmica: invertir la fórmula
-    # base_30 = 43500
-    # exp_total = 43500 + _EXP_SOFT_CAP * ln(1 + (n-30) * (e^(1/EXP_SOFT_CAP) - 1))
-    # Despejando: n = 30 + (exp((exp_total - 43500) / _EXP_SOFT_CAP) - 1) / (e^(1/EXP_SOFT_CAP) - 1)
-    ratio = (exp_total - 43500) / _EXP_SOFT_CAP
-    if ratio <= 0:
-        return 30
-    extra_niveles = int(math.expm1(ratio) / (_EXP_LOG_FACTOR - 1))
-    return 30 + max(1, extra_niveles)
+
+    # Rama logarítmica: avanzar desde 30 hasta que el siguiente nivel cueste más
+    nivel = 30
+    while nivel < NIVEL_MAXIMO and exp_para_nivel(nivel + 1) <= exp_total:
+        nivel += 1
+    return nivel
 
 
 class ExperienceSystem:
@@ -179,15 +195,22 @@ class ExperienceSystem:
             self.bind_bus(event_bus)
 
     def bind_bus(self, bus: EventBus | None) -> None:
-        """Escucha la muerte de enemigos en este bus.
+        """Escucha la muerte de enemigos en este bus, mudando suscripción.
 
-        Guarda el manejador en un atributo porque el bus mantiene las
-        suscripciones **débilmente**: sin una referencia viva, el recolector se
-        lleva el cierre y el sistema deja de contar sin un solo error, que es
-        el fallo que documenta `stage_parts/senales.py`.
+        AUD-EXP: antes se añadía sin des-suscribir del anterior, así que cada
+        cambio de nivel o cada respawn suscribía otra vez y la XP se contaba N
+        veces. Ahora sigue el patrón de ScoreSystem: si ya está en este bus no
+        hace nada, si cambia se va del anterior.
         """
         from src.engine.core.events import Events
 
+        if bus is self._bus:
+            return
+        if self._bus is not None and self._handler is not None:
+            try:
+                self._bus.unsubscribe(Events.ENEMY_DIED, self._handler)
+            except Exception:
+                pass
         self._bus = bus
         if bus is None:
             return
@@ -240,9 +263,11 @@ class ExperienceSystem:
 
         Para la barra de la interfaz. Devolver los dos números en vez de una
         fracción evita que cada pantalla rehaga la resta y se equivoque en el
-        último nivel.
+        último nivel. En el tope devuelve (extra, 0).
         """
         n = self.nivel
+        if n >= NIVEL_MAXIMO:
+            return self._exp - exp_para_nivel(n), 0
         base = exp_para_nivel(n)
         siguiente = exp_para_nivel(n + 1)
         return self._exp - base, siguiente - base

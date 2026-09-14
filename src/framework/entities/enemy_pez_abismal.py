@@ -41,6 +41,7 @@ import logging
 import pygame
 
 from src.engine.core import settings
+from src.engine.core.events import Events
 from src.engine.utils.asset_loader import AssetLoader
 from src.framework.entities.enemy_flying import EnemyFlying
 
@@ -94,8 +95,8 @@ class EnemyPezAbismal(EnemyFlying):
         # 32×16 anterior) para que siga habiendo margen alrededor de una
         # silueta más grande; `_load_extra_sprites` hace lo mismo con
         # `_sprite_fw/_sprite_fh`.
-        self.rect.width = 56
-        self.rect.height = 32
+        self.rect.width = 112
+        self.rect.height = 64
         # AUD-325 — no pisa suelo: nada en agua abierta, igual que un
         # volador no pisa suelo en aire abierto.
         self._hug_slopes = False
@@ -114,6 +115,24 @@ class EnemyPezAbismal(EnemyFlying):
         self.detection_range_x = 2000.0
         self.detection_range_y = 600.0
         self._deaggro_margin = 2000.0
+        # AUD-830 — el SFX de acercamiento estaba cableado (mapa en
+        # `sonido.py`, fichero .wav/.ogg en disco) pero nadie lo emitía: el
+        # único llamante vivía en `Stage4_1B`, que hoy está en repo privado.
+        # El aviso lo emite el propio pez al perseguir, con cooldown para no
+        # ametrallar el bus si el estado parpadea en el borde de detección.
+        self._aviso_acercarse_cooldown: float = 0.0
+
+    def _alert_behavior(self, dt: float) -> None:
+        """Persigue y avisa una vez por encuentro (AUD-830)."""
+        self._aviso_acercarse_cooldown = max(0.0, self._aviso_acercarse_cooldown - dt)
+        if self._aviso_acercarse_cooldown <= 0.0:
+            # AUD-489 — con `pos` para que suene posicional, como la muerte.
+            self._event_bus.emit(
+                Events.SFX_ENEMIES_PEZ_ABISMAL_ACERCARSE,
+                pos=(self.position.x, self.position.y),
+            )
+            self._aviso_acercarse_cooldown = 3.0
+        super()._alert_behavior(dt)
 
     def _load_extra_sprites(self, zone: int, fw: int, fh: int) -> None:
         """Su propio sprite, su propio tamaño, no los de zona: no existe

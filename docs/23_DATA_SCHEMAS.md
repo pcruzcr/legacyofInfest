@@ -440,7 +440,7 @@ Una fuente recurrente de errores en código de juegos 2D son las suposiciones in
 | Espacio | Origen | Lo usa | Conversión |
 |---|---|---|---|
 | **Espacio de mundo** | Esquina superior izquierda del mapa TMX (0,0) | `BaseEntity.position`, `StageData.collision_rects`, objetivo de `Camera.follow` | — |
-| **Espacio de pantalla** | Esquina superior izquierda de la superficie interna de 800×600 (`settings.INTERNAL_WIDTH`/`INTERNAL_HEIGHT`) | `HUD`, `MessageBox`, `ScreenBanner`, cualquier cosa dibujada sin `camera_offset` | `pantalla = mundo - camera.offset` |
+| **Espacio de pantalla** | Esquina superior izquierda de la superficie interna de 1280×720 (`settings.INTERNAL_WIDTH`/`INTERNAL_HEIGHT`) | `HUD`, `MessageBox`, `ScreenBanner`, cualquier cosa dibujada sin `camera_offset` | `pantalla = mundo - camera.offset` |
 | **Espacio local de entidad** | Esquina superior izquierda del propio fotograma de sprite de la entidad | Valores devueltos por `EnemyBase._build_hitbox()`, `_build_hurtbox()` | `mundo = entity.position + desplazamiento_local` |
 | **Espacio de píxel TMX** | Esquina superior izquierda del mapa de Tiled, en píxeles (coincide 1:1 con el espacio de mundo) | Valores `.x`/`.y` en crudo de un objeto `pytmx` | Idéntico al espacio de mundo — sin conversión |
 | **Espacio de arreglo local a la superficie** | Esquina superior izquierda de un `pygame.Surface`/`np.ndarray` en proceso | Todas las entradas/salidas de `FilterTools`/`VisionTools` | Es responsabilidad de quien llama volcar en el desplazamiento correcto de mundo/pantalla tras procesar |
@@ -451,6 +451,10 @@ Una fuente recurrente de errores en código de juegos 2D son las suposiciones in
 > interna real es 800×600 (`settings.INTERNAL_WIDTH`/`INTERNAL_HEIGHT`), el
 > mismo defecto de maqueta heredada corregido por AUD-451/452/453 en el HUD,
 > Opciones y el cuadro de mensajes.
+>
+> **AUD-754 (supersede).** La interna pasó a **1280×720** (nativo 720p,
+> `settings.py:19-20`); la fila de arriba ya dice 1280×720. El 800×600 queda
+> como valor histórico.
 
 ---
 

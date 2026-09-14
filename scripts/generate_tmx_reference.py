@@ -118,6 +118,13 @@ def build_table() -> str:
                       "Declara el cuadrilátero real del combate de jefe; sin "
                       "ninguna, el motor usa el mapa entero. Gana la primera "
                       "que contenga al jefe (AUD-605)"),
+        # AUD-832A — existía en el cargador (`stage_objetos._handle_indoor`)
+        # pero no en esta tabla y `--check` fallaba por él.
+        "IndoorZone": ("Rectángulo",
+                       "— (sin propiedades: la geometría ES el techo). "
+                       "Marca área bajo techo: sin clima, luz cálida "
+                       "constante; alimenta clima/luz/simulación. "
+                       "Vista-agnóstico (lateral/isométrica/raycast)"),
         # ── F4.1 — objetos con los que el jugador interactúa ──────
         "Pickup": ("Rectángulo o punto",
                    "`item_id` **obligatoria** (vale el nombre del objeto en "

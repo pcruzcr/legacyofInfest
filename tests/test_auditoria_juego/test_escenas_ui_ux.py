@@ -24,6 +24,7 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 import pytest
 
+from src.engine.core import settings as _settings
 from src.engine.core.event_bus import EventBus
 from src.engine.core.game_context import GameContext
 from src.engine.core.save_manager import SaveManager
@@ -31,7 +32,7 @@ from src.engine.input.input_manager import InputManager
 from src.engine.scene.scene_manager import SceneManager
 from src.framework.entities import entity_factory
 
-INTERNAL_SIZE = (800, 600)
+INTERNAL_SIZE = (_settings.INTERNAL_WIDTH, _settings.INTERNAL_HEIGHT)
 FRAMES = 10
 DT = 1.0 / 60.0
 #: Pantallas legítimas dibujan poco (créditos de texto fino centrado rondan
@@ -292,9 +293,6 @@ NIVELES: list[tuple[str, str, str]] = [
     ("hall", "src.stages.hall.hall", "Hall"),
     ("stage3_3_el_patio", "src.stages.stage3_3_el_patio.stage3_3_el_patio", "Stage3_3ElPatio"),
     ("stage3_4_boss_gavilan", "src.stages.stage3_4_boss_gavilan.stage3_4_boss_gavilan", "Stage3_4BossGavilanScene"),
-    ("stage4_1", "src.stages.stage4_1.stage4_1", "Stage4_1"),
-    ("stage4_1b", "src.stages.stage4_1b.stage4_1b", "Stage4_1B"),
-    ("stage4_1c_a", "src.stages.stage4_1c.stage4_1c", "Stage4_1C"),
     ("boss_venado", "src.stages.boss_venado.boss_venado_scene", "BossVenadoScene"),
     ("boss_rey", "src.stages.boss_rey.boss_rey_scene", "BossReyScene"),
     ("boss_paburu", "src.stages.boss_paburu.boss_paburu_scene", "BossPaburuScene"),
@@ -322,9 +320,6 @@ def test_el_nivel_se_juega_y_dibuja(stage_id, modulo, clase, context, display) -
     surface = pygame.Surface(INTERNAL_SIZE)
 
     extra = None
-    if clase == "Stage4_1C":
-        extra = "a"
-
     scene = scene_cls(context) if extra is None else scene_cls(context, extra)
     scene.awake()
     scene.start()

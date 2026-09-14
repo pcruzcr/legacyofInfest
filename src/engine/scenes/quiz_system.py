@@ -99,23 +99,21 @@ class QuizManager:
         overlay = self._overlay
         overlay.fill((0, 0, 0, 200))
 
-        box_w = 320
-        box_h = 160
-        bx = (settings.INTERNAL_WIDTH - box_w) // 2
-        by = (settings.INTERNAL_HEIGHT - box_h) // 2
-
-        pygame.draw.rect(overlay, (20, 20, 40), (bx, by, box_w, box_h))
-        pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
-
-        title = self._font_answer.render(_("ui.quiz"), True, COLOR_HIGHLIGHT)
-        overlay.blit(title, (bx + 8, by + 6))
+        # AUD-834 — la caja era de 320x160 fijos con pasos de 12/14: una
+        # pregunta larga o 4 opciones se salían por abajo. Ahora la caja sale
+        # del contenido real (todas las métricas de las fuentes) y se expone
+        # en `caja()` para poder afirmarlo en pruebas.
+        paso_pregunta = self._font_question.get_height() + 2
+        paso_opcion = self._font_question.get_height() + 4
+        options = q.get("options", [])
 
         qtext = q.get("question", "")
+        ancho_max = min(960, settings.INTERNAL_WIDTH - 40) - 48
         wrapped = []
         words = qtext.split(" ")
         line = ""
         for w in words:
-            if self._font_question.size(line + " " + w)[0] > box_w - 24:
+            if self._font_question.size(line + " " + w)[0] > ancho_max:
                 wrapped.append(line)
                 line = w
             else:
@@ -123,11 +121,35 @@ class QuizManager:
         if line:
             wrapped.append(line)
 
+        muestralineas = (
+            [self._font_answer.render(_("ui.quiz"), True, COLOR_HIGHLIGHT)]
+            + [self._font_question.render(linea, True, COLOR_TEXT) for linea in wrapped]
+            + [self._font_question.render(f"  > {o}", True, COLOR_TEXT) for o in options]
+        )
+        ancho_texto = max((s.get_width() for s in muestralineas), default=0)
+        box_w = min(960, max(320, ancho_texto + 48))
+        box_h = (12 + self._font_answer.get_height() + 6
+                 + len(wrapped) * paso_pregunta + 4
+                 + len(options) * paso_opcion + 6
+                 + self._font_answer.get_height() + 6
+                 + self._font_question.get_height() + 12)
+        box_w = min(box_w, settings.INTERNAL_WIDTH - 40)
+        box_h = min(box_h, settings.INTERNAL_HEIGHT - 40)
+        bx = (settings.INTERNAL_WIDTH - box_w) // 2
+        by = (settings.INTERNAL_HEIGHT - box_h) // 2
+        self._caja = pygame.Rect(bx, by, box_w, box_h)
+
+        pygame.draw.rect(overlay, (20, 20, 40), (bx, by, box_w, box_h))
+        pygame.draw.rect(overlay, COLOR_HIGHLIGHT, (bx, by, box_w, box_h), 1)
+
+        title = self._font_answer.render(_("ui.quiz"), True, COLOR_HIGHLIGHT)
+        overlay.blit(title, (bx + 8, by + 6))
+
         for i, line in enumerate(wrapped):
             txt = self._font_question.render(line, True, COLOR_TEXT)
-            overlay.blit(txt, (bx + 12, by + 24 + i * 12))
+            overlay.blit(txt, (bx + 12, by + 24 + i * paso_pregunta))
 
-        options = q.get("options", [])
+        base_opciones = by + 24 + len(wrapped) * paso_pregunta + 4
         for i, opt in enumerate(options):
             color = COLOR_HIGHLIGHT if i == self._selected else COLOR_TEXT
             marker = "▶" if i == self._selected else " "
@@ -139,7 +161,7 @@ class QuizManager:
                     color = (200, 80, 80)
                     marker = "✗"
             otxt = self._font_question.render(f"  {marker} {opt}", True, color)
-            overlay.blit(otxt, (bx + 12, by + 24 + len(wrapped) * 12 + 4 + i * 14))
+            overlay.blit(otxt, (bx + 12, base_opciones + i * paso_opcion))
 
         if self._answered:
             result_color = (80, 200, 80) if self._correct else (200, 80, 80)
@@ -157,6 +179,14 @@ class QuizManager:
         overlay.blit(progress, (bx + 12, by + box_h - 14))
 
         surface.blit(overlay, (0, 0))
+
+    def caja(self) -> pygame.Rect:
+        """El rect de la caja dibujada en el último `draw()`.
+
+        AUD-834 — exponerla es lo que permite afirmar en pruebas que ningún
+        texto se sale de la caja.
+        """
+        return getattr(self, "_caja", pygame.Rect(0, 0, 0, 0))
 
     def close(self) -> None:
         self._active = False

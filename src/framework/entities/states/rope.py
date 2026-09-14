@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from src.engine.core.events import Events
+from src.engine.input.action_map import Action
 from src.framework.entities.states.base import PlayerStateBase, _InputSnapshot
 
 if TYPE_CHECKING:
@@ -110,6 +111,14 @@ class TrepandoState(PlayerStateBase):
                 self.IMPULSO_AL_SALTAR
             )
             player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            # AUD-831 — gastar el flanco: la escena corre `_actualizar_agarres`
+            # DESPUÉS del jugador en el mismo fotograma, y con el flanco vivo
+            # más la liana cerca, re-engancha al instante y el salto no sale
+            # nunca ("no puedo saltar de la cuerda"). Con `getattr` porque los
+            # dobles mínimos de pruebas de estados no traen `consume`.
+            gastar = getattr(input_manager, "consume", None)
+            if callable(gastar):
+                gastar(Action.JUMP)
             from src.framework.entities.states import JumpingState
             player._change_state_instance(JumpingState())
             return
@@ -179,21 +188,102 @@ class TirolesaState(PlayerStateBase):
             player._event_bus.emit(Events.SFX_PLAYER_ZIPLINE,
                                    pos=(player.position.x, player.position.y))
 
-        # Soltarse: saltando, o al llegar al final del cable.
+        # Soltarse: saltando, dejándose caer con abajo, o al final del cable.
         llego = self._cable.progreso(pygame.Vector2(player.rect.center)) >= 0.995
-        if (inp.jump_pressed and self._t > 0.08) or llego:
+        quiere_caer = inp.crouch_held and self._t > 0.08
+        if (inp.jump_pressed and self._t > 0.08) or quiere_caer or llego:
             if inp.jump_pressed and self._t > 0.08:
                 player.velocity.y = player.perfil.salto_impulso * 0.8
                 player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+                # AUD-831 — igual que en `TrepandoState`: gastar el flanco
+                # para que el agarre posterior del mismo fotograma no
+                # re-enganche al instante.
+                gastar = getattr(input_manager, "consume", None)
+                if callable(gastar):
+                    gastar(Action.JUMP)
             else:
                 # Al llegar al final se conserva el impulso del cable. Frenar en
                 # seco convertiría el final de la tirolesa en una caída vertical
                 # y desperdiciaría toda la velocidad que el tramo acumuló.
+                # AUD-830 — dejarse caer con abajo usa la misma salida: el
+                # jugador pidió bajar, no frenar.
                 player.velocity.update(direccion * self._cable.velocidad * 0.6)
             from src.framework.entities.states import FallingState, JumpingState
             player._change_state_instance(
                 JumpingState() if inp.jump_pressed else FallingState(),
             )
+
+
+class GanchoTechoState(PlayerStateBase):
+    """Grapple al techo — Spider PS1, Ori bash. Cuelga del techo y se balancea o se impulsa.
+    HD nativo 1920: cuerda visible con trail, sin escalado.
+    """
+
+    def __init__(self, punto_anclaje: pygame.Vector2 | None = None) -> None:
+        from src.framework.entities.player import PlayerState
+        super().__init__(PlayerState.CLIMBING)
+        self._ancla = punto_anclaje
+        self._t = 0.0
+        self._longitud: float = 80.0
+
+    def enter(self, player: Player) -> None:
+        super().enter(player)
+        player.velocity.update(0.0, 0.0)
+        player.is_grounded = False
+        self._t = 0.0
+        if self._ancla is not None:
+            dx = player.rect.centerx - self._ancla.x
+            dy = player.rect.centery - self._ancla.y
+            self._longitud = max(30.0, (dx*dx + dy*dy) ** 0.5)
+        player._event_bus.emit(Events.SFX_PLAYER_CLIMB, pos=(player.position.x, player.position.y))
+
+    def update(self, player: Player, dt: float, input_manager: InputManager | None) -> None:
+        from src.framework.entities.states import FallingState, JumpingState
+        inp = _InputSnapshot(input_manager)
+        self._t += dt
+        if self._ancla is None:
+            player._change_state_instance(FallingState())
+            return
+        # Péndulo simple: gravedad + input
+        dx = player.rect.centerx - self._ancla.x
+        dy = player.rect.centery - self._ancla.y
+        dist = max(1.0, (dx*dx + dy*dy) ** 0.5)
+        # Normalizar y mantener longitud
+        nx, ny = dx/dist, dy/dist
+        # Input añade impulso tangencial
+        if inp.move_x != 0:
+            # Tangente (-ny, nx) * input
+            tx, ty = -ny, nx
+            player.velocity.x += tx * inp.move_x * 600 * dt
+            player.velocity.y += ty * inp.move_x * 600 * dt
+        # Gravedad péndulo
+        player.velocity.y += 400 * dt
+        # Constraint a círculo
+        player.position.x += player.velocity.x * dt
+        player.position.y += player.velocity.y * dt
+        # Re-proyectar a círculo
+        dx2 = player.rect.centerx - self._ancla.x
+        dy2 = player.rect.centery - self._ancla.y
+        d2 = max(1.0, (dx2*dx2 + dy2*dy2) ** 0.5)
+        if d2 > self._longitud:
+            scale = self._longitud / d2
+            player.position.x = self._ancla.x + dx2*scale - player.rect.width/2
+            player.position.y = self._ancla.y + dy2*scale - player.rect.height/2
+            player.rect.topleft = (int(player.position.x), int(player.position.y))
+            # Amortiguar velocidad radial
+            dot = player.velocity.x*nx + player.velocity.y*ny
+            if dot > 0:
+                player.velocity.x -= dot*nx*0.5
+                player.velocity.y -= dot*ny*0.5
+        if inp.jump_pressed and self._t > 0.12:
+            # Soltar con impulso tangencial + vertical
+            player.velocity.x += -ny * 250
+            player.velocity.y = player.perfil.salto_impulso * 0.9
+            player._change_state_instance(JumpingState())
+            return
+        if inp.crouch_held:
+            player._change_state_instance(FallingState())
+            return
 
 
 class BalanceoEnLianaSaltoState(PlayerStateBase):
@@ -286,6 +376,11 @@ class BalanceoEnLianaSaltoState(PlayerStateBase):
             player.velocity.x = dir_x * self.IMPULSO_SALTO + v_liana * 0.5
             player.velocity.y = player.perfil.salto_impulso * self.IMPULSO_VERTICAL
             player._event_bus.emit(Events.SFX_PLAYER_JUMP)
+            # AUD-831 — igual que en `TrepandoState`: gastar el flanco para
+            # que el agarre posterior del mismo fotograma no re-enganche.
+            gastar = getattr(input_manager, "consume", None)
+            if callable(gastar):
+                gastar(Action.JUMP)
             from src.framework.entities.states import JumpingState
             player._change_state_instance(JumpingState())
             return

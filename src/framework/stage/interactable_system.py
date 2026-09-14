@@ -30,6 +30,8 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    EstacionDeRecarga,
+    Fogata,
     Llavero,
     PlacaDePresion,
     Recogible,
@@ -73,6 +75,8 @@ class InteractableSystem:
         placas: list[PlacaDePresion] | None = None,
         secret_exits: list[SecretExit] | None = None,
         secret_rooms: list[SecretRoom] | None = None,
+        fogatas: list[Fogata] | None = None,
+        estaciones_recarga: list[EstacionDeRecarga] | None = None,
     ) -> None:
         self.recogibles = list(recogibles or [])
         self.cerraduras = list(cerraduras or [])
@@ -85,14 +89,40 @@ class InteractableSystem:
         self.placas: list[PlacaDePresion] = list(placas or [])
         self.secret_exits: list[SecretExit] = list(secret_exits or [])
         self.secret_rooms: list[SecretRoom] = list(secret_rooms or [])
+        self.fogatas: list[Fogata] = list(fogatas or [])
+        self.estaciones_recarga: list[EstacionDeRecarga] = list(estaciones_recarga or [])
         self.llavero = Llavero()
         self._bus = bus
+        #: B3 — persistencia per-map
+        self._stage_id: str = ""
+        self._save_manager = None  # type: ignore[var-annotated]
+        #: B4.3 — player ref for direct recharge
+        self._player_ref = None  # type: ignore[var-annotated]
         #: De qué cadáveres ya salió el botín (AUD-218). Vive aquí y no en el
         #: mixin de señales porque es estado del mundo: se va con el escenario.
         self._botin_soltado: set[str] = set()
         #: Último mensaje para la interfaz. La escena lo lee y lo muestra.
         self.mensaje: str = ""
         self.mensaje_timer: float = 0.0
+
+    # -- B3 persistencia per-map -----------------------------------------
+    def set_persistencia(self, stage_id: str, save_manager) -> None:
+        """B3 — fija MAP_ID y SaveManager para persistir colección."""
+
+        self._stage_id = str(stage_id or "")
+        self._save_manager = save_manager
+
+    def _persistir_item(self, item_key: str) -> None:
+        if not self._stage_id or not item_key or self._save_manager is None:
+            return
+        try:
+            self._save_manager.marcar_item_recogido(self._stage_id, item_key)
+        except Exception:
+            pass
+
+    def set_player_ref(self, player) -> None:
+        """B4.3 — referencia al Player para recarga directa (estamina etc.)."""
+        self._player_ref = player
 
     # -- consulta --------------------------------------------------
     def rects_solidos(self) -> list[pygame.Rect]:
@@ -122,6 +152,8 @@ class InteractableSystem:
         self._warpear(dt, jugador, usar)
         self._cerrar_las_cronometradas(dt, jugador)
         self._revelar_secretos(jugador, usar)
+        self._usar_fogata(jugador, usar)
+        self._usar_estacion(jugador, usar)
         if usar:
             self._abrir_cerraduras(jugador)
             self._abrir_cofres(jugador)
@@ -305,6 +337,15 @@ class InteractableSystem:
                 # escuchaba sólo podía sumar al inventario.
                 pos=objeto.rect.center,
             )
+            # B3 — persistencia per-map (solo TMX, no dinámicos con id 0)
+            if getattr(objeto, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import recogible_key
+
+                    k = recogible_key(self._stage_id, objeto)
+                    self._persistir_item(k)
+                except Exception:
+                    pass
 
     def soltar_botin(self, entity_id: str, recogible: Recogible) -> bool:
         """Deja el botín de `entity_id` en el suelo. `False` si ya pagó.
@@ -401,9 +442,21 @@ class InteractableSystem:
                 f"El cofre contenía: {cofre.contenido}" if cofre.contenido
                 else "El cofre estaba vacío."
             ))
-            self._emitir(EVENTO_COFRE, contenido=cofre.contenido)
+            # AUD-839 (D-07) — la posición va en el evento para que la
+            # escena pueda poner el feedback (partículas) donde está el cofre.
+            self._emitir(EVENTO_COFRE, contenido=cofre.contenido,
+                         pos=tuple(cofre.rect.center))
             if cofre.evento_al_abrir:
                 self._emitir(cofre.evento_al_abrir)
+            # B3 — persistencia per-map sólo si tiene contenido y id TMX
+            if cofre.contenido and getattr(cofre, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import cofre_key
+
+                    k = cofre_key(self._stage_id, cofre)
+                    self._persistir_item(k)
+                except Exception:
+                    pass
 
     def _disparar(self, jugador: pygame.Rect, usar: bool) -> None:
         for disparador in self.disparadores:
@@ -448,6 +501,80 @@ class InteractableSystem:
                 continue
             room.descubierto = True  # type: ignore[attr-defined]
             self._emitir(Events.SECRET_FOUND, secret_id=getattr(room, "secret_id", ""))
+            # B3 — si tiene recompensa y id TMX, persistir como ITEM
+            if getattr(room, "recompensa", "") and getattr(room, "tmx_object_id", 0) != 0:
+                try:
+                    from src.framework.stage.interactables import secret_room_key
+
+                    k = secret_room_key(self._stage_id, room)  # type: ignore[arg-type]
+                    self._persistir_item(k)
+                    # Otorgar recompensa al llavero si es ítem conocido
+                    recomp = str(getattr(room, "recompensa", "") or "")
+                    if recomp:
+                        self.llavero.coger(recomp)
+                except Exception:
+                    pass
+
+    def _usar_fogata(self, jugador: pygame.Rect, usar: bool) -> None:
+        """B4 — bonfire: cura, guarda y marca checkpoint."""
+        for fogata in self.fogatas:
+            if not alcanza(jugador, fogata.rect):
+                continue
+            if usar:
+                self._avisar("Descansando en la fogata... ¡Vida restaurada!")
+                self._emitir(Events.PLAYER_HEALED, amount=5.0)
+                self._emitir(Events.CHECKPOINT_REACHED, checkpoint_id="fogata")
+                # Sonido y partículas
+                try:
+                    self._emitir(Events.SFX_CHECKPOINT, pos=fogata.rect.center)
+                except Exception:
+                    pass
+                fogata.usada = True
+            else:
+                # Hint cuando estás cerca pero no pulsas
+                if self.mensaje_timer <= 0:
+                    self._avisar(fogata.mensaje, duracion=1.0)
+            break
+
+    def _usar_estacion(self, jugador: pygame.Rect, usar: bool) -> None:
+        """B4.3 — recharge station: restaura estamina/mana/especial."""
+        for estacion in self.estaciones_recarga:
+            if not alcanza(jugador, estacion.rect):
+                continue
+            if usar:
+                # Restaurar recursos del player si hay referencia
+                player = getattr(self, "_player_ref", None)
+                if player is not None:
+                    try:
+                        # Estamina
+                        if hasattr(player, "estamina") and hasattr(player, "estamina_max"):
+                            try:
+                                player.estamina = float(player.estamina_max)
+                                if hasattr(player, "_espera_estamina_restante"):
+                                    player._espera_estamina_restante = 0.0
+                            except Exception:
+                                pass
+                        # Mana si existe (HUD mana) — player no tiene mana aún, no-op
+                        # Special meter
+                        if hasattr(player, "special_meter") and hasattr(player, "special_meter_max"):
+                            try:
+                                player.special_meter = float(player.special_meter_max)
+                            except Exception:
+                                pass
+                        # Oxigeno si existe (nado)
+                    except Exception:
+                        pass
+                self._avisar("Recargado — recursos restaurados!")
+                self._emitir(Events.RECHARGE_STATION_USED, pos=estacion.rect.center)
+                try:
+                    self._emitir(Events.SFX_CHECKPOINT, pos=estacion.rect.center)
+                except Exception:
+                    pass
+                estacion.usada = True
+            else:
+                if self.mensaje_timer <= 0:
+                    self._avisar(estacion.mensaje, duracion=1.0)
+            break
 
     def _warpear(self, dt: float, jugador: pygame.Rect, usar: bool) -> None:
         """AUD-287 — cruzar de un punto del mapa a otro.
@@ -479,11 +606,15 @@ class InteractableSystem:
             warp._espera = warp.enfriamiento
             if warp.mensaje:
                 self._avisar(warp.mensaje)
-            self._emitir(
-                EVENTO_WARP,
-                destino=(float(warp.destino.x), float(warp.destino.y)),
-                origen=warp.rect.center,
-            )
+            # AUD-BACKTRACK — si tiene destino_stage_id, es warp inter-escenario (backtracking 100%)
+            # Se emite destino_stage_id además de destino; el handler decide si cambia de mapa o solo teletransporta
+            payload: dict[str, object] = {
+                "destino": (float(warp.destino.x), float(warp.destino.y)),
+                "origen": warp.rect.center,
+            }
+            if getattr(warp, "destino_stage_id", ""):
+                payload["destino_stage_id"] = warp.destino_stage_id
+            self._emitir(EVENTO_WARP, **payload)
 
     # -- salida ----------------------------------------------------
     def _avisar(self, texto: str, duracion: float = 2.0) -> None:

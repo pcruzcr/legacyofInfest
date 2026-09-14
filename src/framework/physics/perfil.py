@@ -75,6 +75,9 @@ class Material:
     friccion: float = 1.0
     #: Fracción de la velocidad de impacto que se devuelve. 0 = sin rebote.
     restitucion: float = 0.0
+    #: AUD-839 (D-71) — multiplicador de la velocidad de MARCHA sobre el
+    #: material: el musgo deja correr más que la piedra, el lodo frena.
+    paso: float = 1.0
 
 
 #: El suelo normal: no rebota. Es el material por defecto **a propósito**, para
@@ -84,7 +87,7 @@ ROCA = Material("roca")
 #: está por completar el catálogo con un nombre en vez de con un número suelto.
 HIELO = Material("hielo", friccion=0.15)
 #: Frena mucho.
-MUSGO = Material("musgo", friccion=2.5)
+MUSGO = Material("musgo", friccion=2.5, paso=1.15)  # AUD-839: deja correr +15 %
 #: La que no se podía expresar hasta ahora, y el motivo del hueco.
 #:
 #: 0,6 y no más: por encima de ~0,8 el rebote tarda tanto en amortiguarse que

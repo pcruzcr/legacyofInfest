@@ -128,6 +128,16 @@ una medición de GPU tomada en la integrada no vale como referencia.
    máquina de estados determinista rinde igual o mejor.
 8. **`.flake8` refleja a ruff, no compite con él.** Las reglas se cambian en
    `pyproject.toml`.
+9. **Toda modificación futura debe demostrar qué certificación afecta y ejecutar
+   automáticamente la regresión correspondiente.** Un cambio sin `AUD-800:` /
+   `CERT-` declarado es un cambio sin trazabilidad, y un cambio sin
+   `python scripts/check_change_safety.py` es un cambio sin verificación.
+   La matriz autoritativa vive en `docs/AUD-800_REGRESSION_MATRIX.md` y el
+   procedimiento en `docs/CHANGE_SAFETY_GUIDE.md`; CI la ejecuta en cada push
+   (`ci.yml: change-safety`). Si tocas `src/engine/render/` sin correr
+   `RENDERER → tests/test_render_*` y no lo demuestras, el cambio está
+   incompleto aunque todos los tests pasen por casualidad. Lo vigila
+   `scripts/check_change_safety.py --ci` y `tests/test_change_safety.py`.
 
 ---
 

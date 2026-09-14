@@ -20,17 +20,17 @@ se pudo medir, no se escribe.
 
 ## 0. Índice de números verificados
 
-`28` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
+`30` estados de jugador · `25` acciones de entrada · `13` estados de IA ·
 `8` arquetipos de enemigo · `35` especies del bestiario · `50` tipos de objeto
 TMX (AUD-455: eran 34 el 2026-08-02, ver §3.1; actualizado 2026-08-30: 50) · `2` tipos de capa `Collision`
 · `18` componentes ECS · `60` eventos en el enum `Events` + `5` de interacción
-(`INTERACT_*`). Total `Objects` en runtime **104** (50+54), **106** con `Collision`.
+(`INTERACT_*`). Total `Objects` en runtime **115** (50+54), **117** con `Collision`.
 
 ---
 
 ## 1. El jugador
 
-### 1.1. Los 28 estados (verificado en `src/framework/entities/player.py:171`)
+### 1.1. Los 30 estados (verificado en `src/framework/entities/player.py:171`)
 
 Todas las mecánicas del personaje son estados de una máquina. El API pública es
 el enum `PlayerState`:
@@ -87,7 +87,7 @@ incoming/outgoing multipliers). Ataque corto/largo: 0,50/1,00 corazones, hitbox
 
 ## 2. Enemigos
 
-### 2.1. Los 13 estados de IA (`src/framework/entities/enemy_base.py:53`)
+### 2.1. Los 15 estados de IA (`src/framework/entities/enemy_base.py:53`)
 
 `IDLE`, `PATROL`, `SEARCH`, `ALERT`, `CHASE`, `TELEGRAPHING`, `FIRING`,
 `RECOVER`, `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
@@ -226,15 +226,19 @@ ausencia = suelo sólido.
 
 ## 5. Eventos del bus
 
-Enum `Events` con **60 entradas** (`src/engine/core/events.py`), más **5 de
+Enum `Events` con **83 entradas** contadas en `src/engine/core/events.py`, más **5 de
 interacción** emitidos por `interactable_system.py`:
 
 Jugador / enemigo: `PLAYER_DAMAGED`, `PLAYER_HEALED`, `PLAYER_DIED`,
 `ENEMY_DIED`, `BOSS_ATTACK`, `BOSS_PHASE_CHANGED`. Nivel: `STAGE_COMPLETE`,
 `CHECKPOINT_REACHED`, `ITEM_COLLECTED`, `FLAG_SET`, `SAVE_REQUESTED`. UI / narración:
 `SHOW_MESSAGE`, `HIDE_MESSAGE`, `DIALOGUE_FINISHED`, `ACHIEVEMENT_UNLOCKED`,
-`ACHIEVEMENT_PROGRESS`. SFX (41): `SFX_PLAYER_JUMP/LAND/FOOTSTEP`, `SFX_HIT_CONNECT`,
-`SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_BOSS_HIT`, `SFX_BOSSES_*`… VFX:
+`ACHIEVEMENT_PROGRESS`. SFX (49 + `MUSIC_STINGER`): `SFX_PLAYER_JUMP/LAND/FOOTSTEP`
+(+ variantes `MUSGO/LODO/GRAVA/AHOGADO`), `SFX_PLAYER_CLIMB/WALL_SLIDE/ZIPLINE`,
+`SFX_HIT_CONNECT`,
+`SFX_PROJECTILE_FIRE`, `SFX_CHECKPOINT`, `SFX_BOSS_HIT`, `SFX_BOSSES_*`,
+`SFX_POISON_TICK`, `SFX_TIMER_ALERT_PULSE`… (lista completa en
+`docs/52_EVENT_MAP.md` §2). VFX:
 `VFX_PARRY`, `VFX_CHARGE`, `VFX_SLAM`, `VFX_ULTIMATE`, `VFX_BUBBLE`.
 
 Interacción (5): `INTERACT_ITEM_PICKED`, `INTERACT_LOCK_OPENED`,
@@ -288,7 +292,7 @@ El bus es con referencias débiles y sin singleton (`core/event_bus.py`, AUD-019
    `MessageTrigger`(_Once); usar `Message` produce un error.
 <!-- /cita-historica -->
 7. **Conteos de la doc inconciliables**: `60` decía 78/37, `62` decía 104/54 (2026-08-30); el código tiene **106 tipos declarables** (50 + 54 + 2 collision, ver §3.1) y
-   28 estados de jugador (ver §1.1).
+   30 estados de jugador (ver §1.1).
 
 ---
 

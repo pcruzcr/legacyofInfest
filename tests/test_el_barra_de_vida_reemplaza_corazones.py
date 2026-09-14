@@ -146,6 +146,26 @@ class TestElRetratoEsCircular:
         borde = lienzo.get_at((r.centerx, r.top + 1))
         assert tuple(borde)[:3] != (0, 0, 0), "el anillo del retrato no se dibujó"
 
+    def test_el_brillo_del_retrato_no_satura_a_blanco(self, hud) -> None:
+        """AUD-824 (P17) — el highlight con `BLEND_RGBA_ADD` sumaba el RGB
+        sin ponderar por el alfa y dejaba un disco blanco opaco sobre medio
+        retrato (~1590 px blancos medidos más los del asset). Con blit
+        normal el highlight no crea blancos: quedan sólo los 184 del asset
+        (ojos del retrato, medidos). La cota 500 distingue con margen 3×
+        por ambos lados sin acoplar el test al dibujo del asset."""
+        lienzo = _lienzo()
+        hud._draw_portrait(lienzo)
+        r = hud.regiones()["retrato"]
+        blancos = sum(
+            1
+            for x in range(r.left, r.right)
+            for y in range(r.top, r.top + r.height // 2)
+            if tuple(lienzo.get_at((x, y)))[:3] == (255, 255, 255)
+        )
+        assert blancos < 500, (
+            f"el brillo saturó {blancos} px a blanco puro en medio retrato (P17)"
+        )
+
 
 class TestElIconoDeMonedaReemplazaElGlifoRoto:
     """AUD-535 — `theme.font().render("¤56", ...)` medía 22 px de ancho

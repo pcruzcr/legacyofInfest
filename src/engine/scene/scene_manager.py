@@ -248,14 +248,47 @@ class SceneManager:
         return min(self._stage_index + 1, len(self._stage_queue) - 1)
 
     def _enter_next_stage(self) -> None:
-        """Replace the current scene with the next stage, or the credits."""
+        """Replace the current scene with the next stage, or the credits.
+
+        AUD-760: al agotar la cola se entra a créditos y se marca NG+ en la
+        partida activa (si la hay). El `ng_plus` no crea contenido nuevo, sólo
+        hace que `get_config()` escale HP/daño/cura por vuelta; por eso no se
+        reinicia la cola aquí: el jugador vuelve al título y elige NG+ desde
+        el menú.
+        """
         if self._stage_index < len(self._stage_queue):
             next_stage_class = self._stage_queue[self._stage_index]
             logger.info("SceneManager: advancing to stage %s", next_stage_class.__name__)
             self.replace(next_stage_class(self._context))
             return
         logger.info("SceneManager: no more stages — end credits")
+        self._incrementar_ng_plus()
         self.replace(self._credits_factory(self._context))
+
+    def _incrementar_ng_plus(self) -> None:
+        """Suma una vuelta de NG+ a la partida que se está jugando (AUD-760).
+
+        Sin partida activa no hay dónde guardarlo — una demo sin slot no
+        genera NG+. La cola no se reinicia aquí: el NG+ se elige desde el
+        título cargando esa partida, igual que cualquier continuación.
+        """
+        mgr = self._context.save_manager
+        if mgr is None:
+            return
+        slot = mgr.ranura_activa if mgr.ranura_activa is not None else mgr.newest_slot()
+        if slot is None:
+            return
+        data = mgr.load(slot)
+        if data is None:
+            return
+        data.ng_plus = int(data.ng_plus or 0) + 1
+        # Completar la cola cuenta como progreso: la siguiente carga empieza en 0.
+        data.stage_index = 0
+        try:
+            mgr.save(slot, data)
+            logger.info("SceneManager: NG+ %d en slot %d", data.ng_plus, slot)
+        except Exception:
+            logger.warning("SceneManager: no se pudo guardar NG+", exc_info=True)
 
     def _on_player_died(self, **data: object) -> None:
         """Handle player death.

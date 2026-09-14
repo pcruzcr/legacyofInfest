@@ -19,7 +19,7 @@ name = "legacyofinfest"
 # La versión vive **sólo aquí**. `src/__init__.py` la lee del paquete
 # instalado y `tests/test_version_coherence.py` comprueba que coincide con la
 # última entrada del CHANGELOG.
-version = "1.1.0"
+version = "1.4.1"
 description = "AAA+ 2D/2.5D/3D Metroidvania Engine — Educational Game Engine for Computer Graphics, Image Processing, and Pattern Recognition"
 requires-python = ">=3.11"
 # AUD-007: pyproject.toml is now the SINGLE source of truth for dependencies.
@@ -179,7 +179,7 @@ filterwarnings = [
 # codebase is actually written to, so that is the width we enforce.
 line-length = 120
 target-version = "py311"
-extend-exclude = [".venv", "build", "dist", "colab", "web"]
+extend-exclude = [".venv", "build", "dist", "colab", "web", "computer-vision-course"]
 
 [tool.ruff.lint]
 # Start from the default correctness rules (pyflakes + pycodestyle errors) and
@@ -267,10 +267,24 @@ ignore = [
 # existing scene and every student template.
 "src/engine/scene/base_scene.py" = ["B027"]
 
+# AUD-806 — Visual Forensics: diagnóstico genera cadenas WORLD→DISPLAY largas que
+# se leen como una sola línea de pipeline; romperlas oscurece el mapeo.
+# RUF059/F841/RUF046 son falsos positivos por patrones de unpacking y round() que
+# documentan la distribución de píxeles.
+"src/engine/render/visual_forensics.py" = ["E501", "RUF059", "F841", "RUF046"]
+"src/engine/scenes/debug_overlay.py" = ["E501", "RUF059"]
+"tests/test_runtime_frame_truth.py" = ["E402", "E501", "I001", "B007", "F841", "F401", "RUF100", "RUF059"]
+
 # Standalone entry-point scripts must prepend the project root to sys.path
 # before they can import from src/ — the import genuinely cannot come first.
 # This is the one case where E402 describes correct code.
 "tools/build_dataset.py" = ["E402", "E501", "E702"]
+"tools/train_enemy_ai.py" = ["E402", "E501", "E702", "E741", "F401", "F541", "I001"]
+"tools/verificar_entrega3.py" = ["E501", "E741", "F541", "F841", "E402"]
+"tests/test_stage_spatial_integrity.py" = ["E501", "I001", "B007", "F841", "E402"]
+"tests/test_dynamic_visual.py" = ["E501", "I001", "B007", "F841", "E402", "E401", "RUF059"]
+"tests/test_game_state_integration.py" = ["E501", "I001", "B007", "F841", "E402", "E401", "F401", "RUF059"]
+"scripts/capture_dynamic_qa.py" = ["E501", "E402", "I001", "B007", "F841", "E401", "RUF059"]
 "scripts/validate_assets.py" = ["E402"]
 "scripts/validate_tmx.py" = ["E402", "E501"]
 

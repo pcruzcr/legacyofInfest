@@ -59,8 +59,8 @@ class EnemyClimber(EnemyBase):
         self._climb_direction: int = 1  # 1 = sube, -1 = baja
         self._on_zipline_progress: float = 0.0
 
-        self.rect.width = 20
-        self.rect.height = 24
+        self.rect.width = 40
+        self.rect.height = 48
 
         self._load_zone_sprites(zone, 16, 16)
 

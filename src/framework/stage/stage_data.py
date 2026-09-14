@@ -42,6 +42,8 @@ from src.framework.stage.interactables import (
     Cerradura,
     Cofre,
     Disparador,
+    EstacionDeRecarga,
+    Fogata,
     PlacaDePresion,
     Recogible,
     SecretExit,
@@ -398,6 +400,11 @@ class StageAtmosphere:
 
     #: AUD-426 — cielo procedural
     cielo: bool = False
+    #: AUD-822 (P19) — el mapa es un interior (cueva, hub bajo techo).
+    #: Opt-in, por defecto exterior. NO se deduce de `cielo`: usar la
+    #: ausencia de cielo como «bajo techo» convertía en interior a todo
+    #: mapa que no declaraba `cielo`, apagando su ciclo de día y su clima.
+    interior: bool = False
     background_layers: list[pygame.Surface] = field(default_factory=list)
     background_factors: list[float] = field(default_factory=list)
     lights: list[LightSpec] = field(default_factory=list)
@@ -447,6 +454,10 @@ class StageProgression:
     checkpoints: list[Checkpoint] = field(default_factory=list)  # type: ignore[name-defined]
     spawn_point: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
     next_trigger: pygame.Rect | None = None
+    #: AUD-839 (D-25) — salidas por `WarpZone` con `destino_stage_id`: son
+    # salidas del nivel tanto como un NextTrigger, pero con llave o pulso.
+    #: (Nota: la cadena "se entra y no se sale" las acepta como salida.)
+    salidas_warp: list[pygame.Rect] = field(default_factory=list)
     message_triggers: list[MessageTrigger] = field(default_factory=list)
     hazard_zones: list[HazardZone] = field(default_factory=list)
     death_pits: list[DeathPit] = field(default_factory=list)
@@ -469,10 +480,16 @@ class StageProgression:
     secret_exits: list[SecretExit] = field(default_factory=list)
     #: AUD-625 — salas secretas (`SecretRoom`) con tell visual.
     secret_rooms: list[SecretRoom] = field(default_factory=list)
+    #: B4 — fogatas reutilizables (bonfire) — Dark Souls/Hollow Knight
+    fogatas: list[Fogata] = field(default_factory=list)  # type: ignore[name-defined]
+    #: B4.3 — estaciones de recarga (recharge) — restaura estamina/mana
+    estaciones_recarga: list[EstacionDeRecarga] = field(default_factory=list)  # type: ignore[name-defined]
     #: Placas de presión (PressurePlate)
     placas: list[PlacaDePresion] = field(default_factory=list)  # type: ignore[name-defined]
     #: AUD-249 — scroll forzado declarado desde Tiled con `ScrollZone`.
     scroll_forzados: list[ScrollForzado] = field(default_factory=list)  # type: ignore[name-defined]
+    #: Indoor/outdoor — zonas donde el clima y día/noche se atenúan (techo)
+    indoor_zones: list[pygame.Rect] = field(default_factory=list)
     #: F5.3–F5.6 — componentes ECS declarados desde el TMX.
     componentes: list[list[object]] = field(default_factory=list)
     zone: int = 0
@@ -558,6 +575,59 @@ class StageData:
                 return
         # Si no, crea en la fachada
         object.__setattr__(self, name, value)
+
+    # ── B3 — Item Completion ───────────────────────────────────────
+    def item_keys(self) -> list[str]:
+        """Lista estable de ITEM keys declarados en este mapa (para persistencia).
+
+        Usa StageData.stage_id como MAP_ID. Cada key es MAP_ID:TMX_ID:ITEM_ID.
+        Sólo incluye Pickup/Key, Chest con contenido y SecretRoom con recompensa
+        cuyo tmx_object_id != 0 (excluye dinámicos y vacíos).
+        """
+        from src.framework.stage.interactables import (
+            cofre_key,
+            es_item_coleccionable_cofre,
+            es_item_coleccionable_recogible,
+            es_item_coleccionable_secret_room,
+            recogible_key,
+            secret_room_key,
+        )
+
+        m = str(getattr(self, "stage_id", "") or "")
+        keys: list[str] = []
+        for r in getattr(self, "recogibles", []) or []:
+            if es_item_coleccionable_recogible(r):
+                keys.append(recogible_key(m, r))
+        for c in getattr(self, "cofres", []) or []:
+            if es_item_coleccionable_cofre(c):
+                keys.append(cofre_key(m, c))
+        for s in getattr(self, "secret_rooms", []) or []:
+            if es_item_coleccionable_secret_room(s):
+                keys.append(secret_room_key(m, s))
+        return keys
+
+    def item_total(self) -> int:
+        """TOTAL determinístico del mapa (cacheable)."""
+        return len(self.item_keys())
+
+    def item_collected_count(self, collected_set: set[str] | None) -> int:
+        """Cuántos ITEMS de este mapa están en el set persistido."""
+        if not collected_set:
+            return 0
+        # Intersección con las keys de este mapa (aisla por map_id)
+        keys = set(self.item_keys())
+        return len(keys & set(collected_set))
+
+    def item_percentage(self, collected_set: set[str] | None) -> float | None:
+        """Porcentaje 0.0-1.0 o None si TOTAL==0. Clamp."""
+        total = self.item_total()
+        if total == 0:
+            return None
+        collected = self.item_collected_count(collected_set)
+        # clamp COLLECTED> TOTAL
+        if collected > total:
+            collected = total
+        return max(0.0, min(1.0, collected / total))
 
     def __dir__(self) -> list[str]:
         base = set(super().__dir__())

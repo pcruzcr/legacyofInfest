@@ -313,7 +313,9 @@ def _spawn_player(prefab: dict[str, Any], stage: StageData, props: dict[str, Any
 
 
 
-    stage.spawn_point = pygame.Vector2(prefab.get("x", 0), prefab.get("y", 0) - 32)
+    # AUD-819 (P14) — como `_handle_player_spawn`: altura lógica, no literal.
+    from src.framework.entities.player import Player
+    stage.spawn_point = pygame.Vector2(prefab.get("x", 0), prefab.get("y", 0) - Player.ALTO_DE_PIE)
 
 
 
@@ -993,30 +995,8 @@ def aplicar_prefab(nombre: str, stage: StageData, offset: pygame.Vector2 = pygam
 
 
         try:
-
-
-
-
-
-
-
-            # Crear dict de props con posición
-
-
-
-
-
-
-
             props = dict(obj.get("props", {}))
-
-
-
-
-
-
-
-            handler({"type": obj.get("type", ""), "x": x, "y": obj.get("y", 0), "width": obj.get("width", 0), "height": obj.get("height", 0)}, None, props)  # noqa: E501
+            handler({"type": obj.get("type", ""), "x": x, "y": _y, "width": obj.get("width", 0), "height": obj.get("height", 0)}, stage, props)  # noqa: E501
 
 
 

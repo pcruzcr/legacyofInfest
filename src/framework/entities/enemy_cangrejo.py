@@ -71,8 +71,8 @@ class EnemyCangrejo(EnemyWalker):
         # una agresión de facto contra un nivel "de presencia".
         self.contact_knockback = 0.0
         # El cangrejo es bajo: su caja no es la de un caminante humanoide.
-        self.rect.width = 22
-        self.rect.height = 16
+        self.rect.width = 44
+        self.rect.height = 32
         # Asegurar tamaño correcto tras el super que cargó 16×12
         self._sprite_fw = self.SPRITE_ANCHO
         self._sprite_fh = self.SPRITE_ALTO

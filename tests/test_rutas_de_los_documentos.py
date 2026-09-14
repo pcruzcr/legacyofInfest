@@ -107,6 +107,20 @@ MARCADORES_DE_POSICION: frozenset[str] = frozenset({
     # AUD-XXX: M7 planificado — tests aún no existen, citados como objetivo.
     "tests/test_world_simulation.py",
     "tests/test_environment_state.py",
+    # AUD-839 — referencias hacia adelante y ejemplos, con la misma lógica que
+    # los dos de arriba: el día que materialicen, `test_ningun_marcador_existe_
+    # ya` obliga a sacarlos de aquí.
+    # 45_SWIMMING_SPEC cita su verificación prevista (el HUD de oxígeno de
+    # AUD-553 existe; la prueba dedicada, todavía no).
+    "tests/test_oxigeno_del_hud.py",
+    # Stage 4.1b/4.1c en construcción (docs 13b/13c): los docs ya los citan.
+    "tests/test_stage4_1b.py",
+    "tests/test_stage4_1c.py",
+    "src/stages/stage4_1b/stage4_1b.py",
+    "src/stages/stage4_1b/trazado.py",
+    "tools/generate_stage4_1b.py",
+    # 95_GUIA_ENTREGA_3: el TMX que el estudiante sustituye por el suyo.
+    "assets/maps/tu_stage/tu_stage.tmx",
 })
 
 #: Módulos retirados que la documentación cita **como historia**: «esto existía
@@ -146,6 +160,56 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
     # AUD-237: el tileset del cementerio genérico se retiró al rehacer stage4_1
     # con tilesets por fase; KNOWN_GAPS GAP-026 lo cita como historia.
     "assets/tilesets/tileset_cemetery.png",
+    # AUD-839 — historia del cleanup AUD-800 y de tracks retirados: los docs de
+    # auditoría los citan como registro de lo que había y por qué se fue.
+    # Borrados en el propio AUD-800 (manifiesto e inventario los documentan):
+    "docs/CERTIFICATION_CONSISTENCY_REPORT.md",
+    "docs/PLAYER_CONTACT_SURFACE_AUDIT.md",
+    "scripts/audit_certification_consistency.py",
+    # Duplicado del tileset del Gavilán: AUD-800 lo clasificó P3 y se archivó
+    # después; el canónico es assets/tilesets/tileset_gavilan_ciudad.tsx.
+    "assets/tileset_gavilan_ciudad.tsx",
+    # Playtest humano 001: sus resultados vivieron en este doc hasta que se
+    # plegaron en RELEASE_READINESS y PROJECT_IMPROVEMENT_REGISTER.
+    "docs/HUMAN_PLAYTEST_001.md",
+    # Pruebas de tracks cerrados cuyos resultados quedaron por escrito en los
+    # docs que las citan (94, STAGE_SPATIAL_INTEGRITY_AUDIT):
+    "tests/test_el_mirador_de_la_fase_6.py",
+    "tests/test_stage_spatial_integrity.py",
+    # Pruebas por-fase del track privado del stage 4.1 original: salieron del
+    # árbol con la desvinculación del track y sus resultados quedaron
+    # registrados en KNOWN_GAPS. El 4.1 entregado se verifica hoy con
+    # tests/test_stage4_1.py y tests/test_stage41_recorrido.py.
+    "tests/test_aud_554_pasos_de_grava_ahogado_y_voz_del_venado.py",
+    "tests/test_el_bosque_observa_en_la_fase_2.py",
+    "tests/test_el_bus_de_reverberacion_de_la_fase_6.py",
+    "tests/test_el_canto_orienta_en_la_planicie.py",
+    "tests/test_el_despertar_de_la_fase_6.py",
+    "tests/test_el_escenario_observa.py",
+    "tests/test_el_horizonte_y_la_despedida.py",
+    "tests/test_el_menu_de_pausa_abre_inventario.py",
+    "tests/test_el_musgo_resbala.py",
+    "tests/test_el_repiso_que_termina_en_musgo.py",
+    "tests/test_el_secreto_de_los_tres_espiritus.py",
+    "tests/test_el_silencio_poblado_de_la_fase_1.py",
+    "tests/test_gap_070_audio_del_4_1.py",
+    "tests/test_la_lluvia_no_se_queda_pegada.py",
+    "tests/test_la_lluvia_vintage_de_la_fase_4.py",
+    "tests/test_la_luna_esconde_cosas.py",
+    "tests/test_la_musica_del_4_1_entra_tarde.py",
+    "tests/test_la_procesion_y_la_multitud.py",
+    "tests/test_la_sombra_varia_y_el_bosque_cambia.py",
+    "tests/test_la_tormenta_paneada_de_la_fase_3.py",
+    "tests/test_la_tumba_que_nadie_reclama.py",
+    "tests/test_la_tumba_susurra_y_el_fantasma_recuerda.py",
+    "tests/test_las_costillas_son_navegables.py",
+    # AUD-839 — D-04/AV-29: el paquete fantasma `src/stages/stage2_4/` (una
+    # BossReyScene de prototipo cuyo TMX nunca existió) se retiró; el Rey
+    # completo de tres fases vive ahora en `src/stages/boss_rey/` y es el que
+    # el registro carga. La fila AV-29 del doc 102 conserva la cita como
+    # historia del hallazgo.
+    "assets/maps/stage2_4/stage2_4.tmx",
+    "src/stages/stage2_4/stage2_4.py",
 })
 
 #: Estado del jugador: ficheros que el juego **escribe al jugarse** y que
@@ -168,6 +232,9 @@ MODULOS_RETIRADOS: frozenset[str] = frozenset({
 ESTADO_DE_EJECUCION: frozenset[str] = frozenset({
     "data/inventory.json",
     "data/score.json",
+    # AUD-839 — lo escribe `tools/build_dataset.py` al entrenar; 95 lo cita
+    # como salida del comando, no como fichero del árbol.
+    "data/dataset.json",
 })
 
 _EXENTAS = MARCADORES_DE_POSICION | MODULOS_RETIRADOS | ESTADO_DE_EJECUCION

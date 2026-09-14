@@ -27,7 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 A = PROJECT_ROOT / "assets"
 
-W, H = 800, 600
+W, H = 1280, 720
 SAMPLE_RATE = 22050
 random.seed(42)
 
@@ -3384,22 +3384,25 @@ def _gen_tileset_stage4_1_fase6(path=None, ts=16, cols=16, rows=16):
     _gen_normal_map_para_tileset(path)
 
 
-def _gen_normal_map_para_tileset(tileset_path):
+def _gen_normal_map_para_tileset(tileset_path, ts: int = 16):
     """Genera *_n.png normal map 8-bit PSX alta calidad para un tileset (Light con sombras_proyectadas).
 
     8-bit por canal (RGB 32-bit con 12 normales): plano (128,128,255) + 8 direcciones
     cardinales/diagonales + 4 esquinas diagonales internas = 12 variaciones distintas.
     El LightSystem lee la normal via sprite_batch GPU (atlas + normales); para tiles se
     usa como bump que el sombreado direccional muestrea con NEAREST sin difuminar.
-    PSX 32-bit: relieve sutil con oclusión, no blur."""
+    PSX 32-bit: relieve sutil con oclusión, no blur.
+
+    AUD-839 — `ts` paramétrico (las hojas HD son de 32 px) y devuelve la ruta
+    generada, para que el manifiesto HD pueda declararla.
+    """
     try:
         src = Image.open(str(tileset_path)).convert("RGBA")
     except Exception:
-        return
+        return None
     w, h = src.size
     normal = Image.new("RGB", (w, h), (128, 128, 255))
     n_draw = ImageDraw.Draw(normal)
-    ts = 16
     cols = w // ts
     rows = h // ts
     for gy in range(rows):
@@ -3432,6 +3435,7 @@ def _gen_normal_map_para_tileset(tileset_path):
             n_draw.line((ox+ts-1, oy+2, ox+ts-1, oy+ts-3), fill=(160, 112, 255))  # E mid
     n_path = tileset_path.with_name(tileset_path.stem + "_n.png")
     normal.save(n_path)
+    return n_path
 
 
 def _gen_tileset_liquidos(path=None, ts=16):
@@ -6363,7 +6367,19 @@ def main():
     
     print("\n[9/9] SFX...")
     _gen_all_sfx()
-    
+
+    # Roadmap 97 — la barra HD 2D/2.5D estilo PS4 es parte de la tubería:
+    # re-render ×2 real de los tilesets temáticos, escalados ×4/×8 NEAREST,
+    # normal maps y manifiesto. Import perezoso: al llegar aquí el módulo ya
+    # está inicializado y no hay ciclo (generar_hd importa los pintores de
+    # este fichero).
+    print("\n[10/9] HD estilo PS4 (tilesets_hd: 512/1024/2048 + normales)...")
+    try:
+        from tools.generar_hd import generar_todo_hd
+    except ImportError:  # ejecutado como script plano desde tools/
+        from generar_hd import generar_todo_hd  # type: ignore
+    generar_todo_hd()
+
     # Count generated files
     total = sum(1 for _ in A.rglob("*") if _.is_file() and _.name != ".gitkeep")
     print(f"\n{'=' * 60}")

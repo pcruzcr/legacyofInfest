@@ -31,9 +31,23 @@ class FantasmaDeCarrera:
                 / f"{slug_de_stage_id(stage_id)}.json")
 
     def _preparar_fantasma(self) -> None:
-        """Empieza a grabar esta carrera y carga la anterior, si la hay."""
+        """Empieza a grabar esta carrera y carga la anterior, si la hay.
+
+        AUD-FANTASMA: solo en Boss Rush — en modo historia no hay fantasma.
+        Antes se grababa y mostraba siempre que existiera un fichero previo,
+        contaminando la partida normal con la mejor marca del speedrun.
+        """
         from src.framework.stage.speedrun_mode import GhostData
 
+        # Solo Boss Rush genera y consume fantasmas; en historia no se graba ni
+        # se carga para no contaminar el disco ni la pantalla.
+        try:
+            if getattr(self, "_boss_rush_activo", lambda: None)() is None:
+                self._fantasma = GhostData()
+                self._fantasma_previo = None
+                return
+        except Exception:
+            pass
         self._fantasma = GhostData()
         previo = GhostData()
         ruta = self._ruta_del_fantasma()
@@ -48,8 +62,13 @@ class FantasmaDeCarrera:
 
         Guardar siempre convertiría el fantasma en «tu última partida», que es
         una compañía peor: el jugador quiere perseguir su mejor marca, no la
-        de hace un rato.
+        de hace un rato. AUD-FANTASMA: solo en Boss Rush.
         """
+        try:
+            if getattr(self, "_boss_rush_activo", lambda: None)() is None:
+                return
+        except Exception:
+            pass
         actual = self._fantasma
         if actual is None or not actual.frame_count:
             return
@@ -67,12 +86,18 @@ class FantasmaDeCarrera:
     _COLOR_FANTASMA = (140, 210, 255)
 
     def _dibujar_fantasma(self, surface: pygame.Surface) -> None:
-        """Una silueta translúcida donde estabas en tu mejor carrera.
+        """Silueta del jugador con transparencia donde estabas en tu mejor Boss Rush.
 
-        Translúcida y sin sprite a propósito: un fantasma opaco con la
-        animación del jugador se confunde con el jugador, y en un salto
-        difícil eso es peor que no tenerlo.
+        AUD-FANTASMA: antes era un rectangulo celeste semi-transparente y se
+        dibujaba tambien en modo historia. Ahora es el sprite del player con
+        alfa 90 y solo aparece si hay Boss Rush activo. Si el sprite no esta
+        disponible se cae al rectangulo fantasma como respaldo.
         """
+        try:
+            if getattr(self, "_boss_rush_activo", lambda: None)() is None:
+                return
+        except Exception:
+            return
         previo = self._fantasma_previo
         if previo is None or self._player is None:
             return
@@ -81,6 +106,50 @@ class FantasmaDeCarrera:
             return
         x, y = punto
         offset = self._camera.offset
+        # Intentar dibujar el sprite actual del player con transparencia
+        try:
+            player = self._player
+            frames = getattr(player, "_sprite_frames", {}).get(
+                getattr(player._state_instance.state_enum, "value", ""), None
+            )
+            if frames:
+                idx = min(getattr(player, "_animation_frame", 0), len(frames) - 1)
+                frame = frames[idx]
+                if getattr(player, "facing_direction", 1) < 0:
+                    try:
+                        from src.engine.utils.surface_pool import get_pool
+                        frame = get_pool().get_flipped_frames(frames)[idx]
+                    except Exception:
+                        frame = pygame.transform.flip(frame, True, False)
+                # Copia con alfa de fantasma (90/255)
+                fantasma = frame.copy()
+                fantasma.set_alpha(90)
+                # Anclaje identico al Player.draw (abajo-centro)
+                try:
+                    from src.framework.entities.player import SPRITE_H, SPRITE_W
+                    ox = (player.rect.width - SPRITE_W) // 2
+                    oy = player.rect.height - SPRITE_H
+                    sx = int(x - offset.x + ox)
+                    sy = int(y - offset.y + oy)
+                    # Squash considerado si existe
+                    sqx = getattr(player, "_squash_x", 1.0)
+                    sqy = getattr(player, "_squash_y", 1.0)
+                    if sqx != 1.0 or sqy != 1.0:
+                        aw = max(1, int(fantasma.get_width() * sqx))
+                        ah = max(1, int(fantasma.get_height() * sqy))
+                        fantasma = pygame.transform.scale(fantasma, (aw, ah))
+                        dx = (SPRITE_W - aw) // 2
+                        dy = SPRITE_H - ah
+                        sx += dx
+                        sy += dy
+                except Exception:
+                    sx = int(x - offset.x)
+                    sy = int(y - offset.y)
+                surface.blit(fantasma, (sx, sy))
+                return
+        except Exception:
+            pass
+        # Fallback: rectangulo translucido si no hay sprite
         alto = self._player.rect.height
         ancho = self._player.rect.width
         silueta = pygame.Surface((ancho, alto), pygame.SRCALPHA)

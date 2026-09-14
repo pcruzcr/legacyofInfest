@@ -11,8 +11,8 @@ class EnemyHormiga(EnemyWalker):
 
     def __init__(self, spawn_position: pygame.Vector2, **kw) -> None:
         super().__init__(spawn_position, patrol_length=120, patrol_speed=55, **kw)
-        self.rect.width = 22
-        self.rect.height = 20
+        self.rect.width = 44
+        self.rect.height = 40
         self._trail_timer = 0.0
 
     def _post_update(self, dt: float) -> None:

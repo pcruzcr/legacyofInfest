@@ -65,8 +65,8 @@ DESTINO = PROJECT_ROOT / "assets" / "maps" / "stage0" / "stage0.tmx"
 TILESET = "../../tilesets/tileset_stage0.png"
 
 TS = 16
-MW, MH = 100, 38          # 1600 × 608 px
-SUELO_Y = 30              # fila del suelo
+MW, MH = 160, 45          # 2560 × 720 px — 80×45 nativo ×2 pantallas, suelo en fila 38 (608) para llenar viewport 720 sin hueco
+SUELO_Y = 38              # fila del suelo (38*16=608, suelo 608-720 =112 px =7 filas)
 
 # Baldosas — tileset_stage0.png mide 1024×1024, 4096 baldosas, 64 columnas.
 TS_COLUMNAS = 64
@@ -184,7 +184,9 @@ def _objetos() -> list[str]:
 
     suelo = SUELO_Y * TS
 
-    obj("PlayerSpawn", 3 * TS, suelo - 48, 16, 32)
+    # AUD-761R — spawn feet == ground: floor 608, player 40×64, feet midbottom = y+64 =608 => y=544 = floor -64
+    # Antes suelo-48 => 560+64=624 16 bajo floor (feet 624 !=608). Ahora 544+64=608 exacto.
+    obj("PlayerSpawn", 3 * TS, suelo - 64, 16, 32)
 
     obj("Objective", 3 * TS, suelo - 80, 0, 0,
         objective_id="llegar_al_final",
@@ -286,13 +288,20 @@ def _objetos() -> list[str]:
         projectile_speed=100.0, projectile_damage=2.0,
         patrol_length=48.0, patrol_speed=30.0)
     obj("Assassin", 90 * TS, suelo - 24, 16, 24)
-    obj("Walker", 93 * TS, suelo - 28, 24, 28, max_health=2.0)
+    obj("Walker", 93 * TS, suelo - 56, 24, 28, max_health=2.0)  # AUD-839: el disco lo cuelga de la plataforma de la tirolesa (y=552)
     obj("Pickup", 92 * TS, (SUELO_Y - 10) * TS, 16, 16,
         item_id="fragmento_3", automatico=True, mensaje="Fragmento 3 de 3.")
     obj("Chest", 94 * TS, (SUELO_Y - 10) * TS, TS, TS,
         contenido="reliquia_prologo", mensaje="Una reliquia del prologo.")
     obj("Zipline", 93 * TS, (SUELO_Y - 10) * TS, 8, 8,
-        destino_dx=5 * TS, destino_dy=8 * TS, velocidad=200.0)
+        destino_dx=5 * TS, destino_dy=8 * TS, velocidad=200.0,
+        # AUD-830 — radio 30 como Paburu R18: con el defecto de 14 había que
+        # saltar y pulsar G en una franja mínima a 160 px del suelo.
+        radio_de_enganche=30.0)
+    # AUD-830 — la tirolesa era contenido mudo: ningún cartel enseñaba G ni
+    # cómo soltarse. Va junto a la repisa desde la que se monta.
+    obj("MessageTrigger_Once", 90 * TS, suelo - 96, 48, 48,
+        text="Tirolesa: sube a la repisa y pulsa G para agarrarte. Salto para soltarla, abajo para dejarte caer.")
     obj("CameraLock", 86 * TS, 0, 14 * TS, MH * TS, lock_y=True)
     obj("Checkpoint", 89 * TS, suelo - 32, 16, 32, checkpoint_id=4)
     obj("NextTrigger", 97 * TS, suelo - 3 * TS, 2 * TS, 3 * TS)
@@ -367,7 +376,7 @@ tileheight="{TS}" infinite="0" nextlayerid="20" nextobjectid="900">
   <property name="climate" value="clear"/>
   <property name="time_limit" type="int" value="0"/>
   <property name="gravity_multiplier" type="float" value="1.0"/>
-  <property name="ambient_light" type="float" value="0.70"/>
+  <property name="ambient_light" type="float" value="0.8"/>
   <property name="start_hour" value="afternoon"/>
   <property name="day_length" type="float" value="420"/>
   <property name="season" value="autumn"/>

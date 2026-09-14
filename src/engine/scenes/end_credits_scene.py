@@ -18,13 +18,16 @@ if TYPE_CHECKING:
 
 #: AUD-548 — quién cuenta como "equipo docente" y no como estudiante. Los
 #: mapas del profesorado (stage0, los laboratorios, los jefes de
-#: referencia, las variantes de 4-1) declaran uno de estos dos valores
-#: —hay una variante con guion y otra con "de" en vez de "of", ambas
-#: escritas a mano en distintos generadores— en vez de un nombre propio.
-_AUTOR_DOCENTE: frozenset[str] = frozenset({
-    "Equipo docente — Legacy of Infest",
-    "Equipo docente — Legacy de Infest",
-})
+#: referencia, las variantes de 4-1) lo declaran con un `author` que empieza
+#: por "Equipo docente": hay variantes con guion, con "de" en vez de "of",
+#: con "InFest" y por especialismo ("— Backtracking", "— IA"), todas
+#: escritas a mano en distintos generadores. AUD-839: regla por prefijo,
+#: porque cada generador nuevo inventaba una variante y la lista exacta
+#: se quedaba vieja (el que la escribió el día anterior ya no entraba).
+
+
+def _es_autor_docente(autor: str) -> bool:
+    return autor.strip().startswith("Equipo docente")
 
 
 def _propiedad(texto: str, clave: str) -> str:
@@ -95,7 +98,7 @@ class EndCreditsScene(BaseScene):
         docentes: list[str] = []
         estudiantes: list[tuple[str, str]] = []
         for nombre, autor in _creditos_por_escenario():
-            if autor in _AUTOR_DOCENTE:
+            if _es_autor_docente(autor):
                 docentes.append(nombre)
             else:
                 estudiantes.append((nombre, autor))

@@ -41,6 +41,39 @@ class TestCheckpointActivation:
         surface = pygame.Surface((320, 224))
         cp.draw(surface, pygame.Vector2(0, 0))
 
+    def test_la_piel_inyectada_se_dibuja_sobre_el_haz(self) -> None:
+        """AUD-823 (P20) — el escenario viste sus checkpoints (`_sprite` /
+        `_grey_sprite`) sin tocar el motor; el haz hace de halo debajo."""
+        for activado in (False, True):
+            cp = Checkpoint(
+                pygame.Vector2(100, 100),
+                pygame.Rect(100, 100, 24, 32),
+                checkpoint_id=0,
+            )
+            piel = pygame.Surface((24, 32))
+            piel.fill((216, 208, 188))
+            if activado:
+                cp._sprite = piel
+                cp.activate()
+            else:
+                cp._grey_sprite = piel
+            lienzo = pygame.Surface((320, 224))
+            cp.draw(lienzo, pygame.Vector2(0, 0))
+            assert lienzo.get_at((112, 116))[:3] == (216, 208, 188), (
+                f"activado={activado}: la piel inyectada no aparece en el lienzo"
+            )
+
+    def test_sin_piel_solo_hay_haz(self) -> None:
+        """Sin inyectar nada, el comportamiento AUD-523 queda intacto."""
+        cp = Checkpoint(
+            pygame.Vector2(100, 100),
+            pygame.Rect(100, 100, 24, 32),
+            checkpoint_id=0,
+        )
+        assert cp._sprite is None and cp._grey_sprite is None
+        lienzo = pygame.Surface((320, 224))
+        cp.draw(lienzo, pygame.Vector2(0, 0))
+
     def test_check_collision_activates(self) -> None:
         cp = Checkpoint(
             pygame.Vector2(100, 100),

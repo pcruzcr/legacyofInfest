@@ -74,9 +74,20 @@ class TestElDibujadoUsaElFactorPublicado:
     def test_stage_data_publica_los_factores(self) -> None:
         import dataclasses
 
+        from src.framework.stage.stage_data import StageAtmosphere
         from src.framework.stage.stage_loader import StageData
 
-        campos = {f.name for f in dataclasses.fields(StageData)}
+        # AUD-P0: StageData ya no es dataclass sino fachada sobre
+        # StagePhysics/StageAtmosphere/StageProgression. El campo vive en
+        # StageAtmosphere; StageLoader lo expone vía __getattr__.
+        try:
+            campos = {f.name for f in dataclasses.fields(StageData)}
+        except TypeError:
+            campos = {f.name for f in dataclasses.fields(StageAtmosphere)}
+            # También debe ser accesible vía la fachada (compat)
+            assert hasattr(StageData, "background_factors") or "background_factors" in campos
+            assert "background_factors" in campos
+            return
         assert "background_factors" in campos
 
     def test_sin_factores_publicados_se_dibuja_igual_que_antes(self) -> None:

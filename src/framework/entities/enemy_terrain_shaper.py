@@ -57,8 +57,8 @@ class EnemyTerrainShaper(EnemyBase):
         self._action_interval: float = 4.0
         self._action_type: int = 0  # 0=create block, 1=break block, 2=place hazard
 
-        self.rect.width = 24
-        self.rect.height = 20
+        self.rect.width = 48
+        self.rect.height = 40
 
         self._load_zone_sprites(zone, 16, 14)
 

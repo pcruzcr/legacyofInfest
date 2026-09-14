@@ -31,10 +31,11 @@ import pygame
 import pytest
 
 from src.engine.core import gpu_effects, user_settings
+from src.engine.core import settings as _settings
 from src.framework.vfx.post_processing import PostProcessing
 
-ANCHO, ALTO = 800, 600
-CENTRO_FOCO = (300, 300)
+ANCHO, ALTO = _settings.INTERNAL_WIDTH, _settings.INTERNAL_HEIGHT
+CENTRO_FOCO = (ANCHO // 2 - 100, ALTO // 2)  # dentro de la superficie interna
 RADIO_FOCO = 90
 FONDO = (40, 40, 50)
 ESQUINA = (8, 8)

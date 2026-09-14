@@ -74,6 +74,12 @@ class DebugOverlay:
         self._overlay: pygame.Surface | None = None
         self._line_cache: dict[int, tuple[str, pygame.Surface]] = {}
         self._hint_surf: pygame.Surface | None = None
+        # AUD-754 — diagnóstico de presentación nativa (F9)
+        self._display_diag: bool = False
+        self._display_diag_surf: pygame.Surface | None = None
+        # AUD-806 — Visual Forensics Mode (F8) — runtime frame truth
+        self._forensics: bool = False
+        self._forensics_state: dict[str, object] | None = None
 
     def _ensure_font(self) -> None:
         if self._font is not None:
@@ -83,6 +89,25 @@ class DebugOverlay:
     @property
     def visible(self) -> bool:
         return self._visible
+
+    def toggle_display_diagnostics(self) -> None:
+        """AUD-754 — alterna overlay de diagnóstico de presentación (F9)."""
+        self._display_diag = not self._display_diag
+        self._visible = True  # al activar diagnóstico, mostrar consola
+
+    def toggle_forensics(self) -> None:
+        """AUD-806 — Visual Forensics Mode (F8) — runtime frame truth.
+
+        No altera gameplay ni renderer: sólo observa y describe la cadena
+        WORLD → CAMERA → SCREEN → INTERNAL → VIEWPORT → DISPLAY para cada píxel.
+        Activable/desactivable sin recrear FBOs ni tocar lógica.
+        """
+        self._forensics = not self._forensics
+        self._visible = True
+
+    def set_forensics_state(self, state: dict[str, object] | None) -> None:
+        """Inyecta el estado forense recolectado por App/drawing (camera, player, etc)."""
+        self._forensics_state = state
 
     def handle_input(self, input_manager: Any) -> None:
         """Lee las dos teclas de la consola. Lo llama `App`, cada fotograma.
@@ -103,6 +128,12 @@ class DebugOverlay:
             # `LEARN_COLLISION`, `LEARN_FSM` y `LEARN_RENDER`: elegir el nivel
             # del árbol abría además tres lecciones del curso.
             self._tree_level = (self._tree_level + 1) % len(TREE_LEVELS)
+        # AUD-754 — F9 diagnóstico de display (independiente de F11, pero muestra overlay)
+        if input_manager.is_raw_key_pressed(pygame.K_F9):
+            self.toggle_display_diagnostics()
+        # AUD-806 — F8 Visual Forensics Mode
+        if input_manager.is_raw_key_pressed(pygame.K_F8):
+            self.toggle_forensics()
 
     def draw(self, surface: pygame.Surface, fps: float,
              medidas: dict[str, Any] | None = None,
@@ -152,9 +183,43 @@ class DebugOverlay:
                 "P50 {p50:.2f} | P95 {p95:.2f} | P99 {p99:.2f} | "
                 "peor {peor:.2f} ms".format(**q))
         lines.append(f"Objetos vivos: {len(gc.get_objects())}")
+        # AUD-754 — diagnóstico de presentación nativa (F9)
+        if self._display_diag:
+            try:
+                from src.engine.core import display as _display
+                pipe = _display.describe_pipeline()
+                for k, v in pipe.items():
+                    lines.append(f"{k}: {v}")
+            except Exception:
+                lines.append("Display diag: error")
+        # AUD-806 — Visual Forensics (F8) — cadena completa si hay estado
+        if self._forensics:
+            try:
+                from src.engine.render import visual_forensics as _vf
+                # Si App inyectó estado, úsalo; si no, recolectar mínimo (dummy)
+                st = self._forensics_state
+                if st is None:
+                    st = _vf.collect_forensics()
+                for fl in _vf.format_forensics(st):
+                    lines.append(fl)
+                # Distribución de píxeles para escala actual
+                try:
+                    dw, dh = st.get("DRAWABLE", (1280, 720))  # type: ignore[union-attr]
+                    iw, ih = st.get("INTERNAL", (1280, 720))  # type: ignore[union-attr]
+                    vp = st.get("VIEWPORT", (0, 0, 1280, 720))  # type: ignore[union-attr]
+                    if isinstance(vp, tuple) and len(vp) == 4:
+                        dist = _vf.pixel_distribution(int(iw[0]) if isinstance(iw, tuple) else int(iw), int(vp[2]))  # type: ignore[index]
+                        lines.append(f"PIXEL DIST (src 0..7 -> disp width): {dist[:8]}")
+                except Exception:
+                    pass
+            except Exception:
+                lines.append("Forensics: error")
         for etiqueta, valor in (medidas or {}).items():
             lines.append(f"{etiqueta}: {valor}")
-        lines.append(f"Árbol: {TREE_LEVELS[self._tree_level]}  |  [F11] cerrar  [F12] rotar")
+        lines.append(
+            f"Árbol: {TREE_LEVELS[self._tree_level]}  |  [F11] cerrar  "
+            "[F12] rotar  [F9] display diag  [F8] forensics  [F10] fullscreen",
+        )
         lines.append("")
 
         # Event queue snapshot
@@ -235,6 +300,50 @@ class DebugOverlay:
                 txt = cached[1]
             surface.blit(txt, (4, y))
             y += 10
+
+        # AUD-754 — grid de depuración de presentación (solo con F9)
+        if self._display_diag:
+            try:
+                pygame.draw.rect(surface, (0, 255, 255), surface.get_rect(), 1)
+                cx, cy = settings.INTERNAL_WIDTH // 2, settings.INTERNAL_HEIGHT // 2
+                pygame.draw.line(surface, (255, 255, 0), (cx - 10, cy), (cx + 10, cy), 1)
+                pygame.draw.line(surface, (255, 255, 0), (cx, cy - 10), (cx, cy + 10), 1)
+                safe = pygame.Rect(32, 32, settings.INTERNAL_WIDTH - 64, settings.INTERNAL_HEIGHT - 64)
+                pygame.draw.rect(surface, (255, 0, 255), safe, 1)
+                if medidas and "CAMERA" in medidas:
+                    pass
+                self._ensure_font()
+                tag = self._font.render("DEBUG GRID: VIEWPORT | SAFE AREA | CENTER", True, (0, 255, 255))
+                surface.blit(tag, (settings.INTERNAL_WIDTH - tag.get_width() - 4, 4))
+            except Exception:
+                pass
+        # AUD-806 — forensics grid + ground + player highlight (solo con F8)
+        if self._forensics:
+            try:
+                from src.engine.render import visual_forensics as _vf2
+                st2 = self._forensics_state if self._forensics_state is not None else _vf2.collect_forensics()
+                # Reusar la lógica de dibujo forense pero sin duplicar texto
+                # (el texto ya está en lines); aquí sólo los marcos guía extra
+                # Ground line y player rect
+                cam = st2.get("CAMERA", (0.0, 0.0))
+                gy = st2.get("GROUND_Y", 608)
+                if isinstance(gy, int) and isinstance(cam, tuple) and len(cam) == 2:
+                    sy = int(gy - cam[1])  # type: ignore[index]
+                    if 0 <= sy < settings.INTERNAL_HEIGHT:
+                        pygame.draw.line(surface, (255, 255, 255), (0, sy), (settings.INTERNAL_WIDTH, sy), 1)
+                ps = st2.get("PLAYER_SCREEN", (0.0, 0.0))
+                pr = st2.get("PLAYER_RECT", (0, 0, 40, 64))
+                if isinstance(ps, tuple) and len(ps) == 2 and isinstance(pr, tuple) and len(pr) == 4:
+                    r = pygame.Rect(int(ps[0]), int(ps[1]), int(pr[2]), int(pr[3]))  # type: ignore[index]
+                    if -100 < r.x < 1380 and -100 < r.y < 820:
+                        pygame.draw.rect(surface, (0, 255, 0), r, 1)
+                        pygame.draw.circle(surface, (255, 0, 0), (int(r.centerx), int(r.bottom)), 3, 1)
+                # Etiqueta forense
+                self._ensure_font()
+                tag2 = self._font.render("FORENSICS: WORLD->CAMERA->SCREEN->INTERNAL->VIEWPORT->DISPLAY", True, (0, 255, 200))
+                surface.blit(tag2, (8, 8))
+            except Exception:
+                pass
 
         if y < settings.INTERNAL_HEIGHT - 20:
             surface.blit(self._hint_surf, (4, settings.INTERNAL_HEIGHT - 14))

@@ -1547,7 +1547,7 @@ class PlayerState(str, Enum):
     AIR_CHASE = "AIR_CHASE"
     CHARGE_RELEASE = "CHARGE_RELEASE"
 
-# AUD-455: esta lista tenía 19 de los 28 estados reales — faltaban CLIMBING,
+# AUD-455: esta lista tenía 19 de los 30 estados reales — faltaban CLIMBING,
 # ZIPLINE, ULTIMATE, AERIAL_ATTACK, AERIAL_SLAM, AIR_CHASE, CHARGE_RELEASE.
 # Verificado contra `src/framework/entities/player.py::PlayerState`.
 
@@ -1675,7 +1675,7 @@ class EnemyState(str, Enum):
     LAUNCHED = "LAUNCHED"
     DYING = "DYING"
 
-# AUD-455: esta lista tenía 4 de los 13 estados reales — faltaban IDLE,
+# AUD-455: esta lista tenía 4 de los 15 estados reales — faltaban IDLE,
 # SEARCH, CHASE, TELEGRAPHING, FIRING, RECOVER, RETREAT, STUNNED, LAUNCHED.
 # Verificado contra `src/framework/entities/enemy_base.py::EnemyState`. La
 # clase misma (AUD-051) documenta por qué cada estado añadido importa — ver

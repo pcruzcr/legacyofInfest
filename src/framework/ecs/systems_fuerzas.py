@@ -108,8 +108,15 @@ def sistema_friccion(mundo: World, dt: float) -> None:
                 # el resultado. Amortiguación exponencial acotada — mismo
                 # patrón que `ChaseFlight.DRAG` (AUD-046) — así que nunca
                 # se aleja del objetivo, sólo tarda en llegar.
+                #
+                # AUD-839 (D-71) — el objetivo en una zona con inercia es el
+                # paso del jugador holgado un `inercia` (musgo 0.15 → corre
+                # un 15 % más que en sendero): si el objetivo fuera la
+                # velocidad de entrada tal cual, la fricción jamás podría
+                # "dejar correr más" y el musgo no se sentiría distinto de
+                # pisar piedra.
                 anterior = zona._vx_mezclada.get(entidad, v.v.x)
-                objetivo = v.v.x
+                objetivo = v.v.x * (1.0 + zona.inercia)
                 tasa = zona.inercia ** dt
                 mezclada = objetivo + (anterior - objetivo) * tasa
                 zona._vx_mezclada[entidad] = mezclada

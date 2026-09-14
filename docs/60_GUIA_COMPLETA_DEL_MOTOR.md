@@ -27,10 +27,10 @@ date_processed: "2026-07-31"
 
 1. [El bucle: qué pasa en un fotograma](#1)
 2. [Anatomía de un escenario TMX](#2)
-3. [Propiedades del mapa — las 17](#3)
-4. [Los 104 tipos de objeto, uno por uno](#4)
-5. [El jugador: 28 estados y qué los provoca](#5)
-6. [Enemigos: 54 tipos y 13 estados](#6)
+3. [Propiedades del mapa — las 18](#3)
+4. [Los 122 tipos de objeto, uno por uno](#4)
+5. [El jugador: 30 estados y qué los provoca](#5)
+6. [Enemigos: 69 tipos y 15 estados](#6)
 7. [Jefes](#7)
 8. [Iluminación, post-procesado y VFX](#8)
 9. [Clima, ciclo día/noche y estaciones](#9)
@@ -49,8 +49,9 @@ date_processed: "2026-07-31"
 <a id="1"></a>
 ## 1. El bucle: qué pasa en un fotograma
 
-Resolución interna fija de **800 × 600** a **60 FPS**, escalada a la ventana.
-Gravedad **800 px/s²**. El orden de cada fotograma es:
+Resolución interna fija de **1280 × 720** a **120 FPS** (paso fijo `FIXED_DT = 1/120`;
+el juego apunta a 60 FPS estables), escalada a la ventana.
+Gravedad **800 px/s²** (`settings.GRAVITY`). El orden de cada fotograma es:
 
 ```
 entrada  →  escena.update(dt)  →  escena.draw(pantalla)  →  bus de eventos
@@ -214,6 +215,7 @@ sin ellas el nivel no valida y pierde 10 puntos de rúbrica. Actualizado
 | `fog_of_war` | float | `0` | radio de visión en píxeles. `0` = apagado. Con `220` el jugador sólo ve su entorno |
 | `god_rays` | float | `0` | rayos de luz que bajan desde arriba, de `0` a `1`. Se nota con `ambient_light` baja |
 | `cielo` | bool | `false` | **cielo procedural** (AUD-426): el degradado sale de la altura del sol en vez de un PNG. Enciéndelo si tu mapa **no** trae fondo con cielo pintado; si lo trae, el degradado queda debajo y no se ve |
+| `interior` | bool | `false` | **bajo techo** (AUD-822): luz cálida fija, sin ciclo de día ni clima. Se DECLARA; sin ella el mapa es exterior aunque no pida `cielo`. No confundir: `cielo` dibuja, `interior` ambienta |
 | `habilidades_libres` | bool | `false` | exime a este escenario del candado de habilidades: el jugador entra con todo desbloqueado. Para laboratorios y pruebas |
 | `water_effect` | bool | `false` | ondulación y refracción sobre las `WaterZone` |
 
@@ -246,7 +248,7 @@ efecto, mira la consola antes que el código.
 ---
 
 <a id="4"></a>
-## 4. Los 104 tipos de objeto, uno por uno
+## 4. Los 122 tipos de objeto, uno por uno
 
 > **AUD-455 (2026-08-13), corregido tras leer `docs/70` §Iteración 15-16.**
 > Esta nota decía primero que la cuenta correcta era 76, contando sólo la capa
@@ -258,14 +260,28 @@ efecto, mira la consola antes que el código.
 > `Collision`). El índice decía 77 porque le faltaba subir tras AUD-400
 > (`Objective`); ésa era la única corrección real. Revertido a 78.
 >
-> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 54 (enemigos, §6)
-> + 2 (`Solid`/`Platform`) = **104**. La lista de abajo es ilustrativa; la cifra
+> **Actualizado 2026-08-30:** 50 (`BUILTIN_OBJECT_TYPES`) + 65 (enemigos, §6)
+> + 2 (`Solid`/`Platform`) = **117**. La lista de abajo es ilustrativa; la cifra
 > viva la guarda `tests/test_el_inventario_cuenta_bien.py`.
+>
+> **Recontado 2026-09-09 (auditoría documental total):** **122 en runtime
+> con los escenarios descubiertos** (51 integrados + 69 del registro + 2 de
+> `Collision`); en base limpia **106** en `Objects` (51 + 55 —el 55 es
+> `ParryTeacher`, ausente en HEAD—) y **108** declarables con
+> `Solid`/`Platform` (lo que `check_tmx_coverage.py --ci` imprime) — es lo que
+> el cargador mide y lo que `docs/62_ESTADO_DEL_PROYECTO.md` dice.
+> `test_el_inventario_cuenta_bien.py` aún exige 119/54/105/107: deuda
+> registrada, el test debe actualizarse junto al código (fuera del alcance
+> documental).
 
-El motor acepta **106 tipos** en total: 50 integrados del framework y 54 enemigos del
-registro en la capa `Objects` (104), más `Solid` y `Platform` en `Collision` (2).
-Todos los números se convierten a `float` automáticamente. La cifra **104**
-es la de `Objects`; **106** es el total que comprueba `tests/test_guia_del_motor.py::TestLasCifrasDelIndice::test_los_tipos_de_objeto`.
+El motor acepta **122 tipos** en runtime con los escenarios descubiertos:
+51 integrados del framework y 69 del registro (106 en la capa `Objects` en
+base limpia), más `Solid` y `Platform` en `Collision` (108 declarables en
+Tiled).
+Todos los números se convierten a `float` automáticamente. La cifra **106**
+es la de `Objects` en base (la que genera la referencia de estudiantes);
+**122** es el total con escenarios descubiertos (lo que
+`test_guia_del_motor.py` comprueba).
 
 > Los tres tipos de zona nuevos de AUD-598/600/601 (GAP-072) están en §4:
 > `AmbientLightZone` — brillo ambiental por tramo; `MusicZone` — música por
@@ -568,6 +584,12 @@ el cable se deduce del desplazamiento. El jugador se agarra con la acción
 Un `Pickup` sin `item_id` **y** sin nombre se ignora con un aviso. Una puerta
 dibujada como punto también: una puerta sin área no bloquea nada.
 
+Los objetos de inventario con definición propia en el catálogo (`_ITEM_DEFS`
+de `inventory.py`) son, entre otros: `heart_piece` (fragmento de corazón;
+4 forman un contenedor en `crafting.py`), `pokeball` (captura cenital),
+`skill_coraza` (botín del Gavilán: −25 % de daño en `player.py`),
+`subweapon_dagger` (daga arrojadiza) y `sun_song` (canción del Sol).
+
 ### 4.8 Sigilo
 
 | Tipo | Propiedad | Por defecto | Qué hace |
@@ -668,6 +690,7 @@ aún se ve, y eso se lee como injusticia aunque sea correcto.
 |---|---|---|
 | `Waypoint` | `owner_id` | el **nombre** de la entidad voladora que lo usa |
 | | `waypoint_index` | orden, desde 0 |
+| `IndoorZone` | — (la geometría ES el techo) | marca área bajo techo: sin clima, luz cálida constante |
 
 Para trayectorias Bézier de enemigos voladores.
 
@@ -719,7 +742,7 @@ que `tests/test_guia_del_motor.py::TestLasListasEstanCompletas` los encuentre.
 ---
 
 <a id="5"></a>
-## 5. El jugador: 28 estados y qué los provoca
+## 5. El jugador: 30 estados y qué los provoca
 
 ### Controles por defecto
 
@@ -787,7 +810,7 @@ vez, diseña con **3 baldosas**. Los huecos de 4 y 5 son contenido para quien ya
 domina el salto aéreo — colócalos donde fallar cueste poco, no en el camino
 principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 
-### Los 28 estados
+### Los 30 estados
 
 | Grupo | Estados |
 |---|---|
@@ -797,7 +820,7 @@ principal. `python -m tests.playtest.jump_bench` imprime la tabla completa.
 | Defensa | `PARRY` |
 | Agarre | `GRAB` `THROW` `CLIMBING` `ZIPLINE` |
 | Medio | `SWIMMING` `SWIM_ATTACK` |
-| Daño | `HURT` `DYING` |
+| Daño | `HURT` `DYING` `STAGGER` `POSSESSED` |
 
 Como diseñador no invocas estados: colocas el objeto y el estado ocurre.
 `CLIMBING` necesita una `Vine`, `ZIPLINE` una `Zipline`, `SWIMMING` una
@@ -821,11 +844,11 @@ enemigos suficientes antes del tramo final, el jugador nunca lo verá.
 ---
 
 <a id="6"></a>
-## 6. Enemigos: 54 tipos y 13 estados
+## 6. Enemigos: 69 tipos y 15 estados
 
 ### Los ocho arquetipos base
 
-Son la base; los 46 restantes son variantes y jefes con otro aspecto y otros
+Son la base; los 61 restantes son variantes y jefes con otro aspecto y otros
 números (35 especies del bestiario + 7 de entregas + buddies y especializados).
 
 | Tipo | Cómo se comporta | Propiedades |
@@ -875,6 +898,9 @@ existen en los mapas de su zona.
 | `BossGavilan` | `stage3_4_boss_gavilan` | el jefe del gavilán, con fases |
 | `BossRey` | `boss_rey` | el Rey Terciopelo, jefe de la Práctica I, con fases |
 | `BossPaburu` | `boss_paburu` | el Gran Chamán Paburu, jefe de la Zona 4, con fases |
+| `BruteOficinas` | `stage2_1_oficinas` (`office_enemies.py`) | bruto de oficinas, variante de zona |
+| `ChargerOficinas` | `stage2_1_oficinas` (`office_enemies.py`) | embestidor de oficinas, variante de zona |
+| `Dron04` | `stage2_1_oficinas` (`dron04.py`, extraído de 2-1) | dron de oficinas |
 
 El cargador importa el paquete del escenario al abrir su mapa y así encuentra
 estos tipos. Si registras los tuyos **al nivel del módulo** (fuera de funciones
@@ -883,22 +909,25 @@ el validador.
 
 ### Tipos especializados adicionales
 
-Los siguientes 14 tipos están registrados por `entity_factory` y cuentan para el
-total de 54, aunque no aparecen en la lista corta de 22 variantes arriba
+Los siguientes 25 tipos están registrados por `entity_factory` y cuentan para el
+total de 69, aunque no aparecen en la lista corta de 22 variantes arriba
 (ver `tests/test_guia_del_motor.py`):
 
 `ArcherQuetzal` · `AssassinSombra` · `BruteGolemHielo` · `BuddyEnguarde` ·
 `BuddyExpresso` · `BuddyRino` · `CasterHealer` · `ChargerWolf` · `Climber` ·
-`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper`
+`FlyingBomber` · `Shielded` · `Summoner` · `Swimmer` · `TerrainShaper` ·
+`AhogadoDelPozo` · `Ceibo` · `Cerbatana` · `Hormiga` · `LaSodaCulebra` ·
+`LaSodaShooterCocinero` · `LaSodaZancudo` · `MascaraTilawa` · `Murcielago` · `Oropel` · `SukiaDeCeniza`
 
-Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.)
-y buddies montables; se documentan aquí para que la lista sea exhaustiva sin
-repetir la tabla completa de 35 especies.
+Son arquetipos especializados (escudero, nadador, trepador, bombardero, etc.),
+buddies montables y variantes de nivel (Ceibo, Hormiga, Oropel, etc.); se
+documentan aquí para que la lista sea exhaustiva sin repetir la tabla completa
+de 35 especies + 10 nuevas.
 
-### Los 13 estados de enemigo
+### Los 15 estados de enemigo
 
-`IDLE` → `PATROL` → `SEARCH` → `ALERT` → `CHASE` → `TELEGRAPHING` → `FIRING`
-→ `RECOVER`, más `RETREAT`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
+`IDLE` → `PATROL` → `SEARCH` → `ALERT` → `CHASE` → `TELEGRAPHING` → `FIRING` → `CHANNELING`
+→ `RECOVER`, más `RETREAT`, `FLEEING`, `CHANNELING`, `STUNNED`, `HURT`, `LAUNCHED`, `DYING`.
 
 El que importa al diseñar es **`TELEGRAPHING`**: el aviso antes del golpe. Un
 enemigo sin telegrafiado no es difícil, es injusto, y el jugador culpa al

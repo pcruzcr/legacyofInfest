@@ -370,10 +370,22 @@ class TestElMapaDeReferenciaDemuestraTodoLoQueElMotorOfrece:
         sentido, así que se declara explícitamente. El precio de esa decisión
         es esta prueba.
         """
-        from scripts.check_tmx_coverage import PROPIEDADES_MAPA
-        from src.framework.stage.stage_loader import StageData
+        import dataclasses
 
-        campos = {f.name for f in StageData.__dataclass_fields__.values()}
+        from scripts.check_tmx_coverage import PROPIEDADES_MAPA
+        from src.framework.stage.stage_data import (
+            StageAtmosphere,
+            StagePhysics,
+            StageProgression,
+        )
+
+        # AUD-839 — `StageData` es una fachada, no una dataclass: las
+        # propiedades de mapa llegan repartidas entre sus tres dominios.
+        campos = {
+            f.name
+            for dominio in (StagePhysics, StageAtmosphere, StageProgression)
+            for f in dataclasses.fields(dominio)
+        }
         no_reconocidas = [p for p in PROPIEDADES_MAPA
                           if p not in campos and p != "background_zone"]
         assert not no_reconocidas, (

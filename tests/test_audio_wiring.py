@@ -69,7 +69,8 @@ SUBTITLE_FILE = ROOT / "src" / "engine" / "ui" / "subtitle_overlay.py"
 #: Es la misma disciplina que `AWAITING_MIGRATION` en `test_ui_consistency`:
 #: una excepción con nombre y motivo se puede revisar; un silencio no.
 AWAITING_THEIR_BOSS = {
-    "SFX_BOSSES_GAVILAN_DIVE",
+    # `SFX_BOSSES_GAVILAN_DIVE` estaba aquí y ya no: `boss_gavilan.py` lo emite
+    # (AUD-831; la lista sólo puede encoger, como dice arriba).
     "SFX_BOSSES_GAVILAN_MASK_BEAM",
     # `SFX_BOSSES_PABURU_EYE_BEAM` y `SFX_BOSSES_PABURU_WAVE` estaban aquí y ya no:
     # la entrega de Paburu los emite (`boss_paburu.py`). La lista encogió, que es

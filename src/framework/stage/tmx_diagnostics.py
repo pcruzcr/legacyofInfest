@@ -114,6 +114,7 @@ BUILTIN_OBJECT_TYPES: tuple[str, ...] = (
     # a la otra no se podía declarar de ninguna forma, así que un mapa grande no
     # tenía manera de conectar sus extremos.
     "WarpZone",        # Zelda (cuevas), Metroid (ascensores), Hollow Knight
+    "IndoorZone",      # PS4 HD — techo indoor/outdoor para clima y luz (backtracking 100%)
     # AUD-297 — suelo inclinado. Hasta aquí, una cuesta había que fingirla
     # apilando bloques escalonados, y eso no es una cuesta: es una escalera que
     # frena al jugador en cada peldaño.

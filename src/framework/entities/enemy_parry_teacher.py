@@ -119,6 +119,11 @@ class EnemyParryTeacher(EnemyBase):
 
             path = base / fname
 
+            if not path.exists():
+                # AUD-830: hoja de profesor opcional ausente: se conserva el
+                # walk genérico de zona sin avisar (ver enemy_flying).
+                continue
+
             try:
 
                 frames = AssetLoader.load_sprite_sheet(path, 16, 14)
@@ -130,6 +135,13 @@ class EnemyParryTeacher(EnemyBase):
                 logger.warning("enemy_parry_teacher: failed to load sprite %s", path)
 
 
+
+    def _aturdimiento_por_parry(self) -> float:
+        # T1-FINALIZATION — `_parry_stun_duration = 2.0` se escribía en el
+        # constructor y nadie lo leía: el gancho base devuelve
+        # `PARRY_STUN_DURATION` (0,9 s) y el "stun largo" del profesor no
+        # existía. Se conecta al gancho existente, no se crea sistema.
+        return float(self._parry_stun_duration)
 
     def _patrol_behavior(self, dt: float) -> None:
 
@@ -236,6 +248,11 @@ class EnemyParryTeacher(EnemyBase):
         for key, fname in [("walk", f"enemy_teacher_{zone_key}_walk.png"), ("telegraph", f"enemy_teacher_{zone_key}_telegraph.png")]:  # noqa: E501
 
             path = base / fname
+
+            if not path.exists():
+                # AUD-830: hoja de profesor opcional ausente: se conserva el
+                # walk genérico de zona sin avisar (ver enemy_flying).
+                continue
 
             try:
 

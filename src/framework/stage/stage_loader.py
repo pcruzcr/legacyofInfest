@@ -481,6 +481,10 @@ class StageLoader(ObjetosDeTiled):
         fog_of_war = cls._safe_float(props.get("fog_of_war", 0.0), "fog_of_war")
         water_effect = cls._bool_de(props.get("water_effect"), por_defecto=False)
         cielo = cls._bool_de(props.get("cielo"), por_defecto=False)
+        # AUD-822 (P19) — `interior` se DECLARA (opt-in, por defecto
+        # exterior). Ver `StageAtmosphere.interior`: deducirlo de la
+        # ausencia de `cielo` apagaba día/clima/luna de los mapas viejos.
+        interior = cls._bool_de(props.get("interior"), por_defecto=False)
         water_speed = cls._parse_unit_prop(props, "water_speed", 0.0, 8.0)
         water_amplitude = cls._parse_unit_prop(props, "water_amplitude", 0.0, 16.0)
         water_frequency = cls._parse_unit_prop(props, "water_frequency", 0.0, 1.0)
@@ -506,7 +510,8 @@ class StageLoader(ObjetosDeTiled):
             habilidades_libres=habilidades_libres, camara=camara, climate=climate, zone=zone,
             ambient_light=ambient_light, bloom=bloom, vignette=vignette, ambient_fx=ambient_fx, ambient_fx_rate=ambient_fx_rate,  # noqa: E501
             start_hour=start_hour, day_length=day_length, season=season, fog_of_war=fog_of_war, water_effect=water_effect,  # noqa: E501
-            cielo=cielo, water_speed=1.5 if water_speed is None else water_speed,
+            cielo=cielo, interior=interior,
+            water_speed=1.5 if water_speed is None else water_speed,
             water_amplitude=4 if water_amplitude is None else int(water_amplitude),
             water_frequency=0.04 if water_frequency is None else water_frequency,
             water_alpha=100 if water_alpha is None else int(water_alpha), water_tint=water_tint, god_rays=god_rays,
@@ -658,9 +663,24 @@ class StageLoader(ObjetosDeTiled):
         dos listados se desincronizarían en cuanto faltara un fichero.
         """
         try:
-            bg_surf = AssetLoader.load_image(
-                bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
-            )
+            # AUD-755 R3 — background nativo 1280×720. Si el PNG ya es ≥1280
+            # en alguna dimensión, no forzar size (evita stretch legacy para
+            # "llenar"). Solo si w<1280 y h<720 escalar nearest con warning.
+            # Cargar sin tamaño forzado primero para inspeccionar
+            probe = AssetLoader.load_image(bg_path)
+            pw, ph = probe.get_size()
+            if pw >= settings.INTERNAL_WIDTH or ph >= settings.INTERNAL_HEIGHT:
+                bg_surf = probe
+            else:
+                logger.warning(
+                    "StageLoader: bg %s %dx%d < %dx%d nativo — escalando "
+                    "nearest legacy (migrar asset a nativo)",
+                    bg_path, pw, ph, settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT,
+                )
+                # Re-cargar con tamaño nativo usando nearest (AssetLoader interno usa scale)
+                bg_surf = AssetLoader.load_image(
+                    bg_path, size=(settings.INTERNAL_WIDTH, settings.INTERNAL_HEIGHT),
+                )
             stage.background_layers.append(bg_surf)
             return True
         except (pygame.error, FileNotFoundError, PermissionError):

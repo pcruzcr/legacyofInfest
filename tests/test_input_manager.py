@@ -80,6 +80,60 @@ class TestInputManager:
             assert len(manager._bindings[action]) > 0
 
 
+class TestLecturasNoDestructivas:
+    """AUD-817 (P15) — leer no consume: el orden de los sistemas no decide
+    quién recibe la tecla. El jugador lee primero (`_InputSnapshot`); la
+    escena (`_actualizar_agarres`, `InteractableSystem`) lee después y debe
+    ver el mismo flanco. El flanco lo cierra `pump()`, no la lectura."""
+
+    @pytest.mark.parametrize(
+        ("tecla", "accion"),
+        [
+            (pygame.K_LEFT, Action.MOVE_LEFT),
+            (pygame.K_RIGHT, Action.MOVE_RIGHT),
+            (pygame.K_UP, Action.MOVE_UP),
+            (pygame.K_DOWN, Action.MOVE_DOWN),
+        ],
+    )
+    def test_las_cuatro_direcciones_sobreviven_a_dos_lecturas(
+        self, manager: InputManager, tecla: int, accion: Action,
+    ) -> None:
+        simulate_key(manager, tecla, True)
+        assert manager.is_action_just_pressed(accion)
+        assert manager.is_action_just_pressed(accion), (
+            "la segunda lectura del mismo fotograma devolvió False: "
+            "algún lector está consumiendo al leer"
+        )
+
+    def test_dos_consumidores_reciben_el_mismo_flanco(
+        self, manager: InputManager,
+    ) -> None:
+        simulate_key(manager, pygame.K_g, True)
+        jugador_lo_ve = manager.is_action_just_pressed(Action.GRAB)
+        escena_lo_ve = manager.is_action_just_pressed(Action.GRAB)
+        assert jugador_lo_ve and escena_lo_ve, (
+            "G llegó al jugador pero no a la escena: el primer lector "
+            "consumió el flanco (P15)"
+        )
+
+    def test_el_flanco_lo_cierra_pump_no_la_lectura(
+        self, manager: InputManager,
+    ) -> None:
+        simulate_key(manager, pygame.K_LEFT, True)
+        assert manager.is_action_just_pressed(Action.MOVE_LEFT)
+        assert manager.is_action_just_pressed(Action.MOVE_LEFT)
+        manager.pump([])
+        assert not manager.is_action_just_pressed(Action.MOVE_LEFT)
+
+    def test_el_consumo_explicito_sigue_gastando_el_flanco(
+        self, manager: InputManager,
+    ) -> None:
+        simulate_key(manager, pygame.K_LEFT, True)
+        assert manager.is_action_just_pressed(Action.MOVE_LEFT)
+        manager.consume(Action.MOVE_LEFT)
+        assert not manager.is_action_just_pressed(Action.MOVE_LEFT)
+
+
 class _FakeJoystick:
     """Un mando sin SDL: sólo responde a `get_axis`."""
 

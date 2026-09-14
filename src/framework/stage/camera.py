@@ -442,17 +442,34 @@ class Camera:
         if not self._cinematica_path or len(self._cinematica_path) < 2:
             return
         self._cinematica_t = (self._cinematica_t + dt * 0.2) % 1.0
-        # Lerp simple entre puntos para stub — real usaría CurveTools.catmull_rom
-        n = len(self._cinematica_path)
-        f = self._cinematica_t * (n - 1)
-        i = int(f)
-        t = f - i
-        a = self._cinematica_path[max(0, i)]
-        b = self._cinematica_path[min(n - 1, i + 1)]
-        p = a.lerp(b, t)
+        # Catmull-Rom real 100% cableado — sin lerp simple
+        try:
+            from src.framework.processing.curve_tools import catmull_rom
+
+            # catmull_rom espera 4 puntos y t 0-1 entre p1-p2
+            n = len(self._cinematica_path)
+            f = self._cinematica_t * (n - 1)
+            i = int(f)
+            t = f - i
+            p0 = self._cinematica_path[max(0, i - 1)]
+            p1 = self._cinematica_path[max(0, i)]
+            p2 = self._cinematica_path[min(n - 1, i + 1)]
+            p3 = self._cinematica_path[min(n - 1, i + 2)]
+            # catmull_rom devuelve Vector2
+            p = catmull_rom(p0, p1, p2, p3, t)
+        except Exception:
+            # Fallback lerp si no hay curva
+            n = len(self._cinematica_path)
+            f = self._cinematica_t * (n - 1)
+            i = int(f)
+            t = f - i
+            a = self._cinematica_path[max(0, i)]
+            b = self._cinematica_path[min(n - 1, i + 1)]
+            p = a.lerp(b, t)
+        # AUD-754 — antes 400,300 fijo (800×600). Ahora usa INTERNAL dinámico.
         self.offset.update(
-            p.x - 400,  # INTERNAL_WIDTH/2
-            p.y - 300,
+            p.x - settings.INTERNAL_WIDTH / 2,
+            p.y - settings.INTERNAL_HEIGHT / 2,
         )
         self._clamp_a_los_bordes()
 

@@ -120,13 +120,19 @@ def _dibujar_barra_moderna(
     """Fondo translúcido redondeado + relleno con degradado + halo opcional.
 
     `pct` ya viene acotado a [0, 1] por quien llama — esta función sólo
-    dibuja, no valida el dato del jugador.
+    dibuja, no valida el dato del jugador. AUD-812 FIX P0-001: defensa en
+    profundidad — pct fuera de [0,1] (boss HUD ratio >1 por health > max)
+    antes causaba `ValueError: subsurface outside surface` en `boss_venado`
+    y `boss_rey` al dibujar la barra de jefe con vida > máximo.
     """
+    # AUD-812 P0-001 — clamp defensivo: pct puede llegar >1 si health > max
+    # (boss fase o curación). Sin clamp, ancho_relleno > rect.width rompe subsurface.
+    pct = max(0.0, min(1.0, float(pct)))
     radio = max(2, min(rect.height // 2, _e(4)))
     surface.blit(_panel_redondeado(rect.width, rect.height, radio), rect.topleft)
 
     if pct > 0.0:
-        ancho_relleno = max(1, int(rect.width * pct))
+        ancho_relleno = max(1, min(rect.width, int(rect.width * pct)))
         relleno_completo = _relleno_redondeado(
             rect.width, rect.height, radio, color_inicio, color_fin)
         surface.blit(relleno_completo.subsurface((0, 0, ancho_relleno, rect.height)),
@@ -249,10 +255,14 @@ RECUADRO_MINIMAPA_DISENO: tuple[int, int, int, int] = (270, 6, 44, 44)
 
 def minimap_rect_por_defecto() -> pygame.Rect:
     """`RECUADRO_MINIMAPA_DISENO` a la escala de la pantalla real."""
+    # PS4 1280×720 - minimapa compacto 128×128, no 192 (too large, mostly empty)
+    if settings.INTERNAL_WIDTH == 1280 and settings.INTERNAL_HEIGHT == 720:
+        return pygame.Rect(settings.INTERNAL_WIDTH - 152, 24, 128, 128)
     return _rect_escalado(*RECUADRO_MINIMAPA_DISENO)
 
 
-_PORTRAIT_STATES = ("normal", "hurt", "critical", "dead")
+_PORTRAIT_STATES = ("normal", "walk", "jump", "fall", "dash", "hurt", "critical", "dead")
+# PS4 moderno: retrato animado con 8 estados, 80×80, smooth, refleja todos los estados del player
 
 
 class HUD:
@@ -276,6 +286,10 @@ class HUD:
         self._save_notify_timer: float = 0.0
         #: AUD-281 — lo que queda del rebote del contador de monedas.
         self._pulso_timer: float = 0.0
+        # PS4 moderno: retrato animado que refleja todos los estados del player
+        self._portrait_anim_timer: float = 0.0
+        self._player_state_for_portrait: str = "normal"
+        self._player_velocity_for_portrait: float = 0.0
         # AUD-729: declaraciones para mypy — los rects los crea el Builder
         # dinámicamente. Sin estas anotaciones mypy cree que HUD no tiene esos
         # atributos y cada acceso es attr-defined. Se inicializan con dummy
@@ -286,6 +300,7 @@ class HUD:
         self._paso_barra_bloque: int = 0
         self._vida_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._estamina_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
+        self._mana_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._carga_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._oxigeno_bar_rect: pygame.Rect = pygame.Rect(0, 0, 0, 0)
         self._score_region: pygame.Rect = pygame.Rect(0, 0, 0, 0)
@@ -443,6 +458,13 @@ class HUD:
         #: AUD-141 — estamina. En 0 la barra no se dibuja.
         self._estamina_actual: float = 0.0
         self._estamina_max: float = 0.0
+        #: AUD-762 — mana celeste. En 0 la barra no se dibuja (mismo que estamina).
+        self._mana_actual: float = 0.0
+        self._mana_max: float = 0.0
+        #: B2 — NG+ level para badge compacto, 0 = ocultar (deriva de SaveData.ng_plus)
+        self._ng_plus_level: int = 0
+        #: B3 — porcentaje de ítems del mapa (None = ocultar, no hay ítems)
+        self._porcentaje_items: float | None = None  # type: ignore[no-redef]
         #: AUD-260 — tiempo bala. Negativo = el escenario no lo pide.
         self._bala_fraccion: float = -1.0
         self._bala_activo: bool = False
@@ -732,6 +754,29 @@ class HUD:
             self._oxigeno_flash_on = False
             self._oxigeno_flash_timer = 0.0
 
+        # PS4 moderno: animación del retrato (respiración + reflejo de estado)
+        self._portrait_anim_timer += dt
+
+    def set_player_state(self, state_name: str, velocity_x: float = 0.0) -> None:
+        """PS4 moderno: el retrato refleja el estado real del player (walk/jump/fall/dash)."""
+        # Normalizar a 8 estados del retrato
+        s = state_name.lower() if state_name else "normal"
+        if "walk" in s or "run" in s:
+            self._player_state_for_portrait = "walk"
+        elif "jump" in s:
+            self._player_state_for_portrait = "jump"
+        elif "fall" in s:
+            self._player_state_for_portrait = "fall"
+        elif "dash" in s:
+            self._player_state_for_portrait = "dash"
+        elif "hurt" in s or "damage" in s:
+            self._player_state_for_portrait = "hurt"
+        elif "dead" in s or "dying" in s:
+            self._player_state_for_portrait = "dead"
+        else:
+            self._player_state_for_portrait = "normal"
+        self._player_velocity_for_portrait = abs(velocity_x)
+
     def _get_portrait_state(self) -> str:
         if self._health <= 0:
             return "dead"
@@ -739,22 +784,32 @@ class HUD:
             return "critical"
         if self._hurt_portrait_timer > 0:
             return "hurt"
+        # PS4: si el player está en movimiento, mostrar walk/jump/fall/dash
+        # Prioridad: hurt/critical/dead > dash > jump/fall > walk > normal
+        ps = getattr(self, "_player_state_for_portrait", "normal")
+        if ps in ("jump", "fall", "dash", "walk"):
+            # Solo si no está herido/crítico
+            return ps
         return "normal"
 
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_portrait(surface)
         self._draw_barra_de_vida(surface)
-        self._draw_special_meter(surface)
         self._draw_estamina(surface)
+        self._draw_mana(surface)
+        self._draw_special_meter(surface)
         self._draw_oxigeno(surface)
         self._draw_tiempo_bala(surface)
         self._draw_boss_rush(surface)
         self._draw_score(surface)
+        self._draw_nivel(surface)
+        self._draw_porcentaje_items(surface)
         self._draw_timer(surface)
         if self._boss_active:
             self._draw_boss_hud(surface)
         if self._combo_count > 0:
             self._draw_combo_indicator(surface)
+        self._draw_ng_plus(surface)
         self._draw_save_notification(surface)
 
     def set_score(self, puntos: int, monedas: int = 0) -> None:
@@ -876,6 +931,135 @@ class HUD:
         iy = r.y + (monedas.get_height() - icono.get_height()) // 2
         surface.blit(icono, (ix, iy))
 
+    def set_porcentaje_items(
+        self, pct: float | None, collected: int | None = None, total: int | None = None
+    ) -> None:
+        """B3 — % de ítems del escenario (0.0-1.0). None = no mostrar (TOTAL==0).
+
+        collected/total opcionales para etiqueta "3/4". Si no se pasan, sólo % se muestra.
+        """
+        if pct is None:
+            self._porcentaje_items = None  # type: ignore[attr-defined]
+        else:
+            try:
+                v = float(pct)
+                v = max(0.0, min(1.0, v))
+                self._porcentaje_items = v  # type: ignore[attr-defined]
+            except Exception:
+                self._porcentaje_items = None  # type: ignore[attr-defined]
+        # Guardar conteo para etiqueta detallada
+        try:
+            self._porcentaje_items_collected = int(collected) if collected is not None else None  # type: ignore[attr-defined]
+            self._porcentaje_items_total = int(total) if total is not None else None  # type: ignore[attr-defined]
+        except Exception:
+            self._porcentaje_items_collected = None  # type: ignore[attr-defined]
+            self._porcentaje_items_total = None  # type: ignore[attr-defined]
+
+    def _draw_nivel(self, surface: pygame.Surface) -> None:
+        """Barra de nivel / XP — compacta bajo retrato, no centro dominante."""
+        try:
+            from src.engine.core.experience import get_experience
+            exp = get_experience()
+            nivel = exp.nivel
+            dentro, total = exp.progreso_del_nivel()
+            pct = (dentro / total) if total > 0 else 0
+            # Texto compacto: NIVEL 2 110/200 (sin +pts que domina centro)
+            txt = f"NIVEL {nivel}  {dentro}/{total}"
+            # Posición: bajo bloque identidad (izquierda), compacta 96×12, no centro
+            # Usa _carga_bar_rect como referencia para apilar debajo
+            bx0 = self._carga_bar_rect.x
+            by0 = self._carga_bar_rect.bottom + _e(6)
+            # Si no hay carga (raro), usa vida
+            if self._carga_bar_rect.width == 0:
+                bx0 = self._vida_bar_rect.x
+                by0 = self._vida_bar_rect.bottom + _e(6)
+            f = self._font
+            surf = f.render(txt, True, (180, 220, 255))
+            bg_w = self._carga_bar_rect.width
+            bg_h = surf.get_height() + _e(2)
+            bg_x = bx0
+            bg_y = by0
+            # No dibujar si se sale de pantalla (fallback 800)
+            if bg_y + bg_h < settings.INTERNAL_HEIGHT:
+                bg_surf = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+                bg_surf.fill((20, 25, 40, 160))
+                surface.blit(bg_surf, (bg_x, bg_y))
+                surface.blit(surf, (bg_x + _e(4), bg_y + _e(2)))
+                # Barra fina debajo del texto
+                bar_w = bg_w - _e(8)
+                bar_h = _e(3)
+                bx = bg_x + _e(4)
+                by = bg_y + bg_h + _e(1)
+                pygame.draw.rect(surface, (40, 45, 60), (bx, by, bar_w, bar_h), border_radius=1)
+                fill_w = int(bar_w * max(0.0, min(1.0, pct)))
+                if fill_w > 0:
+                    pygame.draw.rect(surface, (90, 160, 255), (bx, by, fill_w, bar_h), border_radius=1)
+                    pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
+        except Exception:
+            pass
+
+    def _draw_porcentaje_items(self, surface: pygame.Surface) -> None:
+        """B3 — barra de ítems del mapa. None = ocultar (TOTAL==0)."""
+        pct = getattr(self, "_porcentaje_items", None)
+        if pct is None:
+            return
+        try:
+            pct_f = max(0.0, min(1.0, float(pct)))
+        except Exception:
+            return
+        # Coordenadas: debajo de NIVEL (que ya está bajo carga), o bajo carga si NIVEL no dibujó
+        # Usar carga_bar_rect como ancla; si no existe, usar vida
+        try:
+            bx0 = self._carga_bar_rect.x
+            # NIVEL ocupa ~12+bar_h debajo de carga; porcentaje va un poco más abajo
+            # NIVEL's bg_y = carga.bottom+6, bg_h ~14, bar_h 3 → NIVEL termina en ~ carga.bottom+26
+            # Colocamos porcentaje en carga.bottom + 30 para no solapar NIVEL
+            by0 = self._carga_bar_rect.bottom + _e(30)
+            if self._carga_bar_rect.width == 0:
+                bx0 = self._vida_bar_rect.x
+                by0 = self._vida_bar_rect.bottom + _e(30)
+            # Si se sale de pantalla, no dibujar (fallback 800)
+            if by0 + _e(12) >= settings.INTERNAL_HEIGHT:
+                return
+            f = self._font
+            # Texto: "42% (3/4)" si tenemos conteo, si no sólo "42%"
+            pct_int = round(pct_f * 100)
+            coll = getattr(self, "_porcentaje_items_collected", None)
+            tot = getattr(self, "_porcentaje_items_total", None)
+            if coll is not None and tot is not None and tot > 0:
+                txt = f"{pct_int}%  {coll}/{tot}"
+            else:
+                txt = f"{pct_int}%"
+            surf = f.render(txt, True, (180, 220, 255))
+            bg_w = self._carga_bar_rect.width
+            # Fallback ancho si carga es 0
+            if bg_w == 0:
+                bg_w = self._vida_bar_rect.width
+            bg_h = surf.get_height() + _e(2)
+            bg_x = bx0
+            bg_y = by0
+            bg_surf = pygame.Surface((bg_w, bg_h), pygame.SRCALPHA)
+            bg_surf.fill((20, 25, 40, 160))
+            surface.blit(bg_surf, (bg_x, bg_y))
+            surface.blit(surf, (bg_x + _e(4), bg_y + _e(2)))
+            # Barra fina debajo del texto (mismo estilo que NIVEL)
+            bar_w = bg_w - _e(8)
+            bar_h = _e(3)
+            bx = bg_x + _e(4)
+            by = bg_y + bg_h + _e(1)
+            pygame.draw.rect(surface, (40, 45, 60), (bx, by, bar_w, bar_h), border_radius=1)
+            fill_w = int(bar_w * pct_f)
+            if fill_w > 0:
+                # Color: dorado al 100%, azul ítem en otro caso
+                if pct_f >= 1.0:
+                    col = (255, 220, 80)
+                else:
+                    col = (90, 200, 120)
+                pygame.draw.rect(surface, col, (bx, by, fill_w, bar_h), border_radius=1)
+            pygame.draw.rect(surface, (120, 140, 180, 180), (bx, by, bar_w, bar_h), width=1, border_radius=1)
+        except Exception:
+            pass
+
     def set_special_meter(self, current: float, max_val: float) -> None:
         self._special_current = current
         self._special_max = max_val
@@ -897,6 +1081,24 @@ class HUD:
         self._estamina_max = max_val
         self._reflow_bloque_de_identidad()
 
+    def set_mana(self, current: float, max_val: float) -> None:
+        """AUD-762 — mana celeste. En 0 la barra no se dibuja (mismo que estamina)."""
+        self._mana_actual = current  # type: ignore[attr-defined]
+        self._mana_max = max_val  # type: ignore[attr-defined]
+        self._reflow_bloque_de_identidad()
+
+    def set_ng_plus_level(self, level: int) -> None:
+        """B2 — NG+ level para badge compacto. 0 = ocultar. Deriva de SaveData.ng_plus."""
+        try:
+            lvl = max(0, int(level or 0))
+        except Exception:
+            lvl = 0
+        self._ng_plus_level = lvl  # type: ignore[attr-defined]
+
+    def get_ng_plus_level(self) -> int:
+        """B2 — nivel NG+ actualmente mostrado (0 = oculto). Para tests."""
+        return int(getattr(self, "_ng_plus_level", 0) or 0)
+
     def set_oxigeno(self, ratio: float, avisando: bool) -> None:
         """AUD-575 (GAP-071 resuelto) — el aire del buceo. `ratio < 0`
         significa "no hay agua en juego" y la barra no se dibuja; con el
@@ -908,20 +1110,32 @@ class HUD:
         self._oxigeno_avisando = avisando
 
     def _reflow_bloque_de_identidad(self) -> None:
-        """AUD-565 — con la estamina apagada, la barra de carga sube a
-        ocupar el sitio que dejaría vacío la de estamina, en vez de que el
-        bloque de identidad se quede con un tercio en blanco.
-
-        `_estamina_bar_rect` no cambia de tamaño ni desaparece: sigue
-        existiendo con su ancho de siempre (lo consultan pruebas y
-        `estamina_bar_rect()`) — sólo deja de pintarse (`_draw_estamina`
-        ya lo hacía por su cuenta) y de reservarle sitio a la barra de
-        abajo.
+        """AUD-565 + AUD-762 — bloque identidad 5 barras: vida, estamina, mana, carga, oxigeno.
+        Cada barra activa ocupa un slot; inactivas colapsan sin hueco.
+        `_estamina/mana_bar_rect` siguen existiendo con ancho (pruebas) — sólo dejan de pintarse.
         """
+        y = self._y_barras_bloque
+        paso = self._paso_barra_bloque
+        # vida siempre en y
+        self._vida_bar_rect.y = y
+        y += paso
+        # estamina
         if self._estamina_max > 0.0:
-            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque * 2
+            self._estamina_bar_rect.y = y
+            y += paso
+        # mana celeste (AUD-762)
+        if getattr(self, "_mana_max", 0) > 0.0:
+            self._mana_bar_rect.y = y  # type: ignore[attr-defined]
+            y += paso
+        # carga (ultimate azul) siempre visible? si no, colapsa
+        self._carga_bar_rect.y = y
+        y += paso
+        # oxigeno solo si ratio >=0 se dibuja, pero reserva sitio igual si visible
+        if getattr(self, "_oxigeno_ratio", -1) >= 0.0:
+            self._oxigeno_bar_rect.y = y
         else:
-            self._carga_bar_rect.y = self._y_barras_bloque + self._paso_barra_bloque
+            # oxigeno inactivo no ocupa, pero no afecta carga
+            pass
 
     def set_tiempo_bala(self, fraccion: float, activo: bool) -> None:
         """AUD-260. Con `fraccion` negativa la barra no se dibuja.
@@ -967,6 +1181,15 @@ class HUD:
         _dibujar_barra_moderna(surface, self._estamina_bar_rect, pct,
                                (70, 60, 15), color_fin, halo_al_llenar=False)
 
+    def _draw_mana(self, surface: pygame.Surface) -> None:
+        """AUD-762 — mana celeste. En 0 la barra no se dibuja."""
+        if getattr(self, "_mana_max", 0) <= 0.0:
+            return
+        pct = max(0.0, min(1.0, self._mana_actual / self._mana_max))  # type: ignore[attr-defined]
+        color_fin = (70, 180, 220)  # celeste
+        _dibujar_barra_moderna(surface, self._mana_bar_rect, pct,  # type: ignore[attr-defined]
+                               (15, 40, 60), color_fin, halo_al_llenar=False)
+
     def _draw_oxigeno(self, surface: pygame.Surface) -> None:
         """AUD-575 (GAP-071 resuelto) — la barra de aire del buceo.
         Azul de agua, y roja parpadeante en el tramo de aviso: el color
@@ -996,6 +1219,40 @@ class HUD:
                 surface.blit(label, (self._carga_bar_rect.x,
                                      self._carga_bar_rect.y - _e(12)))
 
+    def _draw_ng_plus(self, surface: pygame.Surface) -> None:
+        """B2 — badge compacto NG+X. 0 = oculto. No mueve barras/portrait/reflow."""
+        lvl = int(getattr(self, "_ng_plus_level", 0) or 0)
+        if lvl <= 0:
+            return
+        texto = f"NG+{lvl}"
+        # Fuente pequeña escalada, dorado sobre fondo oscuro como boss rush
+        fuente = font(_e(10))
+        txt = fuente.render(texto, True, (255, 220, 100))
+        pad = _e(4)
+        w = txt.get_width() + pad * 2
+        h = txt.get_height() + pad * 2
+        # Posición: a la derecha del retrato (portrait.right + 6, portrait.top)
+        # No usa _score_region/cronómetro para no solaparlos; es overlay HUD
+        # que respeta INTERNAL 1280/1920 sin reflow. Gap 6 asegura no pegar.
+        try:
+            x0 = self._portrait_frame_rect.right + _e(6)  # type: ignore[attr-defined]
+            y0 = self._portrait_frame_rect.top  # type: ignore[attr-defined]
+        except Exception:
+            x0 = _e(40)
+            y0 = _e(10)
+        # Clamp dentro de pantalla
+        if x0 + w > settings.INTERNAL_WIDTH - _e(4):
+            x0 = settings.INTERNAL_WIDTH - w - _e(4)
+        if y0 + h > settings.INTERNAL_HEIGHT - _e(4):
+            y0 = settings.INTERNAL_HEIGHT - h - _e(4)
+        rect = pygame.Rect(x0, y0, w, h)
+        # Fondo pill semitransparente + borde dorado
+        bg = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(bg, (40, 32, 12, 210), bg.get_rect(), border_radius=_e(4))
+        pygame.draw.rect(bg, (255, 220, 100, 180), bg.get_rect(), width=1, border_radius=_e(4))
+        surface.blit(bg, rect.topleft)
+        surface.blit(txt, (rect.x + pad, rect.y + pad))
+
     def _draw_save_notification(self, surface: pygame.Surface) -> None:
         if self._save_notify_timer <= 0:
             return
@@ -1016,29 +1273,79 @@ class HUD:
         surface.blit(txt, (tx, ty))
 
     def _draw_portrait(self, surface: pygame.Surface) -> None:
-        """AUD-535 — "diseño circular o de bordes redondeados suaves":
-        el marco 9-slice rectangular se reemplaza por un disco de fondo,
-        el retrato recortado en círculo (`_recortar_circular`, una vez al
-        cargar) y un anillo — no una caja."""
+        """PS4 moderno — retrato circular 80×80, animado, refleja todos los estados.
+        Sin estirar: a 1280×720 es 80×80 real (no 24×4), con anillo, glow y respiración."""
         state = self._get_portrait_state()
-        portrait = self._portraits.get(state)
+        # Fallback a normal si el estado no tiene asset (walk/jump etc usan normal si falta)
+        portrait = self._portraits.get(state) or self._portraits.get("normal")
         r = self._portrait_frame_rect
         centro = r.center
         radio = r.width // 2
 
-        color_map = {"normal": (60, 60, 80), "hurt": (180, 60, 60),
-                     "critical": (200, 40, 40), "dead": (40, 40, 40)}
-        color_anillo = color_map.get(state, (60, 60, 80))
+        # PS4: paleta por estado, más viva y con degradado
+        color_map = {
+            "normal": (80, 100, 160), "walk": (70, 160, 110), "jump": (200, 180, 80),
+            "fall": (200, 120, 60), "dash": (90, 200, 220), "hurt": (200, 60, 60),
+            "critical": (220, 30, 30), "dead": (50, 50, 60),
+        }
+        color_anillo = color_map.get(state, (80, 100, 160))
 
-        pygame.draw.circle(surface, (14, 14, 22), centro, radio)
+        # Animación PS4: respiración sutil (escala 1.0→1.03) y pulso de hurt/critical
+        t = getattr(self, "_portrait_anim_timer", 0.0)
+        # Respiración base 1.5s
+        respiracion = 1.0 + 0.02 * math.sin(t * 4.2)
+        # Si está en dash/jump, pulso más rápido
+        if state in ("dash", "jump"):
+            respiracion += 0.015 * math.sin(t * 12)
+        if state in ("hurt", "critical") and int(t * 8) % 2 == 0:
+            # Parpadeo rojo al estar herido
+            color_anillo = (255, 60, 60) if state != "dead" else (60, 60, 60)
+
+        # Fondo con glow exterior (PS4: bloom suave)
+        # Sombra
+        sombra = pygame.Surface((r.width + 12, r.height + 12), pygame.SRCALPHA)
+        pygame.draw.circle(sombra, (0, 0, 0, 60), (r.width//2 + 6, r.height//2 + 6), radio)
+        surface.blit(sombra, (r.x - 6, r.y - 6), special_flags=pygame.BLEND_RGBA_SUB)
+        # Base
+        pygame.draw.circle(surface, (18, 18, 32), centro, radio)
+        # Glow exterior según estado
+        glow_surf = pygame.Surface((r.width + 16, r.height + 16), pygame.SRCALPHA)
+        glow_col = (*color_anillo, 35)
+        pygame.draw.circle(glow_surf, glow_col, (r.width//2 + 8, r.height//2 + 8), radio + 6, width=8)
+        surface.blit(glow_surf, (r.x - 8, r.y - 8), special_flags=pygame.BLEND_RGBA_ADD)
+
         if portrait:
-            surface.blit(portrait, self._portrait_sprite_rect)
+            # Animación: escalar levemente el retrato con respiración (smooth)
+            # Usamos smoothscale para alta calidad PS4, no nearest
+            pw, ph = portrait.get_size()
+            # Calcular tamaño animado
+            aw = max(1, int(pw * respiracion))
+            ah = max(1, int(ph * respiracion))
+            if aw != pw or ah != ph:
+                # Escalar con smooth para PS4
+                anim_portrait = pygame.transform.smoothscale(portrait, (aw, ah))
+                # Centrar
+                off_x = (aw - pw) // 2
+                off_y = (ah - ph) // 2
+                px = self._portrait_sprite_rect.x - off_x
+                py = self._portrait_sprite_rect.y - off_y
+                surface.blit(anim_portrait, (px, py))
+            else:
+                surface.blit(portrait, self._portrait_sprite_rect)
         else:
             pygame.draw.circle(surface, color_anillo, centro,
                                self._portrait_sprite_rect.width // 2)
 
-        anillo = _anillo_del_retrato(r.width, max(2, _e(1)), color_anillo)
+        anillo = _anillo_del_retrato(r.width, 3, color_anillo)
         surface.blit(anillo, r.topleft)
+        # Highlight superior (PS4: brillo) — AUD-824 (P17): blit normal,
+        # sin `BLEND_RGBA_ADD`. El aditivo suma el RGB sin ponderar por el
+        # alfa: el 18 no atenuaba nada y saturaba un disco blanco opaco
+        # sobre medio retrato. El blit normal respeta el alfa y da el
+        # brillo sutil que el comentario promete.
+        highlight = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
+        pygame.draw.circle(highlight, (255, 255, 255, 18), (centro[0] - r.x, centro[1] - r.y - radio//3), radio//2)
+        surface.blit(highlight, r.topleft)
 
     def _draw_barra_de_vida(self, surface: pygame.Surface) -> None:
         """AUD-535 — reemplaza la fila de corazones: "se eliminan los
@@ -1094,7 +1401,8 @@ class HUD:
         # jefe tiene margen, rojo cuando queda poco. El halo se apaga aquí
         # a propósito — un jefe a tope de vida no necesita un brillo de
         # "listo", el que sí lo pide es el medidor especial del jugador.
-        ratio = (max(0.0, self._boss_health / self._boss_max_health)
+        # AUD-812 P0-001 — clamp a [0,1]: health puede superar max tras curación o fase
+        ratio = (max(0.0, min(1.0, self._boss_health / self._boss_max_health))
                  if self._boss_max_health > 0 else 0.0)
         color_fin = (210, 70, 50) if ratio < 0.3 else (215, 190, 70)
         rect = pygame.Rect(bar_x, bar_y + _e(10), bar_width, bar_height)

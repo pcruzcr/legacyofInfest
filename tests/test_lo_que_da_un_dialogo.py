@@ -63,11 +63,18 @@ class _EscenaMinima:
 @pytest.fixture
 def escena(event_bus, monkeypatch):
     from src.engine.core.game_context import GameContext
+    from src.framework.scenes.stage_parts.persistencia import PersistenciaDeEscenario
     from src.framework.scenes.stage_parts.senales import SenalesDeEscenario
     from src.framework.scenes.stage_parts.sonido import SonidoDeEscenario
     from src.framework.stage.interactable_system import InteractableSystem
 
-    class _Senales(SenalesDeEscenario, SonidoDeEscenario, _EscenaMinima):
+    # AUD-839 — AUD-733 movió banderas, diálogo y persistencia al mixin
+    # `PersistenciaDeEscenario`, y `_subscribe_event_handlers` termina llamando
+    # a `_suscribir_persistencia()`. Sin el mixin en la composición, la escena
+    # mínima no tiene ni el método ni los handlers que esta prueba ejercita.
+    class _Senales(
+        SenalesDeEscenario, PersistenciaDeEscenario, SonidoDeEscenario, _EscenaMinima
+    ):
         pass
 
     context = GameContext(

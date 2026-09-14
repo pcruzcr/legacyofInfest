@@ -73,22 +73,28 @@ class TestLosCreditosLeenElAutorReal:
         from src.engine.scenes.end_credits_scene import _creditos_por_escenario
 
         autores = {autor for _, autor in _creditos_por_escenario()}
+        # AUD-839 — los TMX nuevos firmaron con el nombre completo; el
+        # set de esperados sigue al disco, no al revés.
         esperados = {
-            "César Ubáu Calvo", "Fabrizio E", "Jose Pablo Monestel Cruz",
-            "Saul", "Yariel",
+            "César Ubáu Calvo", "Fabrizio Espinoza Arce",
+            "Jose Pablo Monestel Cruz", "Saul",
+            "Yariel Andrey Elizondo Jiménez",
         }
         faltan = esperados - autores
         assert faltan == set(), f"autores reales que no aparecen: {faltan}"
 
     def test_el_equipo_docente_no_se_confunde_con_un_estudiante(self, _video) -> None:
+        # AUD-839 — la regla es por prefijo: cada generador firma con una
+        # variante ("of"/"de", "Infest"/"InFest", "— Backtracking", "— IA")
+        # y la lista exacta envejecía entre commits.
         from src.engine.scenes.end_credits_scene import (
-            _AUTOR_DOCENTE,
             _creditos_por_escenario,
+            _es_autor_docente,
         )
 
         for _, autor in _creditos_por_escenario():
             if "docente" in autor.lower() or "legacy" in autor.lower():
-                assert autor in _AUTOR_DOCENTE, (
+                assert _es_autor_docente(autor), (
                     f"variante de 'equipo docente' no reconocida: {autor!r} — "
                     f"aparecería listada como si fuera un estudiante"
                 )
@@ -100,8 +106,8 @@ class TestLaPantallaDeCreditosSeArmaConDatosReales:
 
         lineas = [t for t, _ in EndCreditsScene._armar_lineas()]
         texto = "\n".join(lineas)
-        assert "Fabrizio E" in texto
-        assert "Yariel" in texto
+        assert "Fabrizio Espinoza Arce" in texto
+        assert "Yariel Andrey Elizondo Jiménez" in texto
         assert "Student A" not in texto and "Student B" not in texto
 
     def test_no_hay_lineas_vacias_de_autor(self, _video) -> None:

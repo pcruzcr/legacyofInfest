@@ -104,7 +104,10 @@ class EnemyFlying(EnemyBase):
                 pygame.Vector2(cx, cy + 48),
             ]
 
-        # Rect size
+        # Rect size — AUD-821 (P16): la colisión va a la escala del
+        # frame (14×10, ver `_load_zone_sprites` abajo), no al doble. d1676cf
+        # duplicó el rect sin tocar sprites ni dibujo y el murciélago mordía
+        # a 20 px de donde se veía.
         self.rect.width = 20
         self.rect.height = 14
 
@@ -134,6 +137,12 @@ class EnemyFlying(EnemyBase):
         base = settings.ASSETS_DIR / "sprites" / "enemies" / zone_key
         for key, fname in [("fly", f"enemy_fly_{zone_key}.png")]:
             path = base / fname
+            if not path.exists():
+                # AUD-830: hoja de vuelo opcional ausente (p. ej. zone4, sin
+                # carpeta propia): se conserva el walk genérico de zona sin
+                # avisar; el "Missing asset" asustaba por arte que nunca
+                # existió. El aviso queda para hojas corruptas de verdad.
+                continue
             try:
                 frames = AssetLoader.load_sprite_sheet(path, fw, fh)
                 self._sprite_frames[key] = frames

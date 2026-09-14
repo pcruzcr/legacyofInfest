@@ -161,7 +161,25 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         id="skill_parry", name="Parada",
         description="Botón de jefe: desvías los ataques",
         icon_color=(255, 200, 100), slot="skill",
-),
+    ),
+    # GPL-CIERRE R-001 — las dos habilidades fantasma ahora existen de verdad.
+    # `skill_ground_pound` la exige `airborne.py` como candado y `skill_coraza`
+    # la suelta `boss_gavilan.py`; ninguna estaba en este catálogo, así que
+    # `economia.py` filtraba el botín del Gavilán en silencio y el pisotón no
+    # podía otorgarse en ningún mapa nuevo vía `skill_drop`. La campaña actual
+    # no cambia (todos sus mapas están exentos en
+    # `ESCENARIOS_CON_HABILIDADES_LIBRES`); lo que cambia es que un mapa nuevo
+    # sí puede otorgarlas y el Gavilán sí entrega lo que promete.
+    "skill_ground_pound": ItemDef(
+        id="skill_ground_pound", name="Pisotón",
+        description="Botón de jefe: en el aire, abajo + ataque para caer recto y soltar una onda",
+        icon_color=(255, 140, 60), slot="skill",
+    ),
+    "skill_coraza": ItemDef(
+        id="skill_coraza", name="Coraza del Gavilán",
+        description="Botón de jefe: el daño que recibes se reduce un cuarto",
+        icon_color=(150, 200, 220), slot="skill",
+    ),
 
     # AUD-637 -- Collectible Identity: nuevos tipos de coleccionables con identidad
     #: Fragmento de reliquia -- lore del mundo, se entrega en SecretRoom
@@ -176,11 +194,35 @@ _ITEM_DEFS: dict[str, ItemDef] = {
         description="Investigacion de campo: conocimiento puro, sin uso inmediato.",
         icon_color=(100, 180, 255),
     ),
-    #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
+     #: Token de compañero -- se gana en SecretRoom y se gasta para invocar buddy
     "buddy_token": ItemDef(
         id="buddy_token", name="Token de compañero",
         description="Un llamado de ayuda. Usalo para invocar un compañero.",
         icon_color=(200, 180, 220),
+    ),
+    # Pokemon RPG -- Pokeball para captura cenital
+    "pokeball": ItemDef(
+        id="pokeball", name="Pokeball",
+        description="Bola para capturar monstruos en hierba alta",
+        icon_color=(255, 80, 80), price=10,
+    ),
+    # B5 — piezas de corazón ¼ (4 piezas = 1 corazón) — Zelda
+    "heart_piece": ItemDef(
+        id="heart_piece", name="Fragmento de corazón",
+        description="1/4 de corazón. Junta 4 para +1 de vida máxima",
+        icon_color=(255, 100, 150), max_hp_bonus=0.25,
+    ),
+    # B7 — Canción del Sol (toggle día/noche) — Zelda OoT
+    "sun_song": ItemDef(
+        id="sun_song", name="Canción del Sol",
+        description="Alterna día y noche. Úsala para puzzles de luz/oscuridad",
+        icon_color=(255, 220, 80), price=50,
+    ),
+    # B9 — subarmas (base: arco) — SotN
+    "subweapon_dagger": ItemDef(
+        id="subweapon_dagger", name="Daga arrojadiza",
+        description="Subarma rápida. Consume 1 energía",
+        icon_color=(180, 180, 200), price=30,
     ),}
 
 

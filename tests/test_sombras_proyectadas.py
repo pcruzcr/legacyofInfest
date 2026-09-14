@@ -162,9 +162,14 @@ class TestApagadoPorDefecto:
     def test_stage_data_lo_declara_apagado(self) -> None:
         import dataclasses
 
-        from src.framework.stage.stage_loader import StageData
+        # AUD-839 — `StageData` ya no es una dataclass: es la fachada que reparte
+        # kwargs planos entre sus dominios, y `sombras_proyectadas` vive en
+        # `StagePhysics`. El default que esta prueba fija es el de ahí.
+        from src.framework.stage.stage_data import StagePhysics
 
-        por_nombre = {f.name: f.default for f in dataclasses.fields(StageData)}
+        por_nombre = {
+            f.name: f.default for f in dataclasses.fields(StagePhysics)
+        }
         assert por_nombre["sombras_proyectadas"] is False
 
     def test_ningun_mapa_entregado_lo_enciende(self) -> None:
@@ -187,7 +192,12 @@ class TestApagadoPorDefecto:
         # Modernización 2.5D — stage0 también activa sombras con normal maps
         # 1-bit y profondeur 0.85/1.0 para demostrar la iluminación 2.5D en
         # prólogo sin cambiar coste de entregas.
-        inesperados = sorted(set(con_prop) - {"stage_mecanicas.tmx", "stage0.tmx"})
+        # AUD-839 — boss_paburu las enciende para la pelea nueva (la ola 4.1b
+        # del dueño): la arena del jefe es un escaparate más, como el
+        # laboratorio y stage0. Por nombre, no relajando la prueba.
+        inesperados = sorted(set(con_prop) - {
+            "stage_mecanicas.tmx", "stage0.tmx", "boss_paburu.tmx",
+        })
         assert not inesperados, f"ya lo usaban: {inesperados}"
 
     def test_el_laboratorio_si_las_enciende(self) -> None:

@@ -200,6 +200,81 @@ class TestTirolesas:
 
 
 # ══════════════════════════════════════════════════════════════
+# AUD-820 (P12) — el viaje entero, con física de verdad
+# ══════════════════════════════════════════════════════════════
+
+
+class TestElViajeNoAcumulaGravedad:
+    """Los tests de arriba manejan el ESTADO a mano (`_state_instance.update`)
+    y por eso nunca vieron P12: la gravedad la suma `Player.update` DESPUÉS
+    del estado. Aquí se conduce el fotograma completo (`player.update`)."""
+
+    def _viaje(self, jugador, cable, topes: int = 600):
+        from src.framework.entities.states import FallingState, JumpingState
+
+        desviacion_max = 0.0
+        for _ in range(topes):
+            jugador.update(FRAME, [], None)
+            estado = jugador._state_instance
+            if isinstance(estado, (FallingState, JumpingState)):
+                break
+            punto = cable.punto_mas_cercano(
+                pygame.Vector2(jugador.rect.center),
+            )
+            desviacion_max = max(
+                desviacion_max, abs(jugador.rect.top - punto.y),
+            )
+        else:
+            pytest.fail("el viaje no terminó: el cable no suelta al jinete")
+        return desviacion_max
+
+    def test_la_tirolesa_no_hunde_bajo_el_cable(self, jugador):
+        """P12 — a media bajada el jinete iba ~80 px bajo la línea y la
+        progresión de un nivel se podía bypassear por física."""
+        from src.framework.entities.states import TirolesaState
+
+        cable = Tirolesa(
+            origen=pygame.Vector2(100, 100), destino=pygame.Vector2(500, 300),
+        )
+        jugador._change_state_instance(TirolesaState(cable))
+        desviacion = self._viaje(jugador, cable)
+        assert desviacion <= 16.0, (
+            f"el jinete se hundió {desviacion:.1f} px bajo el cable: "
+            "la gravedad sigue integrándose durante el viaje (P12)"
+        )
+
+    def test_la_velocidad_no_crece_durante_el_viaje(self, jugador):
+        """Sin nadie que la resetee, `velocity.y` crecía sin freno."""
+        from src.framework.entities.states import TirolesaState
+
+        cable = Tirolesa(
+            origen=pygame.Vector2(100, 100), destino=pygame.Vector2(500, 300),
+        )
+        jugador._change_state_instance(TirolesaState(cable))
+        for _ in range(60):
+            jugador.update(FRAME, [], None)
+        assert abs(jugador.velocity.y) <= 1.0, (
+            f"velocity.y = {jugador.velocity.y:.1f}: el integrador sigue "
+            "sumando gravedad colgado del cable (P12)"
+        )
+
+    def test_trepar_no_se_hunde_fotograma_a_fotograma(self, jugador):
+        """El hermano liana: reescribe su velocidad cada frame, pero la
+        física le sumaba un escalón de gravedad encima en cada uno."""
+        from src.framework.entities.states import TrepandoState
+
+        liana = Liana(rect=pygame.Rect(100, 0, 4, 300))
+        jugador._change_state_instance(TrepandoState(liana))
+        y0 = jugador.position.y
+        for _ in range(120):
+            jugador.update(FRAME, [], None)
+        assert abs(jugador.position.y - y0) <= 2.0, (
+            f"se hundió {jugador.position.y - y0:.1f} px en 2 s quieto: "
+            "la liana también recibía gravedad (P12)"
+        )
+
+
+# ══════════════════════════════════════════════════════════════
 # El TMX
 # ══════════════════════════════════════════════════════════════
 
@@ -316,7 +391,12 @@ class TestAirChaseYaSeAlcanza:
         # Bases legítimas: `AirborneState` la heredan Jumping y Falling, y
         # `_AttackState` los tres ataques. Entrar en ellas directamente no
         # tendría sentido.
-        bases = {"AirborneState", "_AttackState"}
+        # AUD-DEBUFF: StaggerState y PossessedState son debuffs que se
+        # activan vía sistema de efectos (efectos.py) y eventos veneno/
+        # golpe pesado, no por vía directa _change_state_instance en el
+        # código base — su wiring es vía Player.efectos y trigger manual.
+        # Se consideran estados terminales de efecto, no huérfanos.
+        bases = {"AirborneState", "_AttackState", "StaggerState", "PossessedState"}
         huerfanos = declarados - destinos - bases
         assert not huerfanos, (
             f"estados escritos a los que no llega ningún camino: {sorted(huerfanos)}"

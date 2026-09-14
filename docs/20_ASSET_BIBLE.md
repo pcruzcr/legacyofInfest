@@ -23,9 +23,11 @@ date_processed: "2026-08-12"
 > - **Resolución interna:** el cuerpo en inglés decía «800×600 internal
 >   render» y el resumen en español decía «320x224» — son
 >   `INTERNAL_WIDTH`/`INTERNAL_HEIGHT` de `settings.py` (ver
->   `22_API_CONTRACTS.md` §2.1), y valen **800×600**. El 320×224 es la
+>   `22_API_CONTRACTS.md` §2.1), y valían **800×600** entonces. El 320×224 es la
 >   resolución antigua, ya retirada (ver los commits recientes AUD-450 a
 >   AUD-454 sobre la maquetación fija a 320×224).
+>   **AUD-754 (supersede):** hoy valen **1280×720**; donde este documento diga
+>   800×600 como vigente, léase 1280×720 salvo la tabla de §8, corregida abajo.
 > - **Fotogramas de animación del jugador:** el cuerpo en inglés decía
 >   `player_jump.png` 4 fotogramas, `player_fall.png` 3, `player_crouch.png`
 >   3; el resumen en español decía 3, 2 y 2. Verificado contra
@@ -61,7 +63,7 @@ Cada recurso listado aquí tiene ruta, formato, dimensiones, restricciones de pa
 | Tamaño de píxel | 1:1 — sin subpíxeles (escalado `nearest` para tiles/sprites, `smoothscale` solo HUD) |
 | Anti-aliasing | Nunca en tiles/sprites (sí en HUD `hud_frame` degradado `LANCZOS` AUD-527) |
 | Transparencia | Binaria O alfa suave para efectos (humo, agua, luces) |
-| Resolución interna | 800×600 — todo se diseña nativo 800×600, sin estirar 320×224 |
+| Resolución interna | 1280×720 — todo se diseña nativo 1280×720, sin estirar 320×224 (AUD-754; era 800×600) |
 | 2.5D / Profundidad | `profundidad_min 0.85 profundidad_max 1.0 profundidad_curva 1.5 orden_por_y true` + `sombras_proyectadas true` (AUD-277/339) |
 | Iluminación | `Light` con normal maps **8-bit** `*_n.png` (8 dirs + esquinas) + sombras dithered PSX, bloom suave |
 | Estilo | **PSX 2D Tributo Vintage Moderno:** pixel art nítido con detalle HD, dithering Bayer 4×4 para sombras, outline 1px, paleta por zona con acentos, normal maps para luz, sin blur salvo HUD |
@@ -422,15 +424,15 @@ Cada tileset debe contener baldosas organizadas en las siguientes categorías (c
 
 Ubicación: `assets/backgrounds/`
 
-Cada escenario necesita tres capas de fondo, con nombre `bg_<zona>_far.png`, `bg_<zona>_mid.png` y `bg_<zona>_near.png`. Las dimensiones deben igualar o superar el ancho del mapa del escenario × 224px. El conjunto de Stage 0 es la excepción, a 800×600 (la resolución interna del juego).
+Cada escenario necesita tres capas de fondo, con nombre `bg_<zona>_far.png`, `bg_<zona>_mid.png` y `bg_<zona>_near.png`. Las dimensiones deben igualar o superar el ancho del mapa del escenario × 224px. El conjunto de Stage 0 mide 1280×720 / 2560×720 / 3840×720 (medido con `pygame.image.load().get_size()`; la mención a 800×600 era pre-AUD-754).
 
 ### 8.1 Stage 0
 
 | Fichero | Capa | Tamaño | Parallax |
 |---|---|---|---|
-| `stage0/bg_stage0_far.png` | BG_Far | 800×600 | 0.15× |
-| `stage0/bg_stage0_mid.png` | BG_Mid | 800×600 | 0.40× |
-| `stage0/bg_stage0_near.png` | BG_Near | 800×600 | 0.70× |
+| `stage0/bg_stage0_far.png` | BG_Far | 1280×720 | 0.15× |
+| `stage0/bg_stage0_mid.png` | BG_Mid | 2560×720 | 0.40× |
+| `stage0/bg_stage0_near.png` | BG_Near | 3840×720 | 0.70× |
 
 Cada zona usa un único conjunto de fondo genérico que carga `StageLoader`
 con el patrón `bg_{zone}_{layer}.png` (p. ej. `bg_zone1_far.png`). Las
