@@ -244,11 +244,13 @@ class Vigia:
         """Panel del Vigia arriba a la IZQUIERDA, con lo que ha medido.
 
         Estaba a la derecha y se solapaba con el minimapa del motor, que el
-        HUD coloca en Rect(675, 15, 110, 110): los dos paneles se pisaban y
-        el resultado era ilegible.
+        HUD coloca en Rect(675, 15, 110, 110). Al traerlo a la izquierda se
+        puso en y=92 y entonces pisaba la barra de estamina, que ocupa
+        Rect(15, 94, 60, 12). Ahora va debajo del radar, que es el ultimo
+        hueco libre de la columna izquierda.
         """
         x = 10
-        y = 92
+        y = 272
         panel = pygame.Surface((124, 52), pygame.SRCALPHA)
         panel.fill((10, 20, 35, 165))
         surface.blit(panel, (x, y))

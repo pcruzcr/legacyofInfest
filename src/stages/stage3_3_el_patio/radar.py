@@ -3,8 +3,8 @@ Module: radar
 System: stage (student assignment)
 Academic Unit: Unidad IV (representacion de escena) + II (cambio de coordenadas).
 
-Camara de rastreo: un cuadro en una esquina que ensena el trozo de nivel que
-viene DELANTE del jugador, dibujado como esquema —terreno, enemigos, monedas,
+Camara de rastreo: un cuadro en la columna izquierda, justo debajo de las
+barras de vida, que ensena el trozo de nivel que viene DELANTE del jugador, dibujado como esquema —terreno, enemigos, monedas,
 checkpoints y la salida— en vez de como pixeles del juego.
 
 Por que no reutiliza el minimapa del motor
@@ -29,7 +29,12 @@ from __future__ import annotations
 import pygame
 
 LADO = 132          # lado del cuadro, en pixeles de pantalla
-MARGEN = 8
+# Columna izquierda, justo debajo del HUD del motor: retrato en (15,15,60,60),
+# barra de vida en (15,80,60,12) y estamina en (15,94,60,12), o sea que la
+# franja de arriba termina en y=106. El radar arranca en 114 y el panel del
+# Vigia va debajo, en 272.
+POS_X = 10
+POS_Y = 114
 VENTANA = 640       # cuantos pixeles de mundo entran en el cuadro
 ADELANTO = 170      # cuanto se adelanta la ventana hacia donde se mira
 
@@ -45,7 +50,7 @@ JUGADOR = (90, 200, 255)
 
 
 class Radar:
-    """Dibuja un esquema movil del nivel en una esquina."""
+    """Dibuja un esquema movil del nivel bajo el HUD de la izquierda."""
 
     def __init__(self, datos, salida: tuple[float, float]) -> None:
         self._solidos = list(getattr(datos, "collision_rects", []) or [])
@@ -98,8 +103,7 @@ class Radar:
             return
         ventana = self._ventana(jugador)
         k = LADO / ventana.width
-        ox = surface.get_width() - LADO - MARGEN
-        oy = surface.get_height() - LADO - MARGEN - 18
+        ox, oy = POS_X, POS_Y
 
         cuadro = pygame.Surface((LADO, LADO), pygame.SRCALPHA)
         cuadro.fill(FONDO)

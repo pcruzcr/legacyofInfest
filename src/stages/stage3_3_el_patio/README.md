@@ -674,12 +674,24 @@ pero al no apoyarse en nada se veía como una tira vertical de trozos sueltos
 flotando delante del fondo: no leía como reja, leía como un fallo de dibujado.
 Eliminada.
 
-**El panel del Vigía se mudó a la izquierda.** Estaba en `(668, 58)` y el HUD
-del motor coloca su minimapa en `Rect(675, 15, 110, 110)`: los dos se pisaban
-y el resultado era ilegible. Ahora va en `(10, 92)`.
+**Orden de la columna izquierda.** El HUD del motor ocupa arriba: retrato en
+`(15, 15, 60, 60)`, vida en `(15, 80, 60, 12)` y estamina en
+`(15, 94, 60, 12)` — la franja termina en **y=106**. Debajo van los dos
+paneles propios, sin solaparse con nada:
+
+| Elemento | Posición |
+|---|---|
+| Radar | `(10, 114)`, 132×132 + rótulo |
+| Panel del Vigía | `(10, 272)`, 124×52 |
+
+El panel del Vigía llegó aquí en dos pasos: estaba en `(668, 58)` y se
+solapaba con el minimapa del motor (`Rect(675, 15, 110, 110)`); al traerlo a
+la izquierda se puso en `y=92` y entonces pisaba la barra de estamina. `y=272`
+es el primer hueco que no choca con nada.
 
 **Radar de rastreo** (`radar.py`) — Unidades II y IV. Un cuadro de 132×132 en
-la esquina inferior derecha que dibuja el **esquema** del tramo que viene
+la **columna izquierda, justo debajo de las barras de vida** (`(10, 114)`),
+que dibuja el **esquema** del tramo que viene
 delante: terreno en verde, repisas en amarillo, enemigos en rojo, monedas en
 naranja, checkpoints y la salida en verde claro, y el jugador con un anillo
 azul. La ventana cubre 640 px de mundo y va **adelantada 170 px hacia donde
