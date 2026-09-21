@@ -3,7 +3,7 @@ assignment_type: stage
 assignment_name: "El Patio"
 assignment_id: "stage3_3_el_patio"
 zone: 3
-student_name: "Rebeca"
+student_name: Rebeca Arce Álvarez
 units_demonstrated: [II, III, IV, V, VI, VII, VIII, IX]
 evaluation_milestone: "Evaluación Práctica III"
 ---
@@ -784,6 +784,16 @@ en el piso de abajo a propósito: es el respiro antes de encarar el muro grande.
 jugador si se mantiene a menos de 28 px del centro, con un cooldown de 6 segundos.
 
 ## 7. Reflexión
+Lo más difícil fue encontrar el punto donde el nivel se viera limpio y a la vez
+costara pasarlo. Al principio pensé que dificultad y cantidad eran lo mismo, así
+que llegué a poner 30 enemigos, 15 de ellos halcones iguales. El resultado no era
+difícil, era ilegible. Me di cuenta viendo el minimapa, que se llenaba de puntos
+rojos y ya no me decía nada. Bajar a 5 enemigos no hizo el nivel más fácil —el
+puntaje del calificador no se movió—, pero sí lo hizo jugable, porque por fin se
+entendía lo que estaba pasando en pantalla.
 
-_(a completar por la estudiante: ¿qué fue lo más difícil de armar el escenario? ¿qué
-mejorarías?)_
+Si tuviera más tiempo mejoraría dos cosas. La primera, el piso de arriba, que
+quedó más vacío que el de abajo. 
+ La segunda, la detección de noche, todavía confunde las ventanas encendidas del
+edificio con criaturas creo que se resolvería comparando fotogramas para quedarse
+solo con lo que se mueve, ya que el fondo está quieto y los enemigos no.
