@@ -852,6 +852,48 @@ legible la conexión entre la Unidad VIII y la IX.
 
 Puntaje sin cambios: **130/130 (100,0%)**.
 
+## 4p. La ronda del vigilante: sigilo antes del refugio (2026-09-21)
+
+Un tramo de **sigilo** en la meseta (x 2000–2270), justo antes de la cabaña.
+Un foco barre de un lado a otro; quedarse a la vista cuesta salud, y la forma
+de pasar es meterse en uno de los tres arbustos y esperar a que el haz se
+aleje. Mientras se está escondido, la pantalla dice cuántos segundos faltan
+para poder salir, que es lo que convierte la espera en una decisión y no en
+una pausa a ciegas.
+
+| Estado | Mensaje | Qué pasa |
+|---|---|---|
+| A la vista, dentro del haz | **¡TE VEN!** | 0,25 de daño por segundo |
+| Escondida y el haz encima | **SAL EN n** | A salvo; cuenta atrás real |
+| Escondida y el haz lejos | **¡AHORA!** | Momento de correr al siguiente arbusto |
+
+El daño usa `player.apply_damage()`, la misma llamada que usan los enemigos
+del motor — no una resta de vida por libre.
+
+**Por qué el foco no es un enemigo del motor.** Se planteó como un `Shooter`
+con un cono, pero un enemigo del registro trae vida, estados de daño, muerte y
+una IA que lo acerca al jugador (`SquadBrain` le asigna táctica). Aquí hace
+falta lo contrario: algo que **no** se puede matar, que **no** persigue y que
+sólo importa por dónde mira. Como enemigo sería más código y además mentiría
+al jugador, que intentaría dispararle.
+
+**Por qué el barrido va suavizado.** Con interpolación lineal el foco llega al
+extremo y cambia de sentido de golpe, y eso se lee como un error de
+programación. `ease_in_out_quad` sobre la ida y otra vez sobre la vuelta hace
+que frene al acercarse a cada extremo y arranque despacio al volver, como gira
+una persona que vigila.
+
+**Un fallo que salió en la simulación.** El aviso *"SAL EN"* se mostraba
+siempre que el jugador estaba escondido, y como el haz casi nunca cubre el
+arbusto salía un *"SAL EN 0"* permanente que no informaba de nada. Ahora la
+cuenta atrás sólo aparece si el foco está encima **en ese momento**; si no,
+pone *"¡AHORA!"*, que es la información útil: se puede correr.
+
+Verificado en simulación de un ciclo completo: **0 golpes estando escondida**,
+y el mensaje cambiando correctamente entre los tres estados.
+
+Puntaje sin cambios: **130/130 (100,0%)**.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
