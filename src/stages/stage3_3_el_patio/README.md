@@ -78,8 +78,8 @@ Seis gotas de agua recorren esa misma curva con fases de tiempo distintas
 
 Archivo: [`../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx`](../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx)
 
-Mapa de **150×56 tiles (2400×896 px)** — tres pantallas de desplazamiento horizontal
-y 296 px de recorrido vertical de cámara, sobre la resolución interna real del
+Mapa de **150×60 tiles (2400×960 px)** — tres pantallas de desplazamiento horizontal
+y 360 px de recorrido vertical de cámara, sobre la resolución interna real del
 motor, 800×600. Ver 4k para por qué creció a lo alto. Usa dos tilesets:
 `tileset_gavilan_ciudad.png` del profesor (64 tiles, `firstgid=1`, compartido con el
 mapa del jefe de la zona) y `tileset_patio_props.png` propio (8 tiles, `firstgid=65`;
@@ -759,6 +759,41 @@ que la pieza estaba colgada. Además el veredicto muestra su antigüedad
 (*"hace 3s"*) y **caduca a los 8 segundos**: antes el último resultado se
 quedaba pegado para siempre y la Onda mantenía la bonificación "aereo" media
 partida después, sin nada aéreo cerca.
+
+## 4ñ. El estanque del arranque (2026-09-21)
+
+Un tramo de agua nada más empezar, en las columnas 6–20. No es decoración
+pintada: usa el objeto **`WaterZone`** del motor, que crea una `ZonaDeAgua`
+(`src/framework/ecs/components.py`) y con ella se encadena todo lo que el
+framework ya tenía escrito — `SwimmingState` para nadar,
+`systems_zonas.en_agua()` para detectar la entrada, y `WaterEffect`
+(`src/framework/vfx/water_effect.py`) para pintarlo.
+
+| Propiedad | Valor | Para qué |
+|---|---|---|
+| `water_effect` | `true` | Enciende el `WaterEffect` del motor |
+| `water_tint` | `#3c788c` | Verde-azulado apagado, a juego con la noche |
+| `corriente_x` | `12.0` | El agua empuja suave hacia la salida |
+
+**El suelo no se interrumpe, se hunde.** El estanque baja 4 filas (64 px) y
+vuelve a subir, así que por debajo del agua se sigue pudiendo caminar y salir
+de un salto — 64 px contra los 87,1 que da el salto. Si se hubiera abierto un
+hueco de verdad, el análisis de `grade_stage.py` —que salta entre sólidos y no
+sabe nadar— habría declarado el nivel **incompletable** y se habrían perdido
+los 12 puntos de `design_completable`. Por eso la colisión del piso de abajo
+pasó de un rectángulo a tres: `Solid_FloorBajoA`, `Solid_FondoPoza` y
+`Solid_FloorBajoB`.
+
+El mapa creció de 56 a **60 filas (896 → 960 px)** para que el fondo del
+estanque tenga sitio por debajo del nivel del suelo.
+
+**Un detalle del formato del tinte:** `water_tint` se escribió primero como
+`"60,120,140"` y el cargador lo rechazó —`_parse_light_color` sólo acepta
+nombres (`blood`, `cold`, `fire`, `toxic`, `warm`, `white`) o `#rrggbb`— y
+cayó en su valor por defecto `warm`, que pintaba el agua **naranja**. En
+hexadecimal (`#3c788c`) carga bien y sin avisos.
+
+Puntaje sin cambios: **130/130 (100,0%)**.
 
 ## 5. Obstáculos y plataformeo
 
