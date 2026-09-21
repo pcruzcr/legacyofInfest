@@ -276,71 +276,11 @@
   </object>
 
   <object id="3" type="NextTrigger" name="NextTrigger_01" x="2352" y="512" width="16" height="64"/>
-  <object id="10" type="Walker" name="Walker_01" x="176" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="right"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="11" type="Walker" name="Walker_02" x="400" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="left"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="12" type="Walker" name="Walker_03" x="900" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="right"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="13" type="Walker" name="Walker_04" x="1296" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="left"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="14" type="Walker" name="Walker_05" x="1700" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="right"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
   <object id="15" type="Walker" name="Walker_06" x="2130" y="576">
    <properties>
     <property name="zone" type="int" value="3"/>
     <property name="patrol_length" type="int" value="48"/>
     <property name="facing" value="left"/>
-    <property name="patrol_speed" type="float" value="30.0"/>
-    <property name="alert_speed" type="float" value="55.0"/>
-    <property name="damage_on_contact" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="16" type="Walker" name="Walker_07" x="2280" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="patrol_length" type="int" value="48"/>
-    <property name="facing" value="right"/>
     <property name="patrol_speed" type="float" value="30.0"/>
     <property name="alert_speed" type="float" value="55.0"/>
     <property name="damage_on_contact" type="float" value="0.5"/>
@@ -355,72 +295,7 @@
     <property name="sine_frequency" type="float" value="0.6"/>
    </properties>
   </object>
-  <object id="29" type="Flying" name="Flying_10" x="1850" y="200">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="75"/>
-    <property name="sine_amplitude" type="float" value="20"/>
-    <property name="sine_frequency" type="float" value="0.9"/>
-   </properties>
-  </object>
-  <object id="30" type="Shooter" name="Shooter_01" x="24" y="384">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="31" type="Shooter" name="Shooter_02" x="2360" y="384">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="32" type="Shooter" name="Shooter_03" x="24" y="512">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.8"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="70" type="Shooter" name="Shooter_04" x="500" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.9"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="71" type="Shooter" name="Shooter_05" x="608" y="448">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="1.0"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
   <object id="72" type="Shooter" name="Shooter_06" x="1150" y="576">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="0.9"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="73" type="Shooter" name="Shooter_07" x="1712" y="448">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="fire_rate" type="float" value="1.0"/>
-    <property name="projectile_speed" type="float" value="120.0"/>
-    <property name="patrol_length" type="int" value="0"/>
-   </properties>
-  </object>
-  <object id="74" type="Shooter" name="Shooter_08" x="2200" y="576">
    <properties>
     <property name="zone" type="int" value="3"/>
     <property name="fire_rate" type="float" value="0.9"/>
@@ -455,25 +330,6 @@
     <property name="sine_frequency" type="float" value="0.5"/>
    </properties>
   </object>
-  <object id="302" type="FlyingBomber" name="Dron_03" x="2270" y="300">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="flight_mode" value="sine"/>
-    <property name="flight_speed" type="float" value="45.0"/>
-    <property name="sine_amplitude" type="float" value="18.0"/>
-    <property name="sine_frequency" type="float" value="0.5"/>
-   </properties>
-  </object>
-  <object id="303" type="Medusa" name="Medusa_01" x="1000" y="300">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-   </properties>
-  </object>
-  <object id="304" type="Medusa" name="Medusa_02" x="2000" y="250">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-   </properties>
-  </object>
   <object id="305" type="Vine" name="Liana_01" x="560" y="400" width="16" height="176">
    <properties>
     <property name="ancho_de_agarre" type="int" value="12"/>
@@ -484,18 +340,6 @@
    <properties>
     <property name="ancho_de_agarre" type="int" value="12"/>
     <property name="velocidad" type="float" value="70.0"/>
-   </properties>
-  </object>
-  <object id="307" type="Climber" name="Trepador_01" x="560" y="540">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="climb_speed" type="float" value="60.0"/>
-   </properties>
-  </object>
-  <object id="308" type="Climber" name="Trepador_02" x="1680" y="540">
-   <properties>
-    <property name="zone" type="int" value="3"/>
-    <property name="climb_speed" type="float" value="60.0"/>
    </properties>
   </object>
 </objectgroup>

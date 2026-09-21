@@ -86,7 +86,7 @@ ver 4g para por qué ese número y no 61). Tiene las 8 capas obligatorias:
 
 | Capa | Contenido |
 |------|-----------|
-| `BG_Far` | Vacía: el fondo entero viene de `background_zone="stage3_3_el_patio"` (campus diurno propio, ver 4d) |
+| `BG_Far` | Vacía: el fondo entero viene de `background_zone="stage3_3_el_patio"` (campus nocturno, ver 4j) |
 | `BG_Mid` | Vacía, por lo mismo |
 | `BG_Near` | Vacía (el patio es abierto: no hay pared de fondo que recortar) |
 | `Terrain` | Piso, muros de cierre de altura completa, 2 muros de bloqueo, 11 plataformas de un solo sentido, 2 jardineras y 8 obstáculos (rocas y cajones) |
@@ -105,12 +105,17 @@ porque a diferencia del cuarto del jefe, El Patio no tiene pared de fondo.
 
 | Objeto TMX (`type`) | Nombre narrativo | Cantidad | Notas |
 |---|---|---|---|
-| `Walker` | WalkerPalom | 7 | Patrulla el piso, `patrol_speed=30`, `alert_speed=55` |
-| `Flying` | FlyingHalcon | 2 | Vuelo `sine`, con picado en alerta (ya incluido en `EnemyFlying`) |
-| `Shooter` | ShooterQuetzal | 8 | Estacionarios, en las ventanas de los muros, `fire_rate=0.8` |
-| `FlyingBomber` | Dron | 3 | Suelta bombas cada 2,5 s (daño 1,0, radio 48). Dos vigilan los muros |
-| `Climber` | Trepador | 2 | Sube y baja por las lianas: te disputa la ruta de ascenso |
-| `Medusa` | Medusa | 2 | Fauna: deriva en vaivén, no daña ni se deja dañar |
+| `FlyingBomber` | Dron | 2 | Uno por muro de bloqueo (x=608 y x=1728). Bombardea cada 2,5 s |
+| `Flying` | FlyingHalcon | 1 | x=900. Vuelo `sine`, con picado en alerta |
+| `Shooter` | ShooterQuetzal | 1 | x=1150. Estacionario, `fire_rate=0.8` |
+| `Walker` | WalkerPalom | 1 | x=2130. Patrulla el piso, `patrol_speed=30` |
+
+**Sólo 5, y por qué.** El minimapa dibuja un punto rojo por enemigo, y con 24
+el nivel se leía como una mancha: el problema era de lectura, no de
+dificultad. Quedan cinco repartidos de x=608 a x=2130, **3 aéreos y 2
+terrestres** — las dos clases tienen que seguir presentes o el Vigía se queda
+sin nada que clasificar. El calificador da los 10 puntos de `enemies_placed`
+con tener al menos uno, así que el recorte no cuesta nota: sigue en 95,4%.
 
 Todos con la propiedad `zone=3` para cargar los sprites de zona correctos automáticamente.
 
@@ -532,6 +537,27 @@ pero llamándola desde `entrenar_vigia.py`: su `main()` carga las imágenes con
 `.convert()` sin haber abierto pantalla, y por línea de comandos aborta con
 *"No convert format has been set"*. Se abre la pantalla antes y se llama a la
 función, en vez de tocar un fichero del profesor.
+
+## 4j. Fondo de campus nocturno y sólo 5 enemigos (2026-09-20)
+
+**El fondo.** Se sustituyó el campus diurno por una imagen de campus nocturno
+con luna. El motor escala **toda** capa de fondo a 800×600
+(`StageLoader._try_append_bg`) y la repite en horizontal con
+`shift_x = offset.x * factor % layer_w`, así que una sola imagen cubre los
+2400 px del mapa — pero la costura se ve si el borde derecho no continúa en el
+izquierdo.
+
+Para evitarlo, la imagen se prepara así: se escala por altura y se recorta al
+centro a **920×600** (el edificio queda centrado), se funde la banda sobrante
+de 120 px del final sobre el principio con un degradado lineal, y se recorta a
+**800×600**. Así la columna 799 enlaza con la 0 exactamente como enlazaban la
+799 y la 800 en el original. Diferencia media medida en la costura: **5,8/255**.
+
+`mid` y `near` quedan como PNG **totalmente transparentes** en vez de
+borrarse: el fondo es una pintura única y no tiene sentido separarla en tres
+planos de parallax, pero si los ficheros faltan el cargador registra un aviso
+de fichero ausente en cada partida. Con alfa 0 se pegan y no pintan nada.
+Sólo `far` es visible, con factor 0,15 — lento, como corresponde a un cielo.
 
 ## 5. Obstáculos y plataformeo
 
