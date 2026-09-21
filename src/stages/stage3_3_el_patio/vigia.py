@@ -48,10 +48,11 @@ from src.framework.processing.vision_tools import VisionTools
 def _invertir(mascara: pygame.Surface) -> pygame.Surface:
     """Devuelve el negativo de la mascara.
 
-    Hace falta porque Otsu marca en blanco lo MAS CLARO, y en el patio lo mas
-    claro es el cielo: los enemigos, que son oscuros, quedaban como agujeros
-    dentro de una unica region gigante de 24.629 px en vez de como siluetas
-    propias. Con la mascara invertida cada criatura es su propio componente.
+    Otsu marca en blanco lo MAS CLARO, y cual de los dos lados contiene a las
+    criaturas depende del fondo: con el patio de dia el cielo era claro y los
+    pajaros oscuros —habia que invertir—, y con el patio de noche es al reves,
+    porque lo brillante son las ventanas encendidas. Por eso `segmentar()` ya
+    no invierte siempre: prueba las dos polaridades. Ver su docstring.
     """
     return pygame.surfarray.make_surface(255 - pygame.surfarray.array3d(mascara))
 
@@ -74,6 +75,12 @@ CAJA_MAX = (40, 30)
 KERNEL_APERTURA = 3
 LADO_PARCHE = 32      # lado del parche que se clasifica (igual que el dataset)
 AMENAZA_ALTA = 3      # siluetas simultaneas para considerar el patio "en alerta"
+# Cuanto vale un veredicto antes de caducar. Sin esto el ultimo resultado se
+# quedaba pegado para siempre: el jugador se alejaba del halcon y la Onda
+# seguia con la bonificacion "aereo" media partida despues, sin nada aereo
+# cerca. Ocho segundos es algo mas que el intervalo de analisis, asi que un
+# hueco suelto sin deteccion no apaga el veredicto de golpe.
+VIGENCIA = 8.0
 
 
 def _parece_criatura(region) -> bool:
@@ -92,6 +99,7 @@ class Vigia:
         self._reloj = 0.0
         self.modo: str | None = None          # "aereo" | "terrestre" | None
         self.confianza: float = 0.0
+        self.edad: float = 0.0                # segundos desde el ultimo acierto
         self.amenaza: int = 0
         self.regiones: list = []
         self._recuadros: list[pygame.Rect] = []
@@ -136,22 +144,42 @@ class Vigia:
         # conteo de siluetas no significa nada.
         suave = FilterTools.gaussian_blur(recorte, sigma=1.0)
 
+        # Unidad VII (2/2): el patio de noche es oscuro —luminancia media en
+        # torno a 64 de 255— y todo el detalle se apelmaza en la parte baja
+        # del histograma. Se mide y, si esta oscuro, se realza ANTES de
+        # umbralizar; si no, Otsu corta sobre un rango aplastado y las
+        # siluetas no se separan del cielo.
+        hist = FilterTools.compute_histogram(suave)
+        total = int(hist["total_pixels"]) or 1
+        # media = suma(i * pixeles_con_luminancia_i) / total, igual que en
+        # `fountain.py`: `compute_histogram` devuelve arrays de 256 por canal.
+        media = sum(i * int(c) for i, c in enumerate(hist["luminance"])) / total
+        if media < 110:
+            # `adjust_brightness` solo acepta factores hasta 4,0, y un recorte
+            # casi negro (media de 26) pedia 4,1. Se acota.
+            factor = min(4.0, 110.0 / max(media, 1.0))
+            suave = FilterTools.adjust_brightness(suave, factor)
+
         # Unidad VIII (1/3): umbral de Otsu — elige el corte solo, sin numero
-        # magico, que es lo que hace falta aqui porque el patio cambia de
-        # luminosidad entre el cielo y la sombra de los muros.
+        # magico, que es lo que hace falta aqui porque el patio cambia mucho
+        # de luminosidad entre el cielo y las ventanas encendidas.
         mascara, _umbral = VisionTools.threshold_otsu(suave)
 
-        # Ver `_invertir`: sin esto todo el recorte es un solo componente.
-        mascara = _invertir(mascara)
-
-        # Unidad VIII (2/3): apertura = erosion + dilatacion. Borra las motas
-        # sueltas y deja las siluetas con su tamano casi intacto.
-        mascara = VisionTools.morphological_open(mascara, KERNEL_APERTURA)
-
-        # Unidad VIII (3/3): componentes conectados, ya medidos por region.
-        regiones = [r for r in VisionTools.analyze_regions(mascara)
+        # Unidad VIII (2/3) y polaridad: apertura sobre las DOS versiones de
+        # la mascara. Cual sirve depende del fondo —de dia las criaturas eran
+        # lo oscuro y habia que invertir; de noche son lo claro y no— y
+        # fijarlo a mano dejo al Vigia ciego (0 de 8 detecciones) en cuanto se
+        # cambio el fondo a nocturno. Se queda la polaridad que encuentre mas
+        # siluetas con forma de bicho, asi que se adapta sola.
+        mejor_mascara, mejor_regiones = None, []
+        for candidata in (mascara, _invertir(mascara)):
+            abierta = VisionTools.morphological_open(candidata, KERNEL_APERTURA)
+            # Unidad VIII (3/3): componentes conectados, ya medidos por region.
+            regs = [r for r in VisionTools.analyze_regions(abierta)
                     if _parece_criatura(r)]
-        return mascara, regiones
+            if mejor_mascara is None or len(regs) > len(mejor_regiones):
+                mejor_mascara, mejor_regiones = abierta, regs
+        return mejor_mascara, mejor_regiones
 
     def parche_de(self, recorte: pygame.Surface, cerca_de=None):
         """Segmenta y devuelve el parche de una region. Lo usa el generador.
@@ -200,12 +228,19 @@ class Vigia:
         self.amenaza = len(regiones)
         self._recuadros = [r.bounding_rect.copy() for r in regiones[:6]]
 
-        # Unidad IX: la silueta mas grande manda, y se clasifica el parche de
-        # la MASCARA — la salida de la Unidad VIII alimenta a la IX, que es la
-        # tuberia que pide la rubrica.
+        # Unidad IX: manda la silueta MAS CERCANA AL JUGADOR, no la mas
+        # grande. El patio nocturno tiene ventanas encendidas que el umbral
+        # tambien marca, y varias son mayores que un pajaro: con "la mas
+        # grande" el Vigia acababa clasificando una ventana. El jugador esta
+        # siempre en el centro del recorte, y lo que le amenaza es lo que se
+        # le acerca. Se clasifica el parche de la MASCARA, que es la salida de
+        # la Unidad VIII alimentando a la IX.
         if not regiones or self._modelo is None:
             return
-        parche = self.encuadrar(mascara, regiones[0])
+        centro = (recorte.get_width() / 2, recorte.get_height() / 2)
+        cerca = min(regiones, key=lambda r: (r.centroid[0] - centro[0]) ** 2
+                    + (r.centroid[1] - centro[1]) ** 2)
+        parche = self.encuadrar(mascara, cerca)
         if parche is None:
             return
         try:
@@ -213,12 +248,19 @@ class Vigia:
             probabilidades = PatternRecognitionTools.classify_proba(rasgos, self._modelo)
             self.modo = max(probabilidades, key=lambda k: probabilidades[k])
             self.confianza = float(probabilidades[self.modo])
+            self.edad = 0.0
         except Exception as exc:
             logger.debug("Vigia: no pude clasificar la region (%s)", exc)
 
     # -- ciclo de vida -----------------------------------------
     def update(self, dt: float, pantalla: pygame.Surface, jugador,
                offset: pygame.Vector2) -> None:
+        if self.modo is not None:
+            self.edad += dt
+            if self.edad > VIGENCIA:
+                # Caducado: se olvida el veredicto y con el la bonificacion.
+                self.modo = None
+                self.confianza = 0.0
         self._reloj += dt
         if self._reloj < INTERVALO:
             return
@@ -266,12 +308,23 @@ class Vigia:
                          (x + 6, y + 34))
             return
         if self.modo is None:
-            surface.blit(self._fuente.render("analizando...", True, (170, 190, 205)),
+            # "sin contacto" y no "analizando...": el Vigia SIEMPRE esta
+            # analizando, asi que ese texto no informaba de nada y con el
+            # nivel a 5 enemigos se quedaba fijo tramos enteros — parecia
+            # que la pieza estaba colgada. Esto dice lo que de verdad pasa:
+            # se ha mirado y no hay nada que clasificar.
+            surface.blit(self._fuente.render("sin contacto", True, (150, 165, 180)),
                          (x + 6, y + 34))
             return
         color_m = (255, 200, 120) if self.modo == "aereo" else (150, 230, 160)
         etiqueta = "%s %.0f%%" % (self.modo, self.confianza * 100)
         surface.blit(self._fuente.render(etiqueta, True, color_m), (x + 6, y + 34))
+        # Antiguedad del veredicto: distingue "lo esta viendo ahora" de "lo
+        # vio hace rato", que es justo lo que cambia el comportamiento.
+        if self.edad >= 1.0:
+            viejo = self._fuente.render("hace %ds" % int(self.edad), True,
+                                        (130, 145, 160))
+            surface.blit(viejo, (x + 118 - viejo.get_width(), y + 34))
 
     def draw_regiones(self, surface: pygame.Surface, jugador,
                       offset: pygame.Vector2) -> None:

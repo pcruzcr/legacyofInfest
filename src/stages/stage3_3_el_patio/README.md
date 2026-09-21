@@ -446,36 +446,46 @@ VIII enciende el indicador de alerta del panel.
 
 | | |
 |---|---|
-| **Dataset** | `dataset/aereo/` (191) y `dataset/terrestre/` (165) — **356 muestras**, mínimo exigido 10/clase |
+| **Dataset** | `dataset/aereo/` (377) y `dataset/terrestre/` (664) — **1041 muestras**, mínimo exigido 10/clase |
 | **Origen** | Sprites reales de zona 3: halcón (`Flying`, y el dron que reusa su hoja) vs paloma, garza, buitre y quetzal |
 | **Aumento** | 24 variantes por fotograma: fondo, escala (1,0/1,25/1,5) y espejo |
 | **Características** | `VisionTools.extract_features(method="hog")` → **288 por muestra**, `float32` |
-| **División** | 70/30 estratificada, semilla fija 3 → 249 entrenamiento / 107 prueba |
+| **División** | 70/30 estratificada, semilla fija 3 → 729 entrenamiento / 312 prueba |
 | **Clasificador** | `PatternRecognitionTools.train(..., "forest", n_estimators=40)` |
-| **Comparados** | knn 0,822 · tree 0,860 · svm 0,841 · **forest 0,925** |
+| **Comparados** | knn 0,776 · tree 0,769 · svm 0,808 · **forest 0,824** |
 | **Modelo** | `models/vigia.pkl` (`save_model`, ruta que exige `23_DATA_SCHEMAS.md` §6.2) |
 
-**`EvaluationResult` — precisión de prueba 0,9252 (92,5%)**, por encima del
+**`EvaluationResult` — precisión de prueba 0,8237 (82,4%)**, por encima del
 0,70 exigido.
 
 | Precisión por clase | |
 |---|---|
-| `aereo` | 0,930 |
-| `terrestre` | 0,920 |
+| `aereo` | 0,681 |
+| `terrestre` | 0,905 |
 
 **Matriz de confusión** (filas = real, columnas = predicho):
 
 | | aereo | terrestre |
 |---|---|---|
-| **aereo** | 53 | 4 |
-| **terrestre** | 4 | 46 |
+| **aereo** | 77 | 36 |
+| **terrestre** | 19 | 180 |
 
 ```
               precision    recall  f1-score   support
-       aereo       0.93      0.93      0.93        57
-   terrestre       0.92      0.92      0.92        50
-    accuracy                           0.93       107
+       aereo       0.80      0.68      0.74       113
+   terrestre       0.83      0.90      0.87       199
+    accuracy                           0.82       312
 ```
+
+**Por qué bajó del 92,5% que decía la versión anterior de este README.** Ese
+número estaba medido sobre un dataset compuesto contra el fondo **diurno**,
+que el juego ya no muestra en ninguna parte — era alto y falso. Con el patio
+nocturno el problema es objetivamente más difícil: el cielo es oscuro, los
+pájaros también, y las ventanas encendidas del edificio generan siluetas que
+compiten con las criaturas. 82,4% sobre el fondo real vale más que 92,5% sobre
+uno inventado. La clase `aereo` es la que peor va (0,681): un halcón recortado
+contra cielo negro tiene mucho menos contraste que una paloma contra el
+césped iluminado.
 
 Reproducible con:
 
@@ -709,6 +719,47 @@ código del profesor y lo usan las otras 25 entregas.
 
 Puntaje sin cambios: **130/130 (100,0%)**.
 
+## 4n. El Vigía se quedó ciego al cambiar el fondo (2026-09-20)
+
+Al sustituir el fondo diurno por el nocturno no se volvió a probar el Vigía, y
+la detección cayó a **0 de 8** en las pruebas. Dos fallos encadenados:
+
+**1. La polaridad estaba fijada a mano.** Otsu marca en blanco lo más claro, y
+de qué lado caen las criaturas depende del fondo:
+
+| Fondo | Lo claro es | Las criaturas quedan |
+|---|---|---|
+| Patio de día | el cielo | en negro → había que **invertir** |
+| Patio de noche | las ventanas encendidas | en blanco → invertir lo **rompe** |
+
+La inversión, que era correcta de día, de noche fundía todo el recorte en una
+sola región de 128×128 px. Ahora `segmentar()` prueba **las dos polaridades** y
+se queda con la que encuentre más siluetas con forma de bicho, así que se
+adapta sola al fondo.
+
+**2. El dataset se generaba sobre negro.** `generar_dataset.py` componía sobre
+`bg_stage3_3_el_patio_near.png`, y esa capa es un PNG **transparente** desde
+que el patio pasó a nocturno (una sola pintura, sin planos de parallax).
+Convertida a RGB daba negro: el modelo se entrenó sobre un fondo que el juego
+no muestra en ninguna parte. Ahora se compone sobre `far`, que es la capa
+visible.
+
+**Realce por histograma antes de umbralizar (Unidad VII → VIII).** El patio de
+noche tiene una luminancia media en torno a 64 de 255 y todo el detalle
+apelmazado en la parte baja del histograma. Se mide con
+`FilterTools.compute_histogram()` y, si la media baja de 110, se realza con
+`adjust_brightness()` —con el factor acotado a 4,0, que es el máximo que
+acepta— antes de pasar a Otsu. Es la Unidad VII alimentando a la VIII, que es
+justo la tubería que pide la rúbrica.
+
+**Panel más honesto.** Donde ponía *"analizando..."* ahora pone **"sin
+contacto"**: el Vigía siempre está analizando, así que ese texto no informaba
+de nada, y con el nivel a 5 enemigos se quedaba fijo tramos enteros — parecía
+que la pieza estaba colgada. Además el veredicto muestra su antigüedad
+(*"hace 3s"*) y **caduca a los 8 segundos**: antes el último resultado se
+quedaba pegado para siempre y la Onda mantenía la bonificación "aereo" media
+partida después, sin nada aéreo cerca.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
@@ -727,8 +778,9 @@ Puntaje sin cambios: **130/130 (100,0%)**.
 
 La fuente (`Fountain`, en `fountain.py`) no es un enemigo ni un objeto del registro de
 tipos del TMX: se instancia manualmente en `on_stage_start()` de
-`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (1200, 544)`, que coincide con el
-centro del objeto `Platform_Fountain` de la capa `Collision`. Cura 0.25 corazones al
+`stage3_3_el_patio.py`, en la posición `FOUNTAIN_POS = (464, 832)`, que coincide con el
+centro del objeto `Platform_Fountain` de la capa `Collision` (x=432, ancho 64). Se quedó
+en el piso de abajo a propósito: es el respiro antes de encarar el muro grande. Cura 0.25 corazones al
 jugador si se mantiene a menos de 28 px del centro, con un cooldown de 6 segundos.
 
 ## 7. Reflexión

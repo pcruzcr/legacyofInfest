@@ -68,8 +68,10 @@ HOJAS: dict[str, list[tuple[str, int, int]]] = {
 
 # Bandas del fondo sobre las que se compone cada clase. Ya no deciden nada
 # —solo se guarda la silueta— pero cambian el contraste con el que Otsu corta,
-# asi que dan variedad util en los bordes de la mascara.
-BANDA_Y = {"aereo": (60, 200), "terrestre": (300, 430)}
+# asi que dan variedad util en los bordes de la mascara. El fondo mide 600 px
+# de alto y la ventana de analisis 128, asi que el limite superior de cada
+# banda no puede pasar de 600-128.
+BANDA_Y = {"aereo": (20, 200), "terrestre": (250, 460)}
 
 VARIANTES = 24  # combinaciones de fondo/escala/espejo por fotograma; muchas se
 # descartan porque el sprite no llega a segmentarse sobre ese fondo.
@@ -89,7 +91,12 @@ def main() -> int:
     from src.stages.stage3_3_el_patio.vigia import LADO_ANALISIS, Vigia
 
     vigia = Vigia.__new__(Vigia)  # solo para reutilizar su tuberia
-    fondo = pygame.image.load(str(FONDOS / "bg_stage3_3_el_patio_near.png")).convert()
+    # El fondo VISIBLE del nivel es la capa `far`. `mid` y `near` existen pero
+    # son PNG transparentes desde que el patio pasa a nocturno (una sola
+    # pintura, sin planos de parallax), asi que componer sobre `near` daba
+    # muestras sobre negro — y el modelo entrenado asi quedo ciego en el juego
+    # real. Se compone sobre lo que de verdad se ve.
+    fondo = pygame.image.load(str(FONDOS / "bg_stage3_3_el_patio_far.png")).convert()
     total: dict[str, int] = {}
 
     for clase, hojas in HOJAS.items():

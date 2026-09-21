@@ -417,7 +417,7 @@
     <property name="cantidad" type="int" value="1"/>
    </properties>
   </object>
-  <object id="20" type="Pickup" name="Moneda_10" x="2200" y="296" width="16" height="16">
+  <object id="20" type="Pickup" name="Moneda_10" x="2252" y="180" width="16" height="16">
    <properties>
     <property name="item_id" value="coin"/>
     <property name="cantidad" type="int" value="1"/>
@@ -438,7 +438,7 @@
     <property name="damage" type="float" value="0.25"/>
    </properties>
   </object>
-  <object id="24" type="Vine" name="Liana_01" x="1184" y="368" width="16" height="496">
+  <object id="24" type="Vine" name="Liana_01" x="2248" y="160" width="16" height="176">
    <properties>
     <property name="ancho_de_agarre" type="int" value="12"/>
     <property name="velocidad" type="float" value="70.0"/>
