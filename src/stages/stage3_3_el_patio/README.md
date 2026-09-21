@@ -795,6 +795,63 @@ hexadecimal (`#3c788c`) carga bien y sin avisos.
 
 Puntaje sin cambios: **130/130 (100,0%)**.
 
+## 4o. El estanque al medio, el refugio y el muro de caza (2026-09-21)
+
+**El estanque se muda al medio** (columnas 44–58, x 704–944), a media altura
+del tramo de abajo. Y hubo que **dibujar el agua a mano** (`agua.py`): el
+`WaterEffect` del motor, por el camino de software, reparte líneas tenues por
+**toda la pantalla** con `BLEND_RGB_ADD` —un brillo ambiental— en vez de
+pintar la poza; la versión que sí localiza el agua es la de GPU, que publica
+la región al sombreador. Resultado: el hueco se veía y el agua no. `agua.py`
+pinta la lámina con un degradado de tres colores, superficie ondulada (dos
+senos de periodo distinto sumados) y reflejos que la recorren, leyendo el
+rectángulo **de la propia `ZonaDeAgua`** para que no haya dos fuentes de
+verdad. La física de nado sigue siendo del motor: esto sólo añade el dibujo
+que faltaba.
+
+**Muro de caza** (`Solid_MuroCaza`, columnas 42–43, 112 px). Antes se podía
+pasar por debajo de la repisa ignorando al halcón. Ahora no:
+
+| Salto | Altura | |
+|---|---|---|
+| Suelo → repisa | 80 px | se puede |
+| Repisa → alto del muro | 32 px | se puede |
+| **Suelo → alto del muro** | **112 px** | **imposible** (el salto da 87,1) |
+
+El recorrido queda forzado: subir, pasar junto al halcón, y caer al agua.
+
+**La puerta pasa a ser una cabaña** (`cabana.py`, 16 tiles nuevos; el tileset
+propio crece a 32). Se dibuja **apagada** en el TMX porque encenderla es cosa
+del juego: al entrar en su radio los cristales y el farol suben con
+`ease_out_cubic` —rápido y frenando, como una bombilla— con un parpadeo leve
+y un halo cálido sobre el suelo.
+
+No usa `src/engine/render/lighting.py` porque ese sistema ilumina la **escena
+entera** con focos compuestos en un mapa de luz global; aquí hacían falta dos
+ventanas concretas, y un foco del motor habría aclarado también la meseta, el
+dron y medio cielo.
+
+**El reto "AGUANTA"** va con la cabaña: 18 segundos aguantando en su radio. Lo
+que lo hace legible es que **la luz ES la barra de progreso** — al 50% del
+reto las ventanas están al 50%, así que se ve cuánto falta sin leer el número.
+`NextTrigger` sigue funcionando pase lo que pase: dejar la única salida
+dependiendo de un script es la forma fácil de que alguien quede encerrado por
+un fallo.
+
+**Limpieza de la llegada.** Se quitó la liana que caía delante de la cabaña
+(su moneda colgaba a y=180 y sin liana era inalcanzable —desde la meseta el
+salto llega a y=249—, así que bajó a suelo firme) y el dron volvió de x=2210 a
+x=1700. El último enemigo queda en x=1960, a 328 px del refugio.
+
+**El Vigía marca un solo recuadro.** Con el fondo nocturno la segmentación
+encuentra 8 o 9 siluetas —las ventanas encendidas del edificio pasan el
+filtro— y la pantalla se llenaba de cuadros celestes sin relación con nada.
+Ahora se marca **únicamente la que el clasificador está mirando**, así que el
+recuadro y el veredicto del panel hablan del mismo bicho: es lo que hace
+legible la conexión entre la Unidad VIII y la IX.
+
+Puntaje sin cambios: **130/130 (100,0%)**.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |

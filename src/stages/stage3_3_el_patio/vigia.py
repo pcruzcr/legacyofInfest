@@ -226,7 +226,14 @@ class Vigia:
         mascara, regiones = self.segmentar(recorte)
         self.regiones = regiones
         self.amenaza = len(regiones)
-        self._recuadros = [r.bounding_rect.copy() for r in regiones[:6]]
+        # Antes se guardaban hasta 6 recuadros, uno por silueta. Con el patio
+        # nocturno la segmentacion encuentra 8 o 9 —las ventanas encendidas
+        # del edificio tambien pasan el filtro— y la pantalla se llenaba de
+        # cuadritos celestes sin relacion con nada. Ahora se marca UNA: la que
+        # el clasificador esta mirando, mas abajo. Asi el recuadro y el
+        # veredicto del panel hablan del mismo bicho, que es lo que hace
+        # legible la conexion entre la Unidad VIII y la IX.
+        self._recuadros = []
 
         # Unidad IX: manda la silueta MAS CERCANA AL JUGADOR, no la mas
         # grande. El patio nocturno tiene ventanas encendidas que el umbral
@@ -240,6 +247,7 @@ class Vigia:
         centro = (recorte.get_width() / 2, recorte.get_height() / 2)
         cerca = min(regiones, key=lambda r: (r.centroid[0] - centro[0]) ** 2
                     + (r.centroid[1] - centro[1]) ** 2)
+        self._recuadros = [cerca.bounding_rect.copy()]
         parche = self.encuadrar(mascara, cerca)
         if parche is None:
             return

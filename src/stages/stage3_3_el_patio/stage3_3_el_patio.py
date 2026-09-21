@@ -18,6 +18,8 @@ import pygame
 
 from src.framework.scenes.stage_scene import StageScene
 from src.stages.stage3_3_el_patio.fountain import Fountain
+from src.stages.stage3_3_el_patio.agua import Agua
+from src.stages.stage3_3_el_patio.cabana import Cabana
 from src.stages.stage3_3_el_patio.camara_objetivo import CamaraObjetivo, Objetivo
 from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
 from src.stages.stage3_3_el_patio.onda_fuente import OndaFuenteController
@@ -52,7 +54,7 @@ class Stage3_3ElPatio(StageScene):
     OBJETIVOS = [
         (1160, 620, 820, "SUBE EL MURO"),
         (1640, 360, 1450, "EL FOSO"),
-        (2352, 300, 2150, "SALIDA"),
+        (2320, 290, 2100, "EL REFUGIO"),
     ]
 
     def __init__(self, context: GameContext) -> None:
@@ -63,6 +65,8 @@ class Stage3_3ElPatio(StageScene):
         self._onda: OndaFuenteController | None = None
         self._vigia: Vigia | None = None
         self._radar: Radar | None = None
+        self._aguas: list[Agua] = []
+        self._cabana: Cabana | None = None
         self._ultimo_dt: float = 0.0
 
     # ── Optional lifecycle hooks ────────────────────────────────────
@@ -83,6 +87,17 @@ class Stage3_3ElPatio(StageScene):
         # Camara de rastreo: ensena en un cuadro el tramo que viene delante.
         # La salida coincide con NextTrigger_01 del TMX (x=2352, y=272).
         self._radar = Radar(self._stage_data, (2352, 300))
+        # La lamina del estanque se dibuja a partir del rectangulo de la
+        # propia `ZonaDeAgua` que creo el objeto `WaterZone` del TMX: una
+        # unica fuente de verdad sobre donde hay agua.
+        # La cabana: col 143 del TMX, apoyada 4 filas sobre la meseta.
+        self._cabana = Cabana(143 * 16, (21 - 4) * 16)
+        from src.framework.ecs.components import ZonaDeAgua
+        self._aguas = [
+            Agua(c.rect)
+            for grupo in (self._stage_data.componentes or [])
+            for c in grupo if isinstance(c, ZonaDeAgua)
+        ]
         self._onda = OndaFuenteController(self.events, self._vigia)
         # El ancho del mapa sale del propio TMX, no de una constante: si
         # vuelvo a alargar el nivel, el encuadre se ajusta solo.
@@ -105,6 +120,10 @@ class Stage3_3ElPatio(StageScene):
         if self._onda is not None:
             enemigos = getattr(self._stage_data, "entity_list", []) or []
             self._onda.update(dt, self._player, enemigos)
+        for agua in self._aguas:
+            agua.update(dt)
+        if self._cabana is not None:
+            self._cabana.update(dt, self._player)
         if self._radar is not None:
             self._radar.update(self._player)
         if self._camara_obj is not None:
@@ -112,6 +131,10 @@ class Stage3_3ElPatio(StageScene):
 
     def draw(self, surface: pygame.Surface) -> None:
         super().draw(surface)
+        for agua in self._aguas:
+            agua.draw(surface, self._camera.offset)
+        if self._cabana is not None:
+            self._cabana.draw(surface, self._camera.offset)
         if self._fountain is not None:
             self._fountain.draw(surface, self._camera.offset)
         if self._moneda_fx is not None:
@@ -129,6 +152,8 @@ class Stage3_3ElPatio(StageScene):
             self._vigia.draw(surface)
         if self._radar is not None:
             self._radar.draw(surface, self._player)
+        if self._cabana is not None:
+            self._cabana.draw_hud(surface)
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.
