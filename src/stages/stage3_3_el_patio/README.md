@@ -78,8 +78,9 @@ Seis gotas de agua recorren esa misma curva con fases de tiempo distintas
 
 Archivo: [`../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx`](../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx)
 
-Mapa de **150×38 tiles (2400×608 px)** — tres pantallas completas de desplazamiento
-sobre la resolución interna real del motor, 800×600. Usa dos tilesets:
+Mapa de **150×56 tiles (2400×896 px)** — tres pantallas de desplazamiento horizontal
+y 296 px de recorrido vertical de cámara, sobre la resolución interna real del
+motor, 800×600. Ver 4k para por qué creció a lo alto. Usa dos tilesets:
 `tileset_gavilan_ciudad.png` del profesor (64 tiles, `firstgid=1`, compartido con el
 mapa del jefe de la zona) y `tileset_patio_props.png` propio (8 tiles, `firstgid=65`;
 ver 4g para por qué ese número y no 61). Tiene las 8 capas obligatorias:
@@ -558,6 +559,73 @@ borrarse: el fondo es una pintura única y no tiene sentido separarla en tres
 planos de parallax, pero si los ficheros faltan el cargador registra un aviso
 de fichero ausente en cada partida. Con alfa 0 se pegan y no pintan nada.
 Sólo `far` es visible, con factor 0,15 — lento, como corresponde a un cielo.
+
+## 4k. El nivel en dos pisos (2026-09-20)
+
+El recorrido iba todo por el suelo de principio a fin. Ahora se parte en dos:
+la primera mitad abajo, un **muro grande** que hay que subir, y **la segunda
+mitad y la salida arriba**.
+
+### Por qué el mapa creció a lo alto
+
+De 38 a **56 filas (608 → 896 px)**, y no es cosmético: con 608 px el mapa
+medía *menos* que la ventana de 600 px, así que la cámara no tenía margen para
+desplazarse en vertical y los dos pisos se habrían visto a la vez en pantalla
+— subir no se notaría. Con 896 px hay **296 px de recorrido vertical**, y el
+piso de arriba está fuera de cuadro hasta que se sube.
+
+### La estructura
+
+| Zona | Columnas | Altura |
+|---|---|---|
+| Piso de abajo | 0–74 | suelo en y=864 |
+| **El muro grande** | 75 | **528 px de alto** |
+| Meseta (piso de arriba) | 75–149 | suelo en y=336 |
+| El foso | 100–104 | 80 px de hueco, fondo 48 px abajo |
+| Salida | 148 | **arriba**, y=272 |
+
+**El muro mide 528 px: 6,1 veces el salto máximo del jugador** (87,1 px según
+`JumpEnvelope.from_settings()`). No hay forma de saltarlo, hay que subirlo.
+
+### La subida
+
+Ocho repisas sólidas alternando entre x=1072 y x=1136, **de 64 px en 64 px**
+—por debajo de los 87,1 que da el salto— con 16 px de separación horizontal.
+De la última repisa (y=352) a la meseta (y=336) quedan 16 px. Hay además una
+`Vine` pegada al muro como ruta alternativa.
+
+Se usan repisas **sólidas** y no plataformas de un solo sentido a propósito:
+el análisis de alcanzabilidad de `grade_stage.py` sólo recorre
+`collision_rects`, así que con plataformas one-way marcaba la subida como
+"zona aislada" — el aviso que arrastraba este nivel desde agosto (ver 4d).
+Con repisas sólidas el calificador ve el camino, y el aviso desapareció.
+
+### El foso
+
+5 tiles (**80 px**) de hueco en la meseta, justo por debajo de los 85,5 px que
+da el salto con carrera. Es el "salto exigente" que el calificador echaba en
+falta. Su fondo está 48 px más abajo, recuperable de un salto: caerse cuesta
+tiempo, no deja encerrado.
+
+### Resultado
+
+**130/130 (100,0%)** — el primer nivel de esta entrega sin un solo aviso:
+
+| Categoría | Antes | Ahora |
+|---|---|---|
+| `design_geometry` | 4/10 (2 zonas aisladas) | **10/10** |
+| `design_pacing` | 5/8 (ningún salto exigente) | **8/8** |
+| `design_completable` | 12/12 | 12/12 |
+| **Total** | 95,4% | **100,0%** |
+
+Los 7 checkpoints no son de adorno: el calificador mide la distancia **en 2D**,
+así que del pie del muro al primero de arriba hay 700 px contando los 528 de
+ascenso. Hizo falta uno a media subida (sobre la cuarta repisa) y repartir
+mejor los de la meseta.
+
+La fuente se queda abajo (`FOUNTAIN_POS = (464, 832)`): es el respiro antes de
+encarar el muro. Y la cámara de objetivo ahora enseña la escalera, el foso y
+la salida de arriba.
 
 ## 5. Obstáculos y plataformeo
 

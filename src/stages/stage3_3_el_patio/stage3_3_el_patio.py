@@ -39,17 +39,19 @@ class Stage3_3ElPatio(StageScene):
 
     TMX_PATH = "assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx"
 
-    # Debe coincidir con el objeto Platform_Fountain del TMX (x=1168, y=544,
-    # width=64) -> centro en x = 1168 + 64/2 = 1200.
-    FOUNTAIN_POS = pygame.Vector2(1200, 544)
+    # Debe coincidir con el objeto Platform_Fountain del TMX (x=432, y=832,
+    # width=64) -> centro en x = 432 + 64/2 = 464. La fuente se queda en el
+    # piso de abajo: es el respiro antes de encarar el muro grande.
+    FOUNTAIN_POS = pygame.Vector2(464, 832)
 
     # Camara de objetivo: (x, y) del punto que se ensena, y el x del jugador
-    # que dispara la cinematica. Los dos primeros son los muros de bloqueo
-    # (Solid_MuroBloqueo01/02, en x=576 y x=1696); el tercero es la salida.
+    # que dispara la cinematica. Ahora el nivel tiene dos pisos, asi que la
+    # camara ensena la escalera del muro grande, el foso de arriba y la
+    # salida — que esta en el piso alto, no donde se empieza.
     OBJETIVOS = [
-        (624, 430, 380, "SUBE AQUI"),
-        (1744, 430, 1500, "OTRO MURO"),
-        (2352, 500, 2150, "SALIDA"),
+        (1160, 620, 820, "SUBE EL MURO"),
+        (1640, 360, 1450, "EL FOSO"),
+        (2352, 300, 2150, "SALIDA"),
     ]
 
     def __init__(self, context: GameContext) -> None:
