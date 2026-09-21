@@ -241,9 +241,14 @@ class Vigia:
         return self.amenaza >= AMENAZA_ALTA
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Panel del Vigia arriba a la derecha, con lo que ha medido."""
-        x = surface.get_width() - 132
-        y = 58
+        """Panel del Vigia arriba a la IZQUIERDA, con lo que ha medido.
+
+        Estaba a la derecha y se solapaba con el minimapa del motor, que el
+        HUD coloca en Rect(675, 15, 110, 110): los dos paneles se pisaban y
+        el resultado era ilegible.
+        """
+        x = 10
+        y = 92
         panel = pygame.Surface((124, 52), pygame.SRCALPHA)
         panel.fill((10, 20, 35, 165))
         surface.blit(panel, (x, y))

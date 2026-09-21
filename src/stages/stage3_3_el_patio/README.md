@@ -659,6 +659,44 @@ repisa nueva y obligaba a saltar al halcón desde encima del daño.
 
 Puntaje sin cambios: **130/130 (100,0%)**.
 
+## 4m. Puerta de salida, radar de rastreo y limpieza (2026-09-20)
+
+**Puerta de salida.** El `NextTrigger` era un rectángulo invisible: no había
+nada que dijera "esto es el final". Se añadieron **6 tiles de puerta** al
+tileset propio (`tileset_patio_props.png` pasa de 8 a 16 tiles, gids 73–78:
+2 de ancho × 3 de alto) y se dibuja en la columna 146, apoyada en la meseta.
+Va en `Terrain_Detail` y no en `Terrain` **a propósito**: es decoración, y en
+la capa de terreno el jugador chocaría contra su propia salida.
+
+**Fuera la reja del primer plano.** `FG_Overlay` tenía dos columnas de tile
+`reja` salteadas cada 7 filas. La intención era una verja de primer plano,
+pero al no apoyarse en nada se veía como una tira vertical de trozos sueltos
+flotando delante del fondo: no leía como reja, leía como un fallo de dibujado.
+Eliminada.
+
+**El panel del Vigía se mudó a la izquierda.** Estaba en `(668, 58)` y el HUD
+del motor coloca su minimapa en `Rect(675, 15, 110, 110)`: los dos se pisaban
+y el resultado era ilegible. Ahora va en `(10, 92)`.
+
+**Radar de rastreo** (`radar.py`) — Unidades II y IV. Un cuadro de 132×132 en
+la esquina inferior derecha que dibuja el **esquema** del tramo que viene
+delante: terreno en verde, repisas en amarillo, enemigos en rojo, monedas en
+naranja, checkpoints y la salida en verde claro, y el jugador con un anillo
+azul. La ventana cubre 640 px de mundo y va **adelantada 170 px hacia donde
+mira el jugador** — un radar centrado en uno mismo enseña dónde ya se ha
+estado. Se recorta contra los bordes del mapa para que no quede media ventana
+en negro.
+
+*Por qué no reutiliza el minimapa del motor:* `src/engine/ui/minimap.py`
+existe y `StageScene` ya lo pinta, pero resuelve otro problema — es redondo,
+cubre el mapa entero a la vez y sólo marca puntos sobre zonas exploradas. En
+un mapa de 2400×896 eso deja el nivel en una mancha de 110 px donde no se
+distingue el relieve, que es justo lo que hace falta saber aquí: si lo que
+viene es suelo, un foso o la subida del muro. Adaptarlo tampoco valía: es
+código del profesor y lo usan las otras 25 entregas.
+
+Puntaje sin cambios: **130/130 (100,0%)**.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |

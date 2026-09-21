@@ -21,6 +21,7 @@ from src.stages.stage3_3_el_patio.fountain import Fountain
 from src.stages.stage3_3_el_patio.camara_objetivo import CamaraObjetivo, Objetivo
 from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
 from src.stages.stage3_3_el_patio.onda_fuente import OndaFuenteController
+from src.stages.stage3_3_el_patio.radar import Radar
 from src.stages.stage3_3_el_patio.vigia import Vigia
 
 if TYPE_CHECKING:
@@ -61,6 +62,7 @@ class Stage3_3ElPatio(StageScene):
         self._camara_obj: CamaraObjetivo | None = None
         self._onda: OndaFuenteController | None = None
         self._vigia: Vigia | None = None
+        self._radar: Radar | None = None
         self._ultimo_dt: float = 0.0
 
     # ── Optional lifecycle hooks ────────────────────────────────────
@@ -78,6 +80,9 @@ class Stage3_3ElPatio(StageScene):
         # Unidades VIII y IX: el Vigia mira el fotograma, segmenta lo que se
         # acerca y lo clasifica; la Onda consulta su veredicto.
         self._vigia = Vigia()
+        # Camara de rastreo: ensena en un cuadro el tramo que viene delante.
+        # La salida coincide con NextTrigger_01 del TMX (x=2352, y=272).
+        self._radar = Radar(self._stage_data, (2352, 300))
         self._onda = OndaFuenteController(self.events, self._vigia)
         # El ancho del mapa sale del propio TMX, no de una constante: si
         # vuelvo a alargar el nivel, el encuadre se ajusta solo.
@@ -100,6 +105,8 @@ class Stage3_3ElPatio(StageScene):
         if self._onda is not None:
             enemigos = getattr(self._stage_data, "entity_list", []) or []
             self._onda.update(dt, self._player, enemigos)
+        if self._radar is not None:
+            self._radar.update(self._player)
         if self._camara_obj is not None:
             self._camara_obj.update(dt, self._player, self._camera)
 
@@ -120,6 +127,8 @@ class Stage3_3ElPatio(StageScene):
                                self._camera.offset)
             self._vigia.draw_regiones(surface, self._player, self._camera.offset)
             self._vigia.draw(surface)
+        if self._radar is not None:
+            self._radar.draw(surface, self._player)
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.
