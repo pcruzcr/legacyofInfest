@@ -4,8 +4,8 @@ assignment_name: "El Patio"
 assignment_id: "stage3_3_el_patio"
 zone: 3
 student_name: "Rebeca"
-units_demonstrated: [II, III, IV, V, VI, VII]
-evaluation_milestone: "Evaluación Práctica II"
+units_demonstrated: [II, III, IV, V, VI, VII, VIII, IX]
+evaluation_milestone: "Evaluación Práctica III"
 ---
 
 # Stage 3-3 — El Patio
@@ -78,19 +78,21 @@ Seis gotas de agua recorren esa misma curva con fases de tiempo distintas
 
 Archivo: [`../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx`](../../../assets/maps/stage3_3_el_patio/stage3_3_el_patio.tmx)
 
-Mapa de 60×38 tiles (960×608 px — dimensionado para la resolución interna real del motor,
-800×600), tileset `tileset_gavilan_ciudad.png` (60 tiles con nombre, sin placeholders,
-compartido con el mapa del jefe de la zona), con las 8 capas obligatorias:
+Mapa de **150×38 tiles (2400×608 px)** — tres pantallas completas de desplazamiento
+sobre la resolución interna real del motor, 800×600. Usa dos tilesets:
+`tileset_gavilan_ciudad.png` del profesor (64 tiles, `firstgid=1`, compartido con el
+mapa del jefe de la zona) y `tileset_patio_props.png` propio (8 tiles, `firstgid=65`;
+ver 4g para por qué ese número y no 61). Tiene las 8 capas obligatorias:
 
 | Capa | Contenido |
 |------|-----------|
-| `BG_Far` | Cielo (vacío, deja ver el parallax real de `background_zone="zone3"`) + horizonte de edificios lejanos y pálidos (`lej_*`) |
-| `BG_Mid` | Edificios medios y cercanos (`med_*`, `cer_*`), más altos y con ventanas más brillantes cuanto más cerca |
-| `BG_Near` | Vacía (no hay pared de fondo que recortar: el patio es abierto, no un cuarto cerrado) |
-| `Terrain` | Piso, muros laterales (el derecho deja un hueco como puerta de salida), 3 plataformas de un solo sentido, 2 jardineras y 2 cajones-obstáculo |
+| `BG_Far` | Vacía: el fondo entero viene de `background_zone="stage3_3_el_patio"` (campus diurno propio, ver 4d) |
+| `BG_Mid` | Vacía, por lo mismo |
+| `BG_Near` | Vacía (el patio es abierto: no hay pared de fondo que recortar) |
+| `Terrain` | Piso, muros de cierre de altura completa, 2 muros de bloqueo, 11 plataformas de un solo sentido, 2 jardineras y 8 obstáculos (rocas y cajones) |
 | `Terrain_Detail` | Grietas, manchas, tuberías, luz de piso bajo ventanas/plataformas, lámparas y cuadros contra los muros |
-| `Objects` | `PlayerSpawn_01`, `Checkpoint_01`, `NextTrigger_01`, y los enemigos (ver tabla abajo) |
-| `Collision` | Piso, muros, jardineras, cajones, 4 plataformas (incluida la de la fuente), y una `HazardZone` |
+| `Objects` | `PlayerSpawn_01`, 5 `Checkpoint`, `NextTrigger_01`, 10 `Pickup`, 3 `HazardZone`, 2 `Vine` y los 24 enemigos (ver tabla abajo) |
+| `Collision` | Piso, muros, jardineras, cajones y plataformas (incluida la de la fuente). Las `HazardZone` NO van aquí — ver 4e |
 | `FG_Overlay` | Dos columnas de primer plano (delante del jugador), para profundidad |
 
 El diseño de capas sigue la técnica documentada por el equipo para esta estética: la
@@ -399,6 +401,137 @@ está libre: el motor solo usa A C D F G J K M P Q R S V W X Z.
 Verificado: 3 monedas → 1 carga y 6 → 2; una onda deja al enemigo de prueba
 en −1,0 de vida (muerto); `validate_tmx` 1/1; `grade_stage` **124/130
 (95,4%)**; 40 s de juego sin un error de consola.
+
+## 4i. Evaluación Práctica III — El Vigía de la Fuente (2026-09-20)
+
+Unidades **VIII (segmentación)** y **IX (reconocimiento de patrones)**, sobre
+la VII que ya estaba. Todo con las APIs del motor (`VisionTools`,
+`PatternRecognitionTools`, `tools/build_dataset.py`): no se reimplementó nada
+que el framework ya diera.
+
+### Qué hace
+
+La fuente del patio no solo cura: **vigila**. Cada 1,25 s mira el fotograma ya
+dibujado —píxeles, no la lista de entidades— y saca dos cosas:
+
+1. **Segmentación (VIII).** Desenfoque gaussiano → umbral de **Otsu** →
+   inversión → **apertura morfológica** → **componentes conectados**. El
+   número de siluetas es el *nivel de amenaza*, que se muestra en el panel y
+   pone el patio "en alerta" a partir de 3.
+2. **Reconocimiento (IX).** La silueta mayor se recorta **de la máscara**, se
+   le extraen **HOG** y un **bosque aleatorio** decide: `aereo` o `terrestre`.
+
+**Por qué mira píxeles pudiendo preguntar al motor.** Preguntar "qué enemigos
+hay cerca" sería trivial: la respuesta ya está en memoria. El ejercicio de las
+Unidades VIII/IX es el contrario — partir de una imagen, que es lo único que
+tendría una cámara real, y recuperar de ahí la información.
+
+### Las dos formas en que el clasificador cambia el juego
+
+| Veredicto | Efecto sobre la Onda de la Fuente |
+|---|---|
+| `aereo` | **Radio ×1,6** — los voladores están lejos y altos, hace falta abrir el área |
+| `terrestre` | **Daño +1,5** — vienen de cerca y aguantan más |
+
+Además, independientemente de la clase, el conteo de siluetas de la Unidad
+VIII enciende el indicador de alerta del panel.
+
+### Tubería de entrenamiento
+
+| | |
+|---|---|
+| **Dataset** | `dataset/aereo/` (191) y `dataset/terrestre/` (165) — **356 muestras**, mínimo exigido 10/clase |
+| **Origen** | Sprites reales de zona 3: halcón (`Flying`, y el dron que reusa su hoja) vs paloma, garza, buitre y quetzal |
+| **Aumento** | 24 variantes por fotograma: fondo, escala (1,0/1,25/1,5) y espejo |
+| **Características** | `VisionTools.extract_features(method="hog")` → **288 por muestra**, `float32` |
+| **División** | 70/30 estratificada, semilla fija 3 → 249 entrenamiento / 107 prueba |
+| **Clasificador** | `PatternRecognitionTools.train(..., "forest", n_estimators=40)` |
+| **Comparados** | knn 0,822 · tree 0,860 · svm 0,841 · **forest 0,925** |
+| **Modelo** | `models/vigia.pkl` (`save_model`, ruta que exige `23_DATA_SCHEMAS.md` §6.2) |
+
+**`EvaluationResult` — precisión de prueba 0,9252 (92,5%)**, por encima del
+0,70 exigido.
+
+| Precisión por clase | |
+|---|---|
+| `aereo` | 0,930 |
+| `terrestre` | 0,920 |
+
+**Matriz de confusión** (filas = real, columnas = predicho):
+
+| | aereo | terrestre |
+|---|---|---|
+| **aereo** | 53 | 4 |
+| **terrestre** | 4 | 46 |
+
+```
+              precision    recall  f1-score   support
+       aereo       0.93      0.93      0.93        57
+   terrestre       0.92      0.92      0.92        50
+    accuracy                           0.93       107
+```
+
+Reproducible con:
+
+```
+python src/stages/stage3_3_el_patio/generar_dataset.py
+python src/stages/stage3_3_el_patio/entrenar_vigia.py
+```
+
+### Dos intentos que fallaron, y por qué el tercero funciona
+
+Esto es lo que más me costó, y el README lo deja escrito porque el resultado
+solo se entiende con los descartes:
+
+1. **Entrenar con recortes de pantalla en color.** Daba **92,5% en la prueba y
+   fallaba casi todo en ejecución**. En un parche de 32×32 el enemigo ocupa
+   14×10 px, así que las HOG las dominaba el fondo: el modelo había aprendido
+   a separar *cielo* de *suelo*, no halcón de paloma. Como las muestras aéreas
+   se recortaban del cielo y las terrestres del suelo, la propia prueba
+   premiaba el atajo. Una precisión alta sobre un dataset mal construido no
+   vale nada.
+2. **Entrenar con siluetas del canal alfa del sprite.** Ya medían forma y no
+   fondo, pero una silueta perfecta del alfa no se parece a la que deja Otsu
+   sobre una pantalla desenfocada —los bordes son otros—, y seguían fallando
+   2 de 7 casos.
+3. **Lo que funciona:** generar cada muestra con **la misma tubería que corre
+   en el juego**. `generar_dataset.py` importa `Vigia.segmentar()` y
+   `Vigia.parche_de()` de `vigia.py` en vez de copiarlas, así que
+   entrenamiento e inferencia no pueden separarse.
+
+### Rendimiento
+
+El análisis completo costaba **100,6 ms**, un tirón visible cada vez que
+corría. Dos causas y dos arreglos:
+
+- `analizar()` segmentaba y después `parche_de()` **volvía a segmentar**:
+  trabajo duplicado. Se separó `encuadrar()`, que reutiliza la máscara.
+- El recorte bajó de 160 a 128 px de lado, y el bosque de 100 a 40 árboles.
+
+Resultado: **27,1 ms**, a 0,8 Hz = **2,2% de CPU**. Desglose medido:
+`gaussian_blur` 3,3 ms · `threshold_otsu` 1,6 ms · inversión 1,0 ms ·
+`morphological_open` 1,5 ms · `analyze_regions` 15,4 ms · HOG 0,8 ms ·
+bosque 14,2 ms (antes de bajarlo a 40 árboles).
+
+La frecuencia de 0,8 Hz sobre **una** región sigue el aviso del propio motor
+en `ai_predictor.py`: la inferencia individual cuesta 1,89 ms y una llamada
+por enemigo y fotograma se come el presupuesto de 60 fps.
+
+### Ficheros de esta entrega
+
+| Fichero | Qué es |
+|---|---|
+| `vigia.py` | El sistema en ejecución: segmentación + clasificación + efectos |
+| `generar_dataset.py` | Fabrica el dataset con la tubería del juego |
+| `entrenar_vigia.py` | Entrena, compara 4 clasificadores, evalúa y guarda el `.pkl` |
+| `dataset/` | 356 muestras etiquetadas en 2 clases + `patio_vigia.npz` |
+| `models/vigia.pkl` | El bosque aleatorio entrenado |
+
+**Nota sobre `tools/build_dataset.py`.** Se usa su función `build_dataset()`,
+pero llamándola desde `entrenar_vigia.py`: su `main()` carga las imágenes con
+`.convert()` sin haber abierto pantalla, y por línea de comandos aborta con
+*"No convert format has been set"*. Se abre la pantalla antes y se llama a la
+función, en vez de tocar un fichero del profesor.
 
 ## 5. Obstáculos y plataformeo
 

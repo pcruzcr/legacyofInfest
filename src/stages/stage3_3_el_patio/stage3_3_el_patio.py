@@ -21,6 +21,7 @@ from src.stages.stage3_3_el_patio.fountain import Fountain
 from src.stages.stage3_3_el_patio.camara_objetivo import CamaraObjetivo, Objetivo
 from src.stages.stage3_3_el_patio.moneda_fx import MonedaFxController
 from src.stages.stage3_3_el_patio.onda_fuente import OndaFuenteController
+from src.stages.stage3_3_el_patio.vigia import Vigia
 
 if TYPE_CHECKING:
     from src.engine.core.game_context import GameContext
@@ -57,6 +58,8 @@ class Stage3_3ElPatio(StageScene):
         self._moneda_fx: MonedaFxController | None = None
         self._camara_obj: CamaraObjetivo | None = None
         self._onda: OndaFuenteController | None = None
+        self._vigia: Vigia | None = None
+        self._ultimo_dt: float = 0.0
 
     # ── Optional lifecycle hooks ────────────────────────────────────
     # Override any of these to add custom behavior:
@@ -70,7 +73,10 @@ class Stage3_3ElPatio(StageScene):
         self._moneda_fx = MonedaFxController(self.events)
         # Poder propio del escenario: las monedas cargan la fuente y la
         # tecla E suelta una onda expansiva que mata enemigos en area.
-        self._onda = OndaFuenteController(self.events)
+        # Unidades VIII y IX: el Vigia mira el fotograma, segmenta lo que se
+        # acerca y lo clasifica; la Onda consulta su veredicto.
+        self._vigia = Vigia()
+        self._onda = OndaFuenteController(self.events, self._vigia)
         # El ancho del mapa sale del propio TMX, no de una constante: si
         # vuelvo a alargar el nivel, el encuadre se ajusta solo.
         ancho, alto = self._stage_data.map_pixel_size
@@ -80,6 +86,9 @@ class Stage3_3ElPatio(StageScene):
 
     def update(self, dt: float) -> None:
         super().update(dt)
+        # El Vigia analiza en `draw()`, que es cuando el fotograma existe;
+        # aqui solo se guarda el dt para poder temporizarlo alla.
+        self._ultimo_dt = dt
         if self._fountain is not None:
             self._fountain.update(dt, self._player)
         if self._moneda_fx is not None:
@@ -102,6 +111,13 @@ class Stage3_3ElPatio(StageScene):
             self._onda.draw(surface, self._camera.offset)
         if self._camara_obj is not None:
             self._camara_obj.draw(surface, self._camera.offset)
+        # De ultimo y en `draw`: el Vigia necesita la pantalla YA pintada,
+        # porque su entrada son pixeles, no la lista de entidades.
+        if self._vigia is not None:
+            self._vigia.update(self._ultimo_dt, surface, self._player,
+                               self._camera.offset)
+            self._vigia.draw_regiones(surface, self._player, self._camera.offset)
+            self._vigia.draw(surface)
 
     def on_player_landed(self) -> None:
         """Called when the player first touches ground after being airborne.

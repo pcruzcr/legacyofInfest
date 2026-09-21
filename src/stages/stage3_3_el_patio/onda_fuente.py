@@ -64,9 +64,15 @@ def _mezcla_hsv(a: tuple[int, int, int], b: tuple[int, int, int],
 class Onda:
     """Una onda viva: crece con easing y solo golpea una vez a cada enemigo."""
 
-    def __init__(self, centro: pygame.Vector2) -> None:
+    def __init__(self, centro: pygame.Vector2, radio_max: float = RADIO_MAX,
+                 dano: float = DANO) -> None:
         self.centro = pygame.Vector2(centro)
         self.t = 0.0
+        # El Vigia decide estos dos numeros segun lo que haya clasificado:
+        # aereo abre el radio, terrestre sube el dano. Por defecto, los de
+        # siempre, para que la Onda siga funcionando sin Vigia.
+        self.radio_max = radio_max
+        self.dano = dano
         self._ya_golpeados: set[int] = set()
 
     @property
@@ -76,7 +82,7 @@ class Onda:
     @property
     def radio(self) -> float:
         """Rapida al salir y frenando al final: `ease_out_cubic`."""
-        return RADIO_MAX * ease_out_cubic(min(self.t / DURACION, 1.0))
+        return self.radio_max * ease_out_cubic(min(self.t / DURACION, 1.0))
 
     def update(self, dt: float, enemigos) -> int:
         """Avanza la onda y golpea a quien haya entrado. Devuelve los alcanzados."""
@@ -100,7 +106,7 @@ class Onda:
             # normaliza la diferencia para quedarnos solo con la direccion.
             direccion = vec2_normalize(pygame.Vector2(pos) - self.centro)
             origen = self.centro - direccion * 4
-            golpear(DANO, (origen.x, origen.y))
+            golpear(self.dano, (origen.x, origen.y))
             alcanzados += 1
         return alcanzados
 
@@ -131,8 +137,12 @@ class OndaFuenteController:
     del nivel suma, y cada `MONEDAS_POR_CARGA` monedas dan una carga.
     """
 
-    def __init__(self, event_bus) -> None:
+    def __init__(self, event_bus, vigia=None) -> None:
         from src.framework.stage.interactable_system import EVENTO_RECOGIDO
+
+        # Unidad IX: el resultado del clasificador cambia el poder. Es una de
+        # las dos formas observables en que la clasificacion altera el juego.
+        self._vigia = vigia
 
         self._ondas: list[Onda] = []
         self._monedas = 0
@@ -162,7 +172,11 @@ class OndaFuenteController:
 
         if recien_pulsada and self._cargas > 0 and jugador is not None:
             self._cargas -= 1
-            self._ondas.append(Onda(pygame.Vector2(jugador.position)))
+            radio, dano = RADIO_MAX, DANO
+            if self._vigia is not None:
+                radio *= self._vigia.multiplicador_radio
+                dano += self._vigia.dano_extra
+            self._ondas.append(Onda(pygame.Vector2(jugador.position), radio, dano))
 
         vivos = [e for e in (enemigos or []) if getattr(e, "current_health", 1) > 0]
         for onda in self._ondas:
