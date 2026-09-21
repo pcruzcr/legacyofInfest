@@ -892,6 +892,14 @@ pone *"¡AHORA!"*, que es la información útil: se puede correr.
 Verificado en simulación de un ciclo completo: **0 golpes estando escondida**,
 y el mensaje cambiando correctamente entre los tres estados.
 
+**Se quitó `HazardZone_03`.** Estaba en x=1900–1996, pegada al arranque de la
+ronda (x=2000). El motor pinta las zonas de peligro con una textura de pinchos
+—`drawing_system._dibujar_zonas_de_peligro`, que se puede apagar con la
+propiedad `avisar`— y eso era la "barra" que se veía en el suelo justo antes
+del foco. Además sumaba daño sobre un tramo que ya es difícil por el sigilo:
+dos castigos solapados en el mismo sitio no son dificultad, son ruido. Quedan
+las dos del piso de abajo.
+
 Puntaje sin cambios: **130/130 (100,0%)**.
 
 ## 5. Obstáculos y plataformeo
@@ -903,7 +911,7 @@ Puntaje sin cambios: **130/130 (100,0%)**.
 | `Platform_NubeBaj01/02` | Un solo sentido | Escalera bajando, del otro lado del muro |
 | `Solid_Roca01…04` | Sólido (16 px), roca | Obstáculos de piso — hay que saltarlos |
 | `Solid_CajonMadera01…04` | Sólido (16 px), madera | Algunos van pegados a una roca: salto más exigente |
-| `HazardZone_01/02/03` | Daño 0.25 | Tres zonas de peligro repartidas por el recorrido |
+| `HazardZone_01/02` | Daño 0.25 | Dos zonas de peligro, ambas en el piso de abajo |
 | `Solid_Planter01/02` | Sólido (32 px) | Jardineras — también sirven de cobertura contra las aves |
 | `Platform_Fountain` | Un solo sentido | Plataforma de piedra de la fuente, en el centro del nivel |
 | `Liana_01/02` (`Vine`) | Trepable | Pegadas a cada muro; ruta de ascenso real, no simulada |
