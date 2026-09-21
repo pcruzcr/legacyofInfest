@@ -627,6 +627,38 @@ La fuente se queda abajo (`FOUNTAIN_POS = (464, 832)`): es el respiro antes de
 encarar el muro. Y la cámara de objetivo ahora enseña la escalera, el foso y
 la salida de arriba.
 
+## 4l. Repisa de caza: enemigos que no se podían matar (2026-09-20)
+
+Jugando salió un problema que ningún validador detecta, porque no es un
+problema de geometría sino de combate: **el halcón volaba a 150 px del suelo y
+el salto del jugador da 87,1**. Desde el piso no había forma de tocarlo — solo
+aguantar sus picados —, así que pasar por ahí era cuestión de suerte.
+
+Auditados los cinco enemigos contra la superficie más alta que tienen debajo:
+
+| Enemigo | x | Hay que subir | Antes |
+|---|---|---|---|
+| `Flying` (halcón) | 640 | **70 px** | 150 px — imposible |
+| `FlyingBomber` | 1100 | 44 px | 44 px — ya estaba bien |
+| `Shooter` | 1360 | va por el suelo | — |
+| `FlyingBomber` | 1700 | **68 px** | 90 px — 3 px por encima del salto |
+| `Walker` | 2150 | va por el suelo | — |
+
+Dos arreglos:
+
+1. **`Solid_RepisaCaza`** (x=576, y=784, 96×16): una repisa 80 px sobre el
+   suelo —alcanzable de un salto— justo debajo del halcón, que desde ahí queda
+   a 70 px. Es sólida y no de un solo sentido, por lo mismo que las repisas
+   del muro: así el calificador la ve en su análisis de alcanzabilidad.
+2. **`Dron_02` baja de 90 a 68 px** sobre la meseta. A 90 quedaba 3 px por
+   encima del salto: parecía alcanzable y no lo era, que es la peor
+   combinación posible — el jugador insiste porque cree que falló él.
+
+Además `HazardZone_01` se movió de x=600 a x=380: estaba justo debajo de la
+repisa nueva y obligaba a saltar al halcón desde encima del daño.
+
+Puntaje sin cambios: **130/130 (100,0%)**.
+
 ## 5. Obstáculos y plataformeo
 
 | Objeto | Tipo | Notas |
